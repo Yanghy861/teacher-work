@@ -1,103 +1,74 @@
-# T08 Sol 独立审核报告
+# T08 Sol 独立复审报告
 
-- 审核时间：2026-08-20 18:27 +08:00
-- 审核区间：T04–T08
+- 审核时间：2026-08-20 22:28 +08:00
+- 审核区间：T04–T08 的有效 Spike/安全成果 + Lean V1 后续范围裁决
 - 基线：`checkpoint-T03-pass`（`f2c187d4a59d86b4a4bacb42237516155ac9adf5`）
-- 候选提交：`43e368d1f423fdaf60a586dd6da94d219fced719`
-- 送审提交：`3f0465fc6025663b088b2fac9bcb4d3edcfc9ccc`
-- 结论：`CHANGES_REQUIRED`
+- 候选提交：`fe44b795830bdbcf96f17cc53a86402c1f9f0cd3`
+- 送审提交：`c2fc84f`（`review(T08): request Sol review`）
+- 结论：`PASS`
+
+## Findings
+
+P0–P3：无。未发现需要 Luna 在 T04–T08 区间继续修复的阻塞问题。
 
 ## 范围与可复现性
 
-- 候选提交存在，`checkpoint-T03-pass` 是候选提交的祖先；候选提交又是当前送审提交的祖先。
-- 送审提交只修改 `implementation-tasks/GOAL_PROGRESS.md` 与 `implementation-tasks/SOL_REVIEW_STATUS.md`，未混入产品实现。
-- 审核开始时位于 `main`，工作区干净；候选范围没有提交真实教学样本、机器报告、SQLite、日志、秘密、`node_modules` 或构建产物。
-- T04 的 40 份样本仍位于仓库外目录；独立重算结果为 40/40 存在、SHA-256 mismatch 0。
+- 审核开始时位于 `main`，工作区干净；`checkpoint-T03-pass` 与候选均可解析，基线是候选的祖先，merge-base 精确等于基线。
+- `checkpoint-T03-pass..候选` 共 11 个提交；候选后的 `c2fc84f` 只修改 `GOAL_PROGRESS.md` 与 `SOL_REVIEW_STATUS.md`，未混入产品实现。
+- 候选范围的 `git diff --check` 通过；跟踪树未包含真实教学样本、机器报告、运行数据库、索引、日志、秘密、依赖目录或构建产物。外部样本和复审生成的机器报告均处于 Git 忽略范围。
+- `SOL_REVIEW_STATUS.md` 在复审前只有一个 `AWAITING_REVIEW` 行；活动后续任务精确为 L01–L12，旧 T09–T42 明确退役。
 
-## 独立验证结果
+## 上一轮问题关闭情况
 
+| 上一轮 finding | 复审结论 | 独立证据 |
+|---|---|---|
+| P1：损坏 Office 文件被误判为 `no_text` | 已关闭 | `officeparser@7.5.1` 已精确固定；非 ZIP DOCX、截断 OOXML、缺必需部件三个夹具分别返回 `ZIP_NO_ENTRIES_FOUND`、`ZIP_TRUNCATED`、`REQUIRED_PART_MISSING`，3/3 均为 `parse_failed` |
+| P1：旧 T06 要求三个 WPS 极端场景 | 按产品负责人正式范围裁决关闭 | 当前 T06、主规格 0.2、Lean 决策均将正确性改为启动/焦点返回/重新打开/手动刷新核对，watcher 仅可选加速；不再承诺自动恢复、大文件和保存中退出的实时事件语义 |
+| P1：PDF.js high advisory 未处置 | 已关闭 | 实际依赖树为 `officeparser@7.5.1 → pdfjs-dist@6.2.108 overridden`；官方 registry audit 为 0 项漏洞；恶意 PDF canary 未执行 |
+| P2：19/19 gate 只检查文字 | 已关闭 | gate 升为 23 项并实际执行损坏输入/恶意 PDF fixture probe 与零 watcher 刷新探针，同时校验精确依赖、lock、security disposition 和 ADR 状态；本复审也未把 gate 当作唯一证据 |
+
+`officeparser` 官方 7.5.1 发布说明明确记录损坏输入改为抛出类型化错误；本地行为与上游说明一致。PDF.js 官方安全公告把 `6.2.108` 列为 GHSA-hq66-cqwq-w95j 的修复版本。Chokidar 已有 v5，但 v4.0.3 仍是本候选精确固定、MIT、实测过的可选加速器；Lean V1 允许完全不接入 watcher，因此不要求为追新版本而阻塞。参考：[officeParser releases](https://github.com/harshankur/officeParser/releases)、[PDF.js advisory](https://github.com/advisories/GHSA-hq66-cqwq-w95j)、[Chokidar releases](https://github.com/paulmillr/chokidar/releases)。
+
+## 独立复现结果
+
+### 样本、解析与搜索
+
+- 外部脱敏样本 manifest：40/40 文件存在，SHA-256 mismatch 0；格式为 DOCX 14、PDF 14、PPTX 10、XLSX 2。
+- T04 重跑：40 份；35 `indexed`、5 `no_text`、0 `parse_failed`；12,797 chunks、222,881 text chars；峰值 RSS 475,181,056 bytes。结果与候选记录一致，三个 XML 编码 warning 没有被隐藏为失败结论。
+- T05 重跑：40 份、12,797 chunks，chunk gate 通过，Normalizer 6/6；6 个正例与 7 个语料负例均有真值。Normalized FTS 命中 3 个正例；宽松 TokenExtractor 的 30 个负例误召仍被明确记录，未伪装为可直接采用的生产结果。
+- Fixture/security probe：状态 `passed`；三个损坏 OOXML 夹具全部正确分类；实际 PDF.js 为 6.2.108；恶意 PDF 为 `no_text`，JavaScript canary=false。
+- Electron 43.4.1 / Node 24.18.1 runtime smoke：PPTX、文本 PDF、XLSX 分别得到 151/303/124 chunks，均 `indexed`，PDF.js 6.2.108，进程退出码 0。
+
+### 刷新与恢复
+
+- 零 watcher 刷新探针：10/10 断言通过；startup、focus-return、reopen、manual-refresh 都能发现新 Hash；并发触发合并，同一已接受 Hash 不重复重建，`watcherRequiredForCorrectness=false`。
+- 本机保留的匿名 WPS 报告覆盖 DOCX/PPTX/XLSX 的普通保存、重复保存、另存为和打开未改，并保留可读 final snapshot；这些只作为代表性真机支持证据，不承担正确性门禁。
+- T07 重跑：16/16 场景通过；16/16 子进程在 checkpoint 后被强杀，恢复失败 0；固定临时 root 和报告路径约束仍有效。
+
+### 工程、依赖与文档
+
+- `node spikes/decision-gate/verify-gate.mjs --require-done`：23/23。
 - `npm run typecheck`：通过。
 - `npm run lint`：通过。
-- `npm test -- --run`：通过，7 个测试文件、17 项测试。
-- `npm run build`：通过，Main、Preload、Renderer 均生成 production 产物。
-- `npm ls --depth=0`：通过；顶层解析为 `officeparser@7.3.0` 与 `chokidar@4.0.3`。
-- `node spikes/decision-gate/verify-gate.mjs --require-done`：脚本返回 19/19，但该结果存在下文所述的证据校验缺口，不能作为放行依据。
-- 独立重跑 T04：40 份样本，35 `indexed`、5 `no_text`、12,512 chunks、219,662 chars；结果与送审记录一致。
-- 独立重跑 T05：40 份样本、12,512 chunks，Normalizer 6/6；各变体命中/误召与送审记录一致。
-- 独立重跑 T07：16/16 场景通过、16/16 子进程为 `SIGKILL`、恢复失败 0。
-- 独立检查四份 T06 机器报告：报告包含原始事件、决策和部分 final snapshot，但没有 scenario/action 标识，无法把每段事件序列对应到任务要求的具体 UI 操作。
-- `npm audit --json --registry=https://registry.npmjs.org`：未通过；报告 `officeparser`/`pdfjs-dist` 关联 1 项 high advisory，详见问题 3。
+- `npm test`：8 个测试文件、18 项测试全部通过。
+- `npm run build`：Main、Preload、Renderer production build 全部生成。
+- `npm ls officeparser pdfjs-dist chokidar --all`：依赖树有效，版本与 override 精确匹配。
+- `npm.cmd audit --json --registry=https://registry.npmjs.org`：info/low/moderate/high/critical 全部为 0。
+- implementation-tasks Markdown 相对链接检查：通过；12 个 Lean 任务文件齐全，审核链为 T08 → L04 → L07 → L10 → L12。
 
-## 必须修复的问题
+## Lean V1 范围审核
 
-### P1 · `officeparser@7.3.0` 会把损坏 Office 文件误判为合法空文档
+- 后续范围从旧 T09–T42 收缩为 L01–L12，不删除 T01–T08 已验证成果；四段仍覆盖管资料、找资料、AI 备课、备份与 Windows 交付。
+- 简化项都有明确替代：刷新核对替代 watcher 正确性依赖；一个顺序 Worker/重启重扫替代持久化队列和精确续传；统一 Parser 替代四套格式项目；独立生成/保存草稿替代 AI Workflow；暂停写入后的备份替代在线并发快照。
+- 不可放松边界仍同时出现在 AGENTS、Lean 决策、全局约束、任务追踪与阶段闸门中：原资料不覆盖；Renderer/Main/秘密隔离；managed 安全路径与临时写入/原子重命名；长解析/Hash/索引不阻塞 Main；Key 不明文落盘/进日志/进备份；AI 只保存草稿。
+- L04、L07、L10、L12 均要求全量检查和独立 Sol 审核；高风险边界没有因“简单优先”被整体豁免。
 
-当前 Adapter 只根据输出文本/chunks 是否为空返回 `indexed` 或 `no_text`，没有先验证 OOXML ZIP/必需部件，也没有把第三方解析器的损坏输入行为转换为 `parse_failed`。独立探针创建一个内容为普通文本、扩展名为 `.docx` 的损坏输入并调用当前 `parse()`，实际得到：
+## 非阻塞观察与后续边界
 
-```json
-{
-  "text": "",
-  "chunks": [],
-  "parseStatus": "no_text",
-  "diagnostics": {
-    "parserType": "docx",
-    "warningCodes": ["EMPTY_CHUNK_GENERATED"]
-  }
-}
-```
+- Electron parser smoke 期间 GPU helper 四次以 `-1073741515` 退出，但无 BrowserWindow 的 Main runtime 解析完整完成并以 0 退出。该现象不否定 T08 的 Parser/Electron ABI 证据；真实 UI/交付启动仍必须在 L04/L12 的 Windows smoke 中单独证明。
+- T06 的本地 WPS 报告是匿名、Git 忽略的人机操作证据，不是可自动判定所有 Office 内部语义的矩阵。L03/L04 必须验证生产刷新路径本身，不能把旧 watcher 报告当成生产实现。
+- DOCX heading、复杂公式/表格质量、扫描 PDF OCR 和 packaged PDF worker 仍按 ADR 作为已知限制/Later；它们没有被写成已经解决。
 
-这使损坏、截断或缺少必需 OOXML 部件的文件与真正无正文的文档不可区分，直接违反 T04/ADR-001 冻结的 `indexed | no_text | parse_failed` 契约，也会让后续队列错误地把坏文件当成“成功但无正文”。上游 `officeparser` 的 [v7.5.1 发布说明](https://github.com/harshankur/officeParser/releases/tag/v7.5.1) 明确说明：自 7.3.0 的 streaming ZIP 改写后，损坏输入会解析为空 AST；7.5.1 才开始对非 ZIP、截断 ZIP、缺少必需部件分别抛出结构化错误。
+## 放行决定
 
-相关位置：`spikes/document-parser/officeparser-adapter.mjs:113`、`docs/adr/ADR-001-document-parser.md:15`、`package.json:41`。
-
-修复要求：选择并精确固定能可靠区分损坏输入的版本，或在自有 Adapter 前加入等价的严格 OOXML/PDF 输入验证；增加至少“非 ZIP 假 DOCX”“截断 OOXML”“ZIP 缺必需部件”的可复现夹具，断言最终状态为 `parse_failed` 而不是 `no_text`。随后重跑 T04、依赖其提取结果的 T05、Electron/Windows smoke 和 T08 gate，并同步更新 package lock、Spike 结果与 ADR。不得只把警告字符串硬编码成成功或吞掉异常。
-
-### P1 · T06 明确缺少任务要求的三个真实 WPS 场景，却被标为 `DONE`
-
-T06 实现范围要求在 PPTX、DOCX、XLSX 上执行普通保存、连续 Ctrl+S、另存为、自动恢复式保存、大文件保存、打开未改和保存中退出；验收又明确规定“环境或人工保存流程不足时标 `BLOCKED`”。送审证据却明确写明：
-
-- 自动恢复式保存未稳定触发；
-- 没有大文件保存容量实验；
-- 只做了保存后关闭，没有覆盖保存进行中退出。
-
-`docs/spike-results.md` 把这三项称为 known limitations 后仍宣布 T06 核心验收完成；`STATUS.md` 也将 T06 标为 `DONE`。这与任务文件的显式范围和阻塞规则冲突，不能由 T08 把“未执行”重新分类为“不阻塞”。同时，现有四份机器报告没有场景/action 边界，因此即使对已声称执行的普通保存、重复 Ctrl+S、另存为等操作，也无法从报告中独立定位“哪段事件对应哪次操作”并复核每次真实内容变化恰好一次重建。
-
-相关位置：`implementation-tasks/tasks/T06-spike-office-wps-watcher.md:9`、`:21`–`:23`；`docs/spike-results.md:128`–`:132`；`implementation-tasks/STATUS.md:12`。
-
-修复要求：先把 T06/T08 恢复为符合事实的未完成/阻塞状态；为实验器或配套记录增加匿名 scenario/action 标识、格式、轮次、开始/结束时间和期望结果，使原始事件与决策可归因。使用真实 WPS 补做任务列出的三类场景，并按 PPTX/DOCX/XLSX 记录多轮证据；若某场景在当前环境确实无法安全、可靠执行，则 T06 必须保持 `BLOCKED`，不得进入 T09。不得用合成文件事件或文字声明代替真实 WPS 操作。
-
-### P1 · 冻结的 PDF 依赖栈存在未处置的 high advisory
-
-`officeparser@7.3.0` 精确依赖 `pdfjs-dist@6.1.200`。独立运行官方 npm registry audit 返回 high severity，关联 [GHSA-hq66-cqwq-w95j / CVE-2026-16633](https://github.com/advisories/GHSA-hq66-cqwq-w95j)：受影响范围为 `>=5.6.83 <6.2.108`，修复版本为 `6.2.108`。当前 Spike/ADR 只记录许可、依赖体积与打包风险，没有记录该 advisory 的适用性、Node Worker 威胁模型或明确缓解措施；而 V1 会解析用户提供的本地 PDF，不能在 T08 把这条依赖栈直接冻结为生产候选。
-
-当前调用确实设置了 `isEvalSupported: false`，但这不等同于 advisory 给出的 `enableScripting: false`/CSP 缓解，且送审证据没有证明 officeparser 的纯 Node 文本提取路径不进入受影响执行路径。因此本报告不臆测“必然可利用”，但按 T08 的关键证据规则，未完成的安全处置本身已阻塞放行。
-
-相关位置：`package-lock.json:3953`–`:3964`（其中 `:3963` 固定 `pdfjs-dist: 6.1.200`）、`docs/adr/ADR-001-document-parser.md:44`。
-
-修复要求：对该 advisory 做可审计的适用性分析和恶意 PDF 探针；优先采用包含修复版 PDF.js 的兼容候选。若只能通过 override、替换 PDF parser 或明确禁用相关脚本路径缓解，必须验证 Node/Electron/Windows、PDF worker 版本一致性、40 份样本和恶意夹具，并把决定、剩余风险与 audit 结果写入 ADR。不得直接执行 npm 建议的降级式 `audit fix`，也不得只写“Node 环境不受影响”而无证据。
-
-### P2 · 19/19 gate 只验证文字和状态，能够在关键证据缺失时误报通过
-
-`verify-gate.mjs` 的 Spike C 检查只要求结果文档包含 `run-experiment.mjs` 和 `chokidar@4.0.3`；“四项完成”检查只统计 `状态：DONE` 字符串；阶段状态又只匹配 `STATUS.md` 中的 `DONE`。因此即使同一文档明确写着三个 T06 必做场景未执行，gate 仍返回 19/19。它还把 ADR 的 `Status: Proposed for T08 Sol review` 当作固定通过标记，没有验证最终接受状态。
-
-相关位置：`spikes/decision-gate/verify-gate.mjs:30`、`:33`、`:37`、`:46`–`:49`。
-
-修复要求：让 gate 校验机器可读的最低证据，而不是审核者自己写下的 `DONE`；至少覆盖 T06 所有必做场景/格式/轮次、Adapter 损坏输入分类、依赖安全处置结果和 ADR 最终状态。gate 应在证据缺失时失败，即便 `STATUS.md` 被误写为 `DONE`。
-
-## 已确认可保留的成果
-
-- T04 的 40 份仓库外匿名样本、manifest 与正常文件解析统计可复现；无需丢弃样本或重做样本收集。
-- T05 benchmark 可复现，Normalizer/FTS/短词/TokenExtractor 的实测数据和已记录限制可作为修复后重跑基线。
-- T07 的 16 个真实强杀/恢复场景可复现，本次未发现阻塞性问题。
-- Chokidar 实验器已有 dirty/debounce/stable/readable/Hash/单任务重检基础，可以在其上补场景可追溯性与缺失的真实 WPS 流程，无需推倒重写。
-
-## 复审条件
-
-Luna 只能修复 T04–T08 审核区间，不得进入 T09。修复后需：
-
-1. 关闭以上三个 P1 和一个 P2，并把 T06/T08 状态、Spike 结果、四份 ADR、依赖锁与 gate 恢复为相互一致；
-2. 重跑 40 份样本解析、至少 10,000 chunks 搜索 benchmark、补齐后的真实 WPS 场景、16/16 强杀恢复、typecheck、lint、全部测试、production build、Electron/Windows smoke 和官方 registry audit/安全处置探针；
-3. 创建 `fix(T08-review): <摘要>` 本地提交；
-4. 用新的候选 SHA 把 T08 改回 `AWAITING_REVIEW`，创建新的 `review(T08): request Sol review` 送审提交后停止。
-
-本次不得创建 `checkpoint-T08-pass` 标签，不得进入 T09，不得 push。
+候选满足当前 T04–T08 验收与 Lean V1 范围裁决，上一轮三个 P1 和一个 P2 均已关闭，且没有新的阻塞 finding。T08 审核状态可改为 `PASS`；本审核提交创建 `checkpoint-T08-pass` 后，Luna 可从 L01 开始，但不得越过 L04 审核点。
