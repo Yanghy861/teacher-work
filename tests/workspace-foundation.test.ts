@@ -35,8 +35,10 @@ function createTemporaryDirectory(): string {
 
 describe('workspace paths and SQLite foundation', () => {
   it('initializes the isolated directory tree and reopens without duplicate migrations', () => {
-    const root = join(createTemporaryDirectory(), 'workspace')
-    const first = initializeWorkspace(root, { idFactory: () => 'workspace-test-id' })
+    const temporaryRoot = createTemporaryDirectory()
+    const root = join(temporaryRoot, 'workspace')
+    const installDirectory = join(temporaryRoot, 'install')
+    const first = initializeWorkspace(root, installDirectory, { idFactory: () => 'workspace-test-id' })
 
     expect(first.paths.databasePath).toBe(join(root, 'data', 'workspace.db'))
     expect(first.paths.objectsDirectory).toBe(join(root, 'files', 'objects'))
@@ -47,7 +49,7 @@ describe('workspace paths and SQLite foundation', () => {
     expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1])
     first.close()
 
-    const second = initializeWorkspace(root, { idFactory: () => 'should-not-replace-id' })
+    const second = initializeWorkspace(root, installDirectory, { idFactory: () => 'should-not-replace-id' })
     expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 1 })
     expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1])
     expect(readWorkspaceIdentity(second.database.raw)).toEqual(second.identity)
@@ -55,7 +57,9 @@ describe('workspace paths and SQLite foundation', () => {
   })
 
   it('rolls back a failed migration and does not advance the schema version', () => {
-    const root = join(createTemporaryDirectory(), 'workspace')
+    const temporaryRoot = createTemporaryDirectory()
+    const root = join(temporaryRoot, 'workspace')
+    const installDirectory = join(temporaryRoot, 'install')
     const failingMigration = {
       version: 2,
       name: 'failing_test_migration',
@@ -66,12 +70,12 @@ describe('workspace paths and SQLite foundation', () => {
     }
 
     expect(() =>
-      initializeWorkspace(root, {
+      initializeWorkspace(root, installDirectory, {
         migrations: [...workspaceMigrations, failingMigration],
       }),
     ).toThrow('simulated migration failure')
 
-    const reopened = initializeWorkspace(root)
+    const reopened = initializeWorkspace(root, installDirectory)
     expect(reopened.identity.schemaVersion).toBe(1)
     expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1])
     const rolledBackTable = reopened.database.raw
@@ -82,18 +86,20 @@ describe('workspace paths and SQLite foundation', () => {
   })
 
   it('keeps workspace data outside a replaceable application build directory', () => {
-    const root = join(createTemporaryDirectory(), 'workspace')
-    const buildDirectory = join(root, 'out')
+    const temporaryRoot = createTemporaryDirectory()
+    const root = join(temporaryRoot, 'workspace')
+    const buildDirectory = join(temporaryRoot, 'out')
+    const installDirectory = join(temporaryRoot, 'install')
     mkdirSync(buildDirectory, { recursive: true })
     writeFileSync(join(buildDirectory, 'app.js'), 'temporary build')
 
-    const first = initializeWorkspace(root, { idFactory: () => 'persistent-workspace-id' })
+    const first = initializeWorkspace(root, installDirectory, { idFactory: () => 'persistent-workspace-id' })
     first.close()
     rmSync(buildDirectory, { recursive: true, force: true })
     mkdirSync(buildDirectory, { recursive: true })
     writeFileSync(join(buildDirectory, 'app.js'), 'replacement build')
 
-    const second = initializeWorkspace(root)
+    const second = initializeWorkspace(root, installDirectory)
     expect(second.identity.workspaceId).toBe('persistent-workspace-id')
     expect(readFileSync(join(buildDirectory, 'app.js'), 'utf8')).toBe('replacement build')
     second.close()
@@ -116,19 +122,31 @@ describe('workspace paths and SQLite foundation', () => {
     const invalidFile = join(temporaryRoot, 'not-a-directory')
     writeFileSync(invalidFile, 'not a directory')
 
-    expect(() => WorkspacePaths.fromRoot('relative-workspace')).toThrowError(
+    expect(() => WorkspacePaths.fromRoot('relative-workspace', installDirectory)).toThrowError(
       expect.objectContaining({ code: 'WORKSPACE_PATH_NOT_ABSOLUTE' }),
     )
+    expect(() => WorkspacePaths.fromRoot(installDirectory, installDirectory)).toThrowError(
+      expect.objectContaining({ code: 'WORKSPACE_PATH_INSIDE_APP' }),
+    )
+    expect(() => WorkspacePaths.fromRoot(join(installDirectory, 'workspace'), installDirectory)).toThrowError(
+      expect.objectContaining({ code: 'WORKSPACE_PATH_INSIDE_APP' }),
+    )
+    expect(() => initializeWorkspace(installDirectory, installDirectory)).toThrowError(
+      expect.objectContaining({ code: 'WORKSPACE_PATH_INSIDE_APP' }),
+    )
+    expect(() =>
+      initializeWorkspace(join(installDirectory, 'workspace'), installDirectory),
+    ).toThrowError(expect.objectContaining({ code: 'WORKSPACE_PATH_INSIDE_APP' }))
     expect(() => WorkspacePaths.fromDefaultLocation(installDirectory, installDirectory)).toThrowError(
       expect.objectContaining({ code: 'WORKSPACE_PATH_INSIDE_APP' }),
     )
-    expect(() => initializeWorkspace(invalidFile)).toThrowError(
+    expect(() => initializeWorkspace(invalidFile, installDirectory)).toThrowError(
       expect.objectContaining({ code: 'WORKSPACE_PATH_NOT_DIRECTORY' }),
     )
 
     let failedDirectory = ''
     expect(() =>
-      initializeWorkspace(join(temporaryRoot, 'unwritable'), {
+      initializeWorkspace(join(temporaryRoot, 'unwritable'), installDirectory, {
         writableProbe: (directory) => {
           failedDirectory = directory
           throw new Error('simulated permission denied')

@@ -63,3 +63,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线与候选提交：T03 是 Sol 审核点，审核基线为 `checkpoint-T00`；候选提交 SHA 为 `e360204499552029f86be0afbcd1096c7fa38b9d`，`SOL_REVIEW_STATUS.md` 已标为 `AWAITING_REVIEW`；送审提交为 `review(T03): request Sol review`，提交后立即停止，不进入 T04。
 - 已知限制：T03 只提供工作区信息示例和基础错误/日志边界，不实现业务 CRUD；未知 channel 在 Electron 原生层会被拒绝，内部可测试路由同时返回稳定 `UNKNOWN_CHANNEL` 错误。
 - 下一任务可依赖的接口：`window.teacherWorkbench.app.getVersion()`、`window.teacherWorkbench.workspace.getInfo()`、`IpcResponse<T>`/错误码、`registerAppIpc`、`StructuredLogger`、`RendererErrorBoundary`。
+
+## 2026-08-20 15:08 · T03 · DONE
+
+- 复审修复：针对 T03 Sol 报告的 P1/P2 问题，所有显式工作区入口现在都必须携带并校验应用安装目录；安装目录本身及其子目录稳定返回 `WORKSPACE_PATH_INSIDE_APP`。日志脱敏覆盖 `body_md`、嵌套正文、JSON/header/Bearer/Basic 和空白分隔的敏感文本；Renderer 边界改为专属 ESLint 规则与 TypeScript AST 检查，覆盖静态/副作用/动态导入、require 别名、Main 路径、数据库驱动和 Node 全局。
+- 修改文件：`src/main/workspace/workspace-paths.ts`、`src/main/workspace/workspace-service.ts`、`tests/workspace-foundation.test.ts`、`src/main/logging/structured-logger.ts`、`tests/logging-redaction.test.ts`、`eslint.config.mjs`、`tests/renderer-boundary.test.ts`、`docs/t02-workspace-sqlite.md`、`docs/t03-secure-ipc-observability.md`、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`npm run typecheck` ✅；`npm run lint` ✅；`npm test` ✅（7 files / 17 tests）；`npm run build` ✅；Electron 43.4.1 Node runtime 加载 `better-sqlite3` 并执行内存 SQLite 查询（返回 1）✅。
+- Git 任务提交：待创建 `fix(T03-review): close Sol findings` 本地修复提交；不 push。
+- 审核交接：仍处于 T03 审核区间；修复提交后生成新候选 SHA，将 T03 改回 `AWAITING_REVIEW` 并创建新的 `review(T03): request Sol review`，不进入 T04，不创建通过标签。

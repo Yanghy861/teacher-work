@@ -4,7 +4,14 @@ export type LogSink = (line: string) => void
 const REDACTED = '[REDACTED]'
 const OMITTED = '[OMITTED]'
 const sensitiveAssignmentPattern =
-  /\b(api[_-]?key|token|authorization|password|secret)\b\s*[:=]\s*(?:Bearer\s+)?("[^"]*"|'[^']*'|[^\s,;]+)/gi
+  /(["']?(?:api[_-]?key|x-api-key|token|authorization|password|secret)["']?\s*[:=]\s*)(?:(?:Bearer|Basic)\s+)?("[^"]*"|'[^']*'|[^\s,;}"']+)/gi
+const sensitiveWhitespacePattern =
+  /(\b(?:api[_-]?key|x-api-key|token|authorization|password|secret)\b\s+(?:(?:Bearer|Basic)\s+)?)(?:"[^"]*"|'[^']*'|[^\s,;}"']+)/gi
+const bearerTokenPattern = /\b(?:Bearer|Basic)\s+([A-Za-z0-9._~+/=-]+)/gi
+const fileContentAssignmentPattern =
+  /(["']?(?:body(?:[_-]?(?:md|markdown))?|file[_-]?(?:content|body|text)|document[_-]?(?:content|body|text)|(?:raw|source)[_-]?(?:content|text|body)|content(?:[_-]?md)?|text|markdown(?:[_-]?content)?)["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;}"']+)/gi
+const fileContentWhitespacePattern =
+  /(\b(?:body(?:[_-]?(?:md|markdown))?|file[_-]?(?:content|body|text)|document[_-]?(?:content|body|text)|(?:raw|source)[_-]?(?:content|text|body)|content(?:[_-]?md)?|text|markdown(?:[_-]?content)?)\b\s+)(?:"[^"]*"|'[^']*'|[^\s,;}"']+)/gi
 
 export class StructuredLogger {
   private readonly sink: LogSink
@@ -79,15 +86,34 @@ export function redactLogValue(value: unknown, key = '', seen = new WeakSet<obje
 }
 
 export function redactSensitiveText(value: string): string {
-  return value.replace(sensitiveAssignmentPattern, '$1=[REDACTED]')
+  return value
+    .replace(sensitiveAssignmentPattern, '$1[REDACTED]')
+    .replace(sensitiveWhitespacePattern, '$1[REDACTED]')
+    .replace(fileContentAssignmentPattern, '$1[OMITTED]')
+    .replace(fileContentWhitespacePattern, '$1[OMITTED]')
+    .replace(bearerTokenPattern, (scheme) => scheme.split(/\s+/)[0] + ' [REDACTED]')
 }
 
 function isSensitiveKey(key: string): boolean {
-  return /(?:api[_-]?key|token|authorization|password|secret)/i.test(key)
+  const normalized = normalizeKey(key)
+  return ['apikey', 'token', 'authorization', 'password', 'secret'].some((part) =>
+    normalized.includes(part),
+  )
 }
 
 function isFileContentKey(key: string): boolean {
-  return /^(?:file[_-]?)?(?:content|body|text|document(?:content|text)?)$/i.test(key)
+  const normalized = normalizeKey(key)
+  return (
+    ['body', 'bodymd', 'bodymarkdown', 'content', 'contentmd', 'documentbody', 'documentcontent',
+      'documenttext', 'filebody', 'filecontent', 'filetext', 'markdown', 'markdowncontent',
+      'rawcontent', 'rawtext', 'sourcebody', 'sourcecontent', 'text'].includes(normalized) ||
+    normalized.endsWith('bodymd') ||
+    normalized.endsWith('bodymarkdown')
+  )
+}
+
+function normalizeKey(key: string): string {
+  return key.replace(/[^a-z0-9]/gi, '').toLowerCase()
 }
 
 function defaultLogSink(line: string): void {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  redactSensitiveText,
   redactLogValue,
+  serializeError,
   StructuredLogger,
 } from '../src/main/logging/structured-logger'
 import { TeacherWorkbenchError, IPC_ERROR_CODES } from '../src/shared/ipc-contracts'
@@ -12,14 +14,21 @@ describe('structured log redaction', () => {
     const logger = new StructuredLogger((line) => lines.push(line))
     logger.error(
       'test.secret',
-      new Error('apiKey=top-secret password=pw-secret'),
+      new Error(
+        '{"authorization":"Bearer SOL_AUDIT_SECRET","body_md":"SOL_AUDIT_BODY"} apiKey=top-secret password=pw-secret',
+      ),
       {
         apiKey: 'top-secret',
         token: 'token-secret',
         authorization: 'Bearer auth-secret',
         password: 'pw-secret',
+        body_md: 'SOL_AUDIT_BODY',
         fileContent: '学生作答正文不应进入日志',
-        nested: { documentText: '整份文档正文也不应进入日志' },
+        nested: {
+          documentText: '整份文档正文也不应进入日志',
+          body_md: 'SOL_AUDIT_NESTED_BODY',
+          headers: { authorization: 'Bearer SOL_AUDIT_HEADER' },
+        },
       },
     )
 
@@ -28,6 +37,10 @@ describe('structured log redaction', () => {
     expect(serialized).not.toContain('pw-secret')
     expect(serialized).not.toContain('token-secret')
     expect(serialized).not.toContain('auth-secret')
+    expect(serialized).not.toContain('SOL_AUDIT_SECRET')
+    expect(serialized).not.toContain('SOL_AUDIT_BODY')
+    expect(serialized).not.toContain('SOL_AUDIT_NESTED_BODY')
+    expect(serialized).not.toContain('SOL_AUDIT_HEADER')
     expect(serialized).not.toContain('学生作答正文')
     expect(serialized).not.toContain('整份文档正文')
     expect(serialized).toContain('[REDACTED]')
@@ -48,5 +61,12 @@ describe('structured log redaction', () => {
     })
     expect(JSON.stringify(error)).not.toContain('stack')
     expect(redactLogValue({ password: 'secret' })).toEqual({ password: '[REDACTED]' })
+    expect(redactLogValue({ body_md: 'SOL_AUDIT_BODY' })).toEqual({ body_md: '[OMITTED]' })
+    expect(redactSensitiveText('authorization Bearer SOL_AUDIT_SECRET')).toBe(
+      'authorization Bearer [REDACTED]',
+    )
+    expect(
+      serializeError(new Error('Authorization: Bearer SOL_AUDIT_SECRET')).message,
+    ).toBe('Authorization: [REDACTED]')
   })
 })

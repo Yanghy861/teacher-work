@@ -4,6 +4,7 @@ import { getSchemaVersion, runMigrations, type Migration } from '../db/migration
 import { openWorkspaceDatabase, type WorkspaceDatabase } from '../db/connection'
 import {
   ensureWorkspaceDirectories,
+  WorkspacePathError,
   WorkspacePaths,
   type EnsureWorkspaceDirectoriesOptions,
 } from './workspace-paths'
@@ -26,10 +27,25 @@ export interface WorkspaceHandle {
 }
 
 export function initializeWorkspace(
+  root: string,
+  appInstallPath: string,
+  options?: InitializeWorkspaceOptions,
+): WorkspaceHandle
+export function initializeWorkspace(
+  root: WorkspacePaths,
+  options?: InitializeWorkspaceOptions,
+): WorkspaceHandle
+export function initializeWorkspace(
   root: string | WorkspacePaths,
-  options: InitializeWorkspaceOptions = {},
+  appInstallPathOrOptions: string | InitializeWorkspaceOptions = {},
+  maybeOptions: InitializeWorkspaceOptions = {},
 ): WorkspaceHandle {
-  const paths = typeof root === 'string' ? WorkspacePaths.fromRoot(root) : root
+  const paths =
+    typeof root === 'string'
+      ? WorkspacePaths.fromRoot(root, requireInstallPath(appInstallPathOrOptions))
+      : root
+  const options =
+    typeof appInstallPathOrOptions === 'string' ? maybeOptions : appInstallPathOrOptions
   ensureWorkspaceDirectories(paths, options)
 
   const database = openWorkspaceDatabase(paths.databasePath)
@@ -54,6 +70,17 @@ export function initializeDefaultWorkspace(
   options: InitializeWorkspaceOptions = {},
 ): WorkspaceHandle {
   return initializeWorkspace(WorkspacePaths.fromDefaultLocation(appDataPath, appInstallPath), options)
+}
+
+function requireInstallPath(value: string | InitializeWorkspaceOptions): string {
+  if (typeof value !== 'string') {
+    throw new WorkspacePathError(
+      'WORKSPACE_INSTALL_PATH_REQUIRED',
+      '必须提供应用安装目录，才能初始化用户选择的工作区。',
+      '',
+    )
+  }
+  return value
 }
 
 function ensureWorkspaceIdentity(

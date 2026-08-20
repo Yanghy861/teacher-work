@@ -9,6 +9,7 @@ export type WorkspacePathErrorCode =
   | 'WORKSPACE_PATH_NOT_DIRECTORY'
   | 'WORKSPACE_PATH_NOT_WRITABLE'
   | 'WORKSPACE_PATH_INIT_FAILED'
+  | 'WORKSPACE_INSTALL_PATH_REQUIRED'
 
 export class WorkspacePathError extends Error {
   readonly code: WorkspacePathErrorCode
@@ -33,7 +34,7 @@ export class WorkspacePaths {
   readonly cacheDirectory: string
   readonly backupsDirectory: string
 
-  constructor(root: string) {
+  private constructor(root: string) {
     if (!root.trim()) {
       throw new WorkspacePathError(
         'WORKSPACE_PATH_EMPTY',
@@ -60,11 +61,14 @@ export class WorkspacePaths {
     this.backupsDirectory = join(this.root, 'backups')
   }
 
-  static fromRoot(root: string): WorkspacePaths {
-    return new WorkspacePaths(root)
+  static fromRoot(root: string, appInstallPath: string): WorkspacePaths {
+    const paths = new WorkspacePaths(root)
+    assertPathOutside(paths.root, appInstallPath)
+    return paths
   }
 
   static fromDefaultLocation(appDataPath: string, appInstallPath: string): WorkspacePaths {
+    assertAbsolutePath(appDataPath, '应用数据目录')
     const candidate = resolve(appDataPath, 'TeacherWorkspace')
     assertPathOutside(candidate, appInstallPath)
     return new WorkspacePaths(candidate)
@@ -88,8 +92,9 @@ export interface EnsureWorkspaceDirectoriesOptions {
 }
 
 export function assertPathOutside(candidatePath: string, appInstallPath: string): void {
+  assertAbsolutePath(candidatePath, '工作区路径')
   const candidate = resolve(candidatePath)
-  const install = resolve(appInstallPath)
+  const install = validateInstallPath(appInstallPath)
   const relativePath = relative(install, candidate)
   const isInside = relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath))
 
@@ -100,6 +105,35 @@ export function assertPathOutside(candidatePath: string, appInstallPath: string)
       candidate,
     )
   }
+}
+
+function assertAbsolutePath(path: string, label: string): void {
+  if (typeof path !== 'string' || !path.trim()) {
+    throw new WorkspacePathError(
+      'WORKSPACE_PATH_EMPTY',
+      label + '不能为空。',
+      typeof path === 'string' ? path : '',
+    )
+  }
+  if (!isAbsolute(path)) {
+    throw new WorkspacePathError(
+      'WORKSPACE_PATH_NOT_ABSOLUTE',
+      label + '必须是绝对路径。',
+      path,
+    )
+  }
+}
+
+function validateInstallPath(appInstallPath: string): string {
+  if (typeof appInstallPath !== 'string' || !appInstallPath.trim()) {
+    throw new WorkspacePathError(
+      'WORKSPACE_INSTALL_PATH_REQUIRED',
+      '必须提供应用安装目录，才能校验工作区是否与程序分离。',
+      typeof appInstallPath === 'string' ? appInstallPath : '',
+    )
+  }
+  assertAbsolutePath(appInstallPath, '应用安装目录')
+  return resolve(appInstallPath)
 }
 
 export function ensureWorkspaceDirectories(

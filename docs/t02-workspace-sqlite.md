@@ -13,7 +13,7 @@
 └── backups/
 ```
 
-`initializeWorkspace` 接受用户明确选择的绝对路径；`initializeDefaultWorkspace` 接受应用数据目录和应用安装目录，并拒绝把默认候选路径放在安装目录内。初始化会逐级创建目录并做写入探针，遇到文件占位、权限错误或初始化失败时抛出带稳定错误码的 `WorkspacePathError`，不会静默回退到程序目录。
+`initializeWorkspace` 接受用户明确选择的绝对路径和应用安装目录，并拒绝安装目录本身及其任意子目录；`initializeDefaultWorkspace` 接受应用数据目录和应用安装目录，并拒绝把默认候选路径放在安装目录内。初始化会逐级创建目录并做写入探针，遇到文件占位、权限错误或初始化失败时抛出带稳定错误码的 `WorkspacePathError`，不会静默回退到程序目录。
 
 ## SQLite 连接与迁移
 
