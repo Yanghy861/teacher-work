@@ -93,3 +93,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：T04 的真实前置条件不足；T05 还要求 T04 的真实提取结果和至少 10,000 个 chunk，T06 还要求 Windows 真机及实际 Office/WPS 保存流程，均不能用合成样本、mock 或静态结论替代。
 - 下一任务可依赖的接口：提供仓库外的 30～100 份脱敏真实样本（至少 PPTX、DOCX、文本 PDF、扫描 PDF、XLSX，覆盖中文/数学/表格/图片/大文件），并提供或允许安装候选 Adapter 后，从 `spikes/document-parser/README.md` 的命令恢复 T04；解阻前不得开始 T05–T08。
 - 若阻塞，缺少条件与最小解阻动作：缺少可访问的真实脱敏样本目录。用户只需提供仓库外样本目录并允许按 Adapter 契约运行候选解析器；恢复后先运行样本门槛检查和 Spike A，补齐 `docs/spike-results.md` 真实指标与结论，再从 T04 继续。
+
+## 2026-08-20 16:51 +08:00 · T04 · DONE
+
+- 关键改动：解除 T04 真实样本阻塞；选用并安装 `officeparser@7.3.0`，实现独立 `officeparser-adapter.mjs`，统一返回 `text/chunks/position/status`，显式关闭 OCR；扩展 Spike runner 输出安全诊断信号和候选标签；补齐 Spike A 真实结果、候选库许可/维护/打包风险与生产约束。
+- 修改文件：`package.json`、`package-lock.json`、`spikes/document-parser/run-spike.mjs`、`spikes/document-parser/officeparser-adapter.mjs`、`spikes/document-parser/README.md`、`docs/spike-results.md`、`eslint.config.mjs`、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：sample manifest 40/40 SHA-256 一致 ✅；真实 Spike 命令运行 40 份：35 `indexed`、5 `no_text`、0 `parse_failed`，12,512 chunks，219,662 chars，峰值 RSS 487,915,520 bytes ✅；扫描 PDF 5/5 正确为 `no_text`；Electron 43.4.1 / Node 24.18.1 smoke 解析 PPTX、文本 PDF、XLSX 均成功并退出码 0 ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm test` ✅（7 files / 17 tests）；`npm run build` ✅。
+- 人工/真实环境验证：样本来自仓库外只读目录，未复制或提交真实文件；报告不含正文、文件名或路径。确认 PPTX/PDF/XLSX 位置元数据可用；记录 DOCX heading path 不稳定、数学表达式和复杂表格降级仍需后续 Spike/任务验证。
+- Git 任务提交：待 staged diff 审查后创建 `task(T04): document parser spike` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：不适用；T04 已完成，下一任务为 T05，T08 仍是本次目标审核点。
+- 已知限制：`officeparser` 直接依赖包含 PDF.js/Tesseract 资源，虽然本次 OCR 关闭且 smoke 通过，正式打包仍需复核资源加载与体积；DOCX heading 位置需在生产 Adapter 层补齐或明确降级。
+- 下一任务可依赖的接口：`spikes/document-parser/officeparser-adapter.mjs` 的自有解析结果契约、`indexed/no_text/parse_failed` 状态、PPTX slide/PDF page/XLSX sheet 位置，以及 `docs/spike-results.md` 中的候选决策与风险。

@@ -1,5 +1,5 @@
 import { readdir, stat, writeFile } from 'node:fs/promises'
-import { extname, isAbsolute, resolve } from 'node:path'
+import { basename, extname, isAbsolute, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { performance } from 'node:perf_hooks'
 
@@ -25,7 +25,7 @@ function printUsage() {
   console.log(
     [
       'Usage:',
-      '  node spikes/document-parser/run-spike.mjs --samples <absolute-dir> --adapter <module> [--output <absolute-json>]',
+      '  node spikes/document-parser/run-spike.mjs --samples <absolute-dir> --adapter <module> [--adapter-label <name>] [--output <absolute-json>]',
       '',
       'The adapter must export async parse(filePath) -> { text, chunks, parseStatus }.',
       'The runner writes measurements only; it never writes document paths, names, or正文内容.',
@@ -91,6 +91,32 @@ function positionCounts(chunks) {
   return counts
 }
 
+function safeDiagnostics(diagnostics) {
+  if (diagnostics === null || typeof diagnostics !== 'object') {
+    return {}
+  }
+
+  const numberMap = (value) => Object.fromEntries(
+    Object.entries(value ?? {}).filter(([, count]) => typeof count === 'number'),
+  )
+  const textSignals = diagnostics.textSignals
+  return {
+    parserType: typeof diagnostics.parserType === 'string' ? diagnostics.parserType : undefined,
+    warningCount: typeof diagnostics.warningCount === 'number' ? diagnostics.warningCount : undefined,
+    warningCodes: Array.isArray(diagnostics.warningCodes)
+      ? diagnostics.warningCodes.filter((code) => typeof code === 'string').slice(0, 20)
+      : [],
+    nodeTypeCounts: numberMap(diagnostics.nodeTypeCounts),
+    textSignals: textSignals === null || typeof textSignals !== 'object'
+      ? undefined
+      : {
+          cjkCharCount: typeof textSignals.cjkCharCount === 'number' ? textSignals.cjkCharCount : 0,
+          mathSymbolCount: typeof textSignals.mathSymbolCount === 'number' ? textSignals.mathSymbolCount : 0,
+          queryMatches: numberMap(textSignals.queryMatches),
+        },
+  }
+}
+
 async function measureParse(filePath, parse) {
   let peakRssBytes = process.memoryUsage().rss
   const sampleMemory = () => {
@@ -110,6 +136,7 @@ async function measureParse(filePath, parse) {
       textChars,
       chunkCount: chunks.length,
       positionCounts: positionCounts(chunks),
+      diagnostics: safeDiagnostics(result?.diagnostics),
       elapsedMs,
       peakRssBytes,
     }
@@ -120,6 +147,7 @@ async function measureParse(filePath, parse) {
       textChars: 0,
       chunkCount: 0,
       positionCounts: {},
+      diagnostics: {},
       elapsedMs: Math.round((performance.now() - startedAt) * 100) / 100,
       peakRssBytes,
       errorCode: error instanceof Error ? error.name : 'unknown_error',
@@ -186,6 +214,7 @@ async function main() {
 
   const samplesArgument = option(args, '--samples')
   const adapterArgument = option(args, '--adapter')
+  const adapterLabel = option(args, '--adapter-label') ?? basename(adapterArgument ?? 'adapter')
   const outputArgument = option(args, '--output')
   if (samplesArgument === undefined || adapterArgument === undefined) {
     printUsage()
@@ -219,6 +248,7 @@ async function main() {
       {
         schemaVersion: 1,
         status: 'blocked',
+        adapter: adapterLabel,
         reason: 'sample_set_does_not_meet_T04_gate',
         sampleCount: files.length,
         formatCounts: counts,
@@ -248,6 +278,7 @@ async function main() {
     {
       schemaVersion: 1,
       status: 'completed',
+      adapter: adapterLabel,
       sampleCount: files.length,
       formatCounts: counts,
       acceptance,

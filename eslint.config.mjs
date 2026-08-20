@@ -12,7 +12,7 @@ const nodeBuiltinModuleNames = new Set(
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', 'out/**', 'dist/**', 'coverage/**', 'release/**'],
+    ignores: ['node_modules/**', 'out/**', 'dist/**', 'coverage/**', 'release/**', 'tmp/**', 'temp/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

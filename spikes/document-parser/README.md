@@ -1,6 +1,6 @@
 # T04 Spike A：文档解析实验工具
 
-`run-spike.mjs` 是与业务代码隔离的样本驱动实验工具。它要求调用者提供外部脱敏样本目录和一个候选 Adapter，不把任何解析正文、文件名或路径写入报告；机器报告只保留匿名样本编号、格式、大小、状态、chunk/位置计数、耗时和进程 RSS 峰值。
+`run-spike.mjs` 是与业务代码隔离的样本驱动实验工具。它要求调用者提供外部脱敏样本目录和一个候选 Adapter，不把任何解析正文、文件名或路径写入报告；机器报告只保留匿名样本编号、候选标签、格式、大小、状态、chunk/位置计数、耗时、进程 RSS 峰值和安全诊断信号（警告代码、节点类型计数、固定查询命中计数）。
 
 ## 样本门槛
 
@@ -31,6 +31,7 @@
 node spikes/document-parser/run-spike.mjs `
   --samples D:\path\to\sanitized-samples `
   --adapter D:\path\to\adapter.mjs `
+  --adapter-label officeparser-7.3.0 `
   --output D:\path\outside\repo\document-parser-run.json
 ```
 
