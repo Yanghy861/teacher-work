@@ -11,7 +11,7 @@
 
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|
-| T03 | T01–T03 | AWAITING_REVIEW | a3ea75af88e06b14af20a4a643c68db7d9cf83dc | | 复审修复提交已完成，等待 Sol 复审 |
+| T03 | T01–T03 | CHANGES_REQUIRED | a3ea75af88e06b14af20a4a643c68db7d9cf83dc | | `docs/reviews/T03-sol-review.md` 第一次复审：裸 `http`/`worker_threads` 等 Node 内置模块仍可绕过 Renderer 守卫 |
 | T08 | T04–T08 | PENDING | | | |
 | T15 | T09–T15 | PENDING | | | |
 | T20 | T16–T20 | PENDING | | | |

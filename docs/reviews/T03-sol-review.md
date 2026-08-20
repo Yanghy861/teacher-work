@@ -71,3 +71,36 @@ Luna 只能修复 T01–T03 审核区间内的上述问题，不得进入 T04。
 4. 用新的候选 SHA 把 T03 改回 `AWAITING_REVIEW`，创建新的 `review(T03): request Sol review` 送审提交后停止。
 
 本次不得创建 `checkpoint-T03-pass` 标签。
+
+## 2026-08-20 15:16 · 第一次复审
+
+- 新候选提交：`a3ea75af88e06b14af20a4a643c68db7d9cf83dc`
+- 新送审提交：`40cf891ec26c5be580a7046b0d52a16bb5e3d235`
+- 结论：`CHANGES_REQUIRED`
+
+### 已确认修复
+
+- 显式工作区入口现在强制携带应用安装目录；安装目录本身及其子目录均被拒绝，测试中的工作区与替换构建目录也已分离。
+- `body_md`、嵌套正文、Authorization/Bearer、JSON/header 与空白分隔凭据均有实现和回归测试；独立探针确认 `SOL_AUDIT_BODY` 与 `SOL_AUDIT_SECRET` 不再出现在输出中。
+- `npm run typecheck`、`npm run lint`、`npm test`（7 files / 17 tests）、`npm run build`、Electron 43.4.1 + `better-sqlite3` ABI 内存查询均通过。
+
+### 仍需修复 · P2 Renderer 裸 Node 内置模块仍可绕过
+
+Renderer ESLint/AST 守卫只枚举了 `fs`、`path`、`os`、`crypto`、`child_process` 等少数裸模块名；虽然 `node:*` 全部被禁止，但 Node 同时支持不带 `node:` 的内置模块名。独立 ESLint API 探针结果：
+
+```text
+import http from 'http'
+=> 只有 @typescript-eslint/no-unused-vars，未触发 no-restricted-imports
+
+import { Worker } from 'worker_threads'
+=> 只有 @typescript-eslint/no-unused-vars，未触发 no-restricted-imports
+
+import http from 'node:http'
+=> 正确触发 no-restricted-imports
+```
+
+这仍未满足上一轮“禁止 Node 内置模块”的复审条件。修复时应从 Node 的 `builtinModules`（或等价完整清单）统一生成带/不带 `node:` 的禁用集合，并在 ESLint 规则与 TypeScript AST 守卫中使用同一完整来源；测试至少加入裸 `http`、`worker_threads` 和一个其他未曾手写枚举的内置模块。不得继续逐个补少数名称，也不得放宽 Renderer 构建或安全配置。
+
+相关位置：`eslint.config.mjs:20`、`tests/renderer-boundary.test.ts:25`。
+
+Luna 仍不得进入 T04。完成此单项最小修复后，重新运行 typecheck、lint、全部测试和 production build，创建新的 `fix(T03-review): <摘要>` 提交，更新候选 SHA 并再次标记 `AWAITING_REVIEW` 后停止。本次仍不得创建 `checkpoint-T03-pass` 标签。
