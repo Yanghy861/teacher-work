@@ -231,3 +231,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线与候选提交：不适用；L03 不是审核点。下一步为 L04，L04 完成后填写候选 SHA、标记 `AWAITING_REVIEW` 并创建送审提交，随后停止。
 - 已知限制 / Later：watcher 只保留为后续加速选项；缩略图、Markdown 编辑器、全文预览、复杂进度和精确续传不在 L03 范围。当前权威一致性来自启动、焦点返回、重新打开和手动刷新核对。
 - 下一任务可依赖的接口：schema v4、`ManagedFileService.refreshFile/refreshAll`、`ManagedFileRefreshResult`、`files:content-changed` 事件和 `ManagedFilesPanel`。
+
+## 2026-08-21 · L04 · DONE
+
+- 关键改动：补充阶段 1 端到端验收夹具，串起一对一课程、两个不连续阶段、两个课次、学生、资料导入、两个独立课次副本、外部编辑后的 Main 刷新核对以及软删除/恢复。L04 未新增非核心子系统，沿用 L01–L03 的 Main/Preload 边界、受控 UUID 对象目录和临时文件原子写入。
+- 修改文件：`tests/phase1-acceptance.test.ts`、`docs/phase1-acceptance.md`、本文件与 `STATUS.md`。
+- 验证结果：`npm test` ✅（13 files / 34 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。L04 专项夹具确认两个课次副本 Hash/内容隔离、外部编辑只影响副本 A、刷新识别变化、删除后 active 列表隐藏且 overview 可见、恢复后可受控打开。
+- 人工/真实环境验证：复用本次 L03 在 Windows 11 25H2/build 26200 的真实 Electron UI smoke 证据：sandbox/contextIsolation 保持开启，native picker 导入脱敏 fixture，资料列表核对并关联当前课次/学生，窗口正常关闭；临时 fixture/workspace 已删除，未触碰真实教学资料。L04 的完整数据流程由隔离 workspace 端到端测试覆盖。
+- Git 任务提交：待 staged diff 审查后创建 `lean(L04): phase1 acceptance` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：L04 审核基线为 `checkpoint-T08-pass`；任务提交后将填写完整候选 SHA、把 `SOL_REVIEW_STATUS.md` 的 L04 改为 `AWAITING_REVIEW`，创建送审提交并立即停止，不进入 L05。
+- 已知限制 / Later：未增加 external roots、生产 watcher、拖拽、极端磁盘/强杀矩阵和大规模压力测试；这些不属于 L04 的 Lean V1 验收条件。
+- 下一任务可依赖的接口：L01–L03 的课程树、`ManagedFileService`、`ManagedFilesPanel`、刷新/内容变化事件；L05 只能在 Sol 将 L04 标为 `PASS` 后开始。
