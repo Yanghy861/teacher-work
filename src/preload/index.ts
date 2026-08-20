@@ -2,7 +2,12 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import {
   CORE_IPC_CHANNELS,
+  FILE_IPC_CHANNELS,
   IPC_CHANNELS,
+  isFileActionResult,
+  isManagedFileOverview,
+  isManagedFileRecord,
+  isNullableManagedFileRecord,
   isAppVersion,
   isCoreOverview,
   isNodeRecord,
@@ -16,6 +21,9 @@ import {
   type CreateNoteRequest,
   type CreatePeriodRequest,
   type CreateStudentRequest,
+  type CopyFileToLessonRequest,
+  type CopyFileToStudentRequest,
+  type FileIdRequest,
   type MoveNodeRequest,
   type NodeIdRequest,
   type ReorderNodeRequest,
@@ -55,6 +63,16 @@ const api = Object.freeze({
     reorderNode: (request: ReorderNodeRequest) => invoke(CORE_IPC_CHANNELS.reorderNode, request, isNodeRecord),
     softDeleteNode: (request: NodeIdRequest) => invoke(CORE_IPC_CHANNELS.softDeleteNode, request, isNodeRecord),
     restoreNode: (request: NodeIdRequest) => invoke(CORE_IPC_CHANNELS.restoreNode, request, isNodeRecord),
+  }),
+  files: Object.freeze({
+    getOverview: () => invoke(FILE_IPC_CHANNELS.getManagedFileOverview, {}, isManagedFileOverview),
+    importFromPicker: () => invoke(FILE_IPC_CHANNELS.importFromPicker, {}, isNullableManagedFileRecord),
+    openFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.openFile, request, isFileActionResult),
+    showFileInFolder: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.showFileInFolder, request, isFileActionResult),
+    softDeleteFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.softDeleteFile, request, isManagedFileRecord),
+    restoreFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.restoreFile, request, isManagedFileRecord),
+    copyToLesson: (request: CopyFileToLessonRequest) => invoke(FILE_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
+    copyToStudent: (request: CopyFileToStudentRequest) => invoke(FILE_IPC_CHANNELS.copyToStudent, request, isManagedFileRecord),
   }),
 }) satisfies TeacherWorkbenchApi
 

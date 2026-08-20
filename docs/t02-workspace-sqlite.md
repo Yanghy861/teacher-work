@@ -26,7 +26,7 @@
 
 连接对象提供显式 `close()` 生命周期和类型化的 `backup(destinationPath)` seam，当前任务不实现备份流程。迁移 runner 先确保 `schema_migrations` 存在，再按严格递增版本逐个使用 SQLite transaction 执行；迁移函数抛错时，其 DDL 与版本记录一起回滚。
 
-T02 阶段的唯一迁移创建 `workspace_meta`。初始化完成后写入并复读 `workspaceId` 与 `schemaVersion`；工作区重开会复用原 ID，不会重复应用已记录的迁移。L01 的 schema v2 在同一 runner 中追加 `nodes`、学生关系和 `notes` 表；`files`、`search`、`ai_runs` 等仍留给后续里程碑。
+T02 阶段的唯一迁移创建 `workspace_meta`。初始化完成后写入并复读 `workspaceId` 与 `schemaVersion`；工作区重开会复用原 ID，不会重复应用已记录的迁移。L01 的 schema v2 在同一 runner 中追加 `nodes`、学生关系和 `notes` 表；L02 的 schema v3 再追加受控 managed 文件及课次/学生关联表。`search`、`ai_runs` 等仍留给后续里程碑。
 
 ## 验证
 

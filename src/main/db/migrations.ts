@@ -77,6 +77,49 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 3,
+    name: 'create_managed_files',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS files (
+          id TEXT PRIMARY KEY NOT NULL,
+          original_name TEXT NOT NULL CHECK (length(trim(original_name)) > 0),
+          size_bytes INTEGER NOT NULL CHECK (size_bytes >= 0),
+          mime_type TEXT NOT NULL,
+          origin_file_id TEXT REFERENCES files(id) ON DELETE SET NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_files_active_created
+          ON files (deleted_at, created_at, id);
+        CREATE INDEX IF NOT EXISTS idx_files_origin
+          ON files (origin_file_id);
+
+        CREATE TABLE IF NOT EXISTS lesson_files (
+          file_id TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+          lesson_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (file_id, lesson_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_lesson_files_lesson
+          ON lesson_files (lesson_id, created_at, file_id);
+
+        CREATE TABLE IF NOT EXISTS student_files (
+          file_id TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+          student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (file_id, student_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_student_files_student
+          ON student_files (student_id, created_at, file_id);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

@@ -32,8 +32,23 @@ import {
   type RenameNodeRequest,
   type StudentRecord,
 } from './core-contracts'
+import {
+  isCopyFileToLessonRequest,
+  isCopyFileToStudentRequest,
+  isFileActionResult,
+  isFileIdRequest,
+  isManagedFileOverview,
+  isManagedFileRecord,
+  isNullableManagedFileRecord,
+  type CopyFileToLessonRequest,
+  type CopyFileToStudentRequest,
+  type FileActionResult,
+  type FileIdRequest,
+  type ManagedFileOverview,
+  type ManagedFileRecord,
+} from './file-contracts'
 
-export { CORE_IPC_CHANNELS, IPC_CHANNELS } from './ipc-contracts'
+export { CORE_IPC_CHANNELS, FILE_IPC_CHANNELS, IPC_CHANNELS } from './ipc-contracts'
 export type { IpcChannel, WorkspaceInfo } from './ipc-contracts'
 export type {
   CoreOverview,
@@ -50,6 +65,14 @@ export type {
   RenameNodeRequest,
   StudentRecord,
 } from './core-contracts'
+export type {
+  CopyFileToLessonRequest,
+  CopyFileToStudentRequest,
+  FileActionResult,
+  FileIdRequest,
+  ManagedFileOverview,
+  ManagedFileRecord,
+} from './file-contracts'
 
 export interface TeacherWorkbenchApi {
   app: {
@@ -71,6 +94,16 @@ export interface TeacherWorkbenchApi {
     softDeleteNode: (request: NodeIdRequest) => Promise<NodeRecord>
     restoreNode: (request: NodeIdRequest) => Promise<NodeRecord>
   }
+  files: {
+    getOverview: () => Promise<ManagedFileOverview>
+    importFromPicker: () => Promise<ManagedFileRecord | null>
+    openFile: (request: FileIdRequest) => Promise<FileActionResult>
+    showFileInFolder: (request: FileIdRequest) => Promise<FileActionResult>
+    softDeleteFile: (request: FileIdRequest) => Promise<ManagedFileRecord>
+    restoreFile: (request: FileIdRequest) => Promise<ManagedFileRecord>
+    copyToLesson: (request: CopyFileToLessonRequest) => Promise<ManagedFileRecord>
+    copyToStudent: (request: CopyFileToStudentRequest) => Promise<ManagedFileRecord>
+  }
 }
 
 export {
@@ -89,6 +122,13 @@ export {
   isRenameNodeRequest,
   isStudentRecord,
   isWorkspaceInfo,
+  isCopyFileToLessonRequest,
+  isCopyFileToStudentRequest,
+  isFileActionResult,
+  isFileIdRequest,
+  isManagedFileOverview,
+  isManagedFileRecord,
+  isNullableManagedFileRecord,
   parseIpcResponse,
   TeacherWorkbenchError,
 }

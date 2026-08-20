@@ -209,3 +209,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线与候选提交：L01 不是审核点；下一里程碑为 L02，L04 前不得进入搜索阶段。
 - 已知限制：基础树采用按钮/列表，没有拖拽、1000+ 节点优化或 UI 软删除菜单；managed 文件和素材副本留给 L02，属于 Lean 计划内范围，不构成阻塞。
 - 下一任务可依赖的接口：schema v2、`NodeService`/`CoreDataService`、`window.teacherWorkbench.core` 类型化 API，以及课程/学生/课次/note 的 overview 数据。
+
+## 2026-08-20 · L02 · DONE
+
+- 关键改动：在 schema v3 中新增 `files`、`lesson_files`、`student_files`；实现 `ManagedFileService`，将导入和课次/学生副本写入 `files/objects/<uuid>/content`，使用同目录临时文件、可读性/大小校验和原子重命名，再以 SQLite transaction 登记。支持受控打开、显示位置、软删除/恢复和 `origin_file_id` 独立副本关系。
+- 边界改动：新增显式 `files:*` IPC 白名单与 Preload runtime guards；导入只由 Main 内部 native picker 提供源路径，Renderer 只能传空请求或登记 file ID/目标 ID，任意 Renderer 路径字段、路径穿越和未登记对象均拒绝。
+- 验证结果：`npm test` ✅（12 files / 32 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`git diff --check` ✅。测试覆盖导入/打开、两个课次与学生副本隔离、软删除/恢复、路径越界/未登记 ID、复制失败清理、IPC 注册注销和稳定错误响应。
+- 人工/真实环境验证：L02 使用系统临时目录和脱敏文本 fixture，不接触真实教学资料；Electron 原生窗口 UI 资料页面留给 L03，未把 L03 范围提前并入本里程碑。
+- Git 任务提交：待 staged diff 审查后创建 `lean(L02): managed files and materials` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：不适用；L02 不是 Sol 审核闸门，下一里程碑为 L03，L04 完成后才送 Sol 审核并停止。
+- 已知限制 / Later：文件页面、素材/学生页面入口、外部编辑后 size/mtime/Hash 刷新核对属于 L03；不实现后台 watcher、external roots、去重、精细进度或断点续传。
+- 下一任务可依赖的接口：schema v3、`ManagedFileService`、`window.teacherWorkbench.files` 类型化 API、`files/objects/<uuid>/content` 受控布局和 `MANAGED_FILE_ERROR` 错误码。

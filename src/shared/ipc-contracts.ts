@@ -17,15 +17,28 @@ export const CORE_IPC_CHANNELS = {
   restoreNode: 'core:restore-node',
 } as const
 
+export const FILE_IPC_CHANNELS = {
+  getManagedFileOverview: 'files:get-overview',
+  importFromPicker: 'files:import-from-picker',
+  openFile: 'files:open',
+  showFileInFolder: 'files:show-in-folder',
+  softDeleteFile: 'files:soft-delete',
+  restoreFile: 'files:restore',
+  copyToLesson: 'files:copy-to-lesson',
+  copyToStudent: 'files:copy-to-student',
+} as const
+
 export type IpcChannel =
   | (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
   | (typeof CORE_IPC_CHANNELS)[keyof typeof CORE_IPC_CHANNELS]
+  | (typeof FILE_IPC_CHANNELS)[keyof typeof FILE_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
   UNKNOWN_CHANNEL: 'UNKNOWN_CHANNEL',
   WORKSPACE_UNAVAILABLE: 'WORKSPACE_UNAVAILABLE',
   CORE_DATA_ERROR: 'CORE_DATA_ERROR',
+  MANAGED_FILE_ERROR: 'MANAGED_FILE_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   INVALID_RESPONSE: 'INVALID_RESPONSE',
 } as const

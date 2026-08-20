@@ -22,7 +22,7 @@
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
 | L01 核心数据与基础树 | DONE | schema v2、NodeService、课程/学生/课次与 note、类型化 core IPC、基础树 UI；24 tests、typecheck、lint、build 与隔离 Windows UI smoke 通过 |
-| L02 managed 文件与素材 | TODO | |
+| L02 managed 文件与素材 | DONE | schema v3、受控对象目录、导入/独立副本/软删除恢复、文件 IPC 与 Preload 边界完成；32 tests、typecheck、lint 通过 |
 | L03 文件页面与刷新 | TODO | |
 | L04 管资料阶段闸门 | TODO | |
 | L05 搜索核心 | TODO | |
