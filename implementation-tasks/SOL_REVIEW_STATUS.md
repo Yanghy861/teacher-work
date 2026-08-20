@@ -11,7 +11,7 @@
 
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|
-| T03 | T01–T03 | PENDING | | | |
+| T03 | T01–T03 | AWAITING_REVIEW | e360204499552029f86be0afbcd1096c7fa38b9d | | T03 任务提交已完成，等待 Sol 审核 |
 | T08 | T04–T08 | PENDING | | | |
 | T15 | T09–T15 | PENDING | | | |
 | T20 | T16–T20 | PENDING | | | |

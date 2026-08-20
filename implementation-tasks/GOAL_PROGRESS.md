@@ -59,7 +59,7 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 修改文件：`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/main/ipc/app-ipc.ts`、`src/main/logging/structured-logger.ts`、`src/main/logging/main-error-handlers.ts`、`src/main/index.ts`、`src/renderer/App.tsx`、`src/renderer/main.tsx`、`src/renderer/renderer-error-boundary.tsx`、`src/renderer/styles.css`、`tests/security-baseline.test.ts`、`tests/renderer-boundary.test.ts`、`tests/ipc-security.test.ts`、`tests/logging-redaction.test.ts`、`tests/renderer-error-boundary.test.ts`、`docs/t03-secure-ipc-observability.md`、本文件与 `STATUS.md`。
 - 验证命令与结果：`npm run typecheck` ✅；`npm run lint` ✅；`npm test` ✅（7 files / 16 tests）；`npm run build` ✅（Electron Main、Preload、Renderer 均产出）；Electron 43.4.1 的 Node runtime 加载 `better-sqlite3` 并执行内存 SQLite 查询 ✅。测试覆盖合法/非法 payload、路径与 SQL 注入、未知 channel、稳定错误响应、白名单注册/注销、脱敏、正文省略、Renderer Error Boundary 和 Renderer 进程边界。
 - 人工/真实环境验证：本任务未写入真实教学资料；IPC 业务验证使用依赖注入的 Main service 和临时/内存测试数据，Electron 原生模块 ABI 已在当前 Electron runtime 中单独验证。T01 的真实 Windows 窗口验收仍以已有 T01 DONE 记录为准。
-- Git 任务提交：待完成送审前，先创建 `task(T03): secure ipc and observability baseline` 本地任务提交；不 push。
-- 若为审核点，审核基线与候选提交：T03 是 Sol 审核点，审核基线为 `checkpoint-T00`；完成任务提交后将记录候选 SHA，更新 `SOL_REVIEW_STATUS.md` 为 `AWAITING_REVIEW`，创建 `review(T03): request Sol review`，然后立即停止，不进入 T04。
+- Git 任务提交：`e360204499552029f86be0afbcd1096c7fa38b9d`（`task(T03): secure ipc and observability baseline`）已创建；不 push。
+- 若为审核点，审核基线与候选提交：T03 是 Sol 审核点，审核基线为 `checkpoint-T00`；候选提交 SHA 为 `e360204499552029f86be0afbcd1096c7fa38b9d`，`SOL_REVIEW_STATUS.md` 已标为 `AWAITING_REVIEW`；送审提交为 `review(T03): request Sol review`，提交后立即停止，不进入 T04。
 - 已知限制：T03 只提供工作区信息示例和基础错误/日志边界，不实现业务 CRUD；未知 channel 在 Electron 原生层会被拒绝，内部可测试路由同时返回稳定 `UNKNOWN_CHANNEL` 错误。
 - 下一任务可依赖的接口：`window.teacherWorkbench.app.getVersion()`、`window.teacherWorkbench.workspace.getInfo()`、`IpcResponse<T>`/错误码、`registerAppIpc`、`StructuredLogger`、`RendererErrorBoundary`。
