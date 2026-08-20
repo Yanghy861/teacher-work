@@ -3,6 +3,8 @@ import { release } from 'node:os'
 import { join } from 'node:path'
 
 import { registerAppIpc } from './ipc/app-ipc'
+import { registerCoreIpc } from './ipc/core-ipc'
+import { CoreDataService } from './data/core-data-service'
 import { installMainErrorHandlers } from './logging/main-error-handlers'
 import { StructuredLogger } from './logging/structured-logger'
 import { applyWindowsCompatibility } from './windows-compat'
@@ -15,7 +17,9 @@ import type { WorkspaceInfo } from '../shared/ipc-contracts'
 
 let mainWindow: BrowserWindow | null = null
 let workspaceHandle: WorkspaceHandle | null = null
+let coreDataService: CoreDataService | null = null
 let unregisterAppIpc: (() => void) | null = null
+let unregisterCoreIpc: (() => void) | null = null
 let servicesClosed = false
 
 const logger = new StructuredLogger()
@@ -23,9 +27,24 @@ const removeMainErrorHandlers = installMainErrorHandlers(logger)
 
 function getWorkspaceInfo(): WorkspaceInfo {
   if (workspaceHandle === null) {
-    workspaceHandle = initializeDefaultWorkspace(app.getPath('appData'), app.getAppPath())
+    const smokeAppDataPath = process.env.TEACHER_WORKBENCH_L01_SMOKE_APP_DATA?.trim()
+    workspaceHandle = initializeDefaultWorkspace(
+      smokeAppDataPath || app.getPath('appData'),
+      app.getAppPath(),
+    )
   }
   return workspaceHandle.identity
+}
+
+function getCoreData(): CoreDataService {
+  if (workspaceHandle === null) {
+    getWorkspaceInfo()
+  }
+  if (workspaceHandle === null) {
+    throw new Error('Workspace was not initialized')
+  }
+  coreDataService ??= new CoreDataService(workspaceHandle.database.raw)
+  return coreDataService
 }
 
 function createMainWindow(): BrowserWindow {
@@ -73,6 +92,7 @@ void app.whenReady().then(() => {
     },
     logger,
   )
+  unregisterCoreIpc = registerCoreIpc(ipcMain, { getCoreData }, logger)
   mainWindow = createMainWindow()
 
   app.on('activate', () => {
@@ -90,6 +110,8 @@ app.on('before-quit', () => {
   }
   servicesClosed = true
   unregisterAppIpc?.()
+  unregisterCoreIpc?.()
+  coreDataService = null
   workspaceHandle?.close()
   removeMainErrorHandlers()
 })

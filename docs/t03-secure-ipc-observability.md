@@ -2,14 +2,16 @@
 
 ## 单向窄边界
 
-Renderer 只能通过 Preload 暴露的两个命名方法通信：
+T03 的基础 App/Workspace IPC 仍通过两个命名方法通信；L01 在同一边界上追加独立的 `core` 类型化方法，未暴露通用 invoke：
 
 ~~~text
 window.teacherWorkbench.app.getVersion()
 window.teacherWorkbench.workspace.getInfo()
+window.teacherWorkbench.core.getOverview()
+window.teacherWorkbench.core.createCourse({ title, mode })
 ~~~
 
-Preload 内部只接受 IpcChannel 联合类型和两个固定 channel 常量，向 Main 发送空请求对象；没有暴露通用 invoke、任意路径、SQL 或原始 ipcRenderer。Main 通过 registerAppIpc 集中注册和注销同一白名单，dispatchAppIpc 对 channel、请求和服务返回值做运行时校验。getWorkspaceInfo 在 Renderer 启动时贯通到 initializeDefaultWorkspace，返回工作区身份和 schema 版本，不把路径输入交给 Renderer。
+Preload 内部只接受 `IpcChannel` 联合类型和固定 channel 常量，向 Main 发送结构化且运行时校验的请求；没有暴露通用 invoke、任意路径、SQL 或原始 ipcRenderer。Main 通过 `registerAppIpc`/`registerCoreIpc` 分别注册和注销白名单，dispatch 层校验 channel、请求和服务返回值。`getWorkspaceInfo` 在 Renderer 启动时贯通到 `initializeDefaultWorkspace`，返回工作区身份和 schema 版本，不把路径输入交给 Renderer。
 
 共享契约定义 IpcResponse<T>、请求类型、WorkspaceInfo、错误码和响应解析器。内部异常只映射为稳定的 WORKSPACE_UNAVAILABLE 或 INTERNAL_ERROR；返回值不包含 Main 堆栈。Renderer 将稳定错误转换为 TeacherWorkbenchError，根组件由 RendererErrorBoundary 兜底。
 

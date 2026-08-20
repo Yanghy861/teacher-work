@@ -198,3 +198,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 送审证据：Markdown 相对链接检查通过；T08 gate 23/23；typecheck、lint、8 files / 18 tests、production build 全部通过；26 个范围文件已在候选提交中可审计保存。
 - 建议 Sol 重点：确认简化没有放松原资料保护、Renderer/Main/秘密边界、managed 原子写入、路径防逃逸、后台长任务和 AI 草稿隔离；确认 Goal 的高成本非核心替代规则与四个后续阶段闸门一致。
 - 状态：T08 已重新设为 `AWAITING_REVIEW`；创建本次 `review(T08): request Sol review` 元数据提交后停止，不进入 L01、不创建通过标签、不 push。
+
+## 2026-08-20 23:20 +08:00 · L01 · DONE
+
+- 关键改动：在 T02 SQLite migration runner 上新增 schema v2；实现 `nodes` 三层课程树、课程模式、学生实体、课程—学生关系和普通 note。`NodeService` 提供创建/读取/重命名/移动/排序/软删除/恢复，校验父级类型和循环；所有正式写入使用 Main 侧 transaction。新增 `CoreDataService`、core IPC 白名单及 Preload runtime guards；Renderer 的“我的课程”页提供课程、阶段、课次、学生和记录的按钮/表单/列表流程。
+- 修改文件：`src/main/db/migrations.ts`、`src/main/data/node-service.ts`、`src/main/data/core-data-service.ts`、`src/main/ipc/core-ipc.ts`、`src/shared/core-contracts.ts`、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/main/index.ts`、`src/renderer/App.tsx`、`src/renderer/course-dashboard.tsx`、`src/renderer/styles.css`、`tests/core-data.test.ts`、`tests/core-ipc.test.ts`、`tests/workspace-foundation.test.ts`、`docs/l01-core-data-tree.md`、`docs/t02-workspace-sqlite.md`、`docs/t03-secure-ipc-observability.md`、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`npm test` ✅（10 files / 24 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main/Preload/Renderer）。额外核对迁移版本为 v2、额外 payload/SQL 字段被拒绝、循环移动和子树恢复负向路径通过。
+- 人工/真实环境验证：在 Windows 11 25H2/build 26200 的真实 Electron 窗口完成课程 → 阶段 → 课次 → 学生 → 记录；页面即时显示完整树与 note，关闭后读取隔离临时 `workspace.db` 确认节点、link 和 note 均落盘。第一次把临时 root 放在仓库下被 `WORKSPACE_PATH_INSIDE_APP` 正确拒绝，改用系统临时目录后通过；未接触真实教学资料。
+- Git 任务提交：待最终 staged diff 审查后创建 `lean(L01): core data and tree` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：L01 不是审核点；下一里程碑为 L02，L04 前不得进入搜索阶段。
+- 已知限制：基础树采用按钮/列表，没有拖拽、1000+ 节点优化或 UI 软删除菜单；managed 文件和素材副本留给 L02，属于 Lean 计划内范围，不构成阻塞。
+- 下一任务可依赖的接口：schema v2、`NodeService`/`CoreDataService`、`window.teacherWorkbench.core` 类型化 API，以及课程/学生/课次/note 的 overview 数据。

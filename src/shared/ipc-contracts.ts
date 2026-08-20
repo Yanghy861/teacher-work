@@ -3,12 +3,29 @@ export const IPC_CHANNELS = {
   getWorkspaceInfo: 'workspace:get-info',
 } as const
 
-export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
+export const CORE_IPC_CHANNELS = {
+  getCoreOverview: 'core:get-overview',
+  createCourse: 'core:create-course',
+  createPeriod: 'core:create-period',
+  createLesson: 'core:create-lesson',
+  createStudent: 'core:create-student',
+  createNote: 'core:create-note',
+  renameNode: 'core:rename-node',
+  moveNode: 'core:move-node',
+  reorderNode: 'core:reorder-node',
+  softDeleteNode: 'core:soft-delete-node',
+  restoreNode: 'core:restore-node',
+} as const
+
+export type IpcChannel =
+  | (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
+  | (typeof CORE_IPC_CHANNELS)[keyof typeof CORE_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
   UNKNOWN_CHANNEL: 'UNKNOWN_CHANNEL',
   WORKSPACE_UNAVAILABLE: 'WORKSPACE_UNAVAILABLE',
+  CORE_DATA_ERROR: 'CORE_DATA_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   INVALID_RESPONSE: 'INVALID_RESPONSE',
 } as const

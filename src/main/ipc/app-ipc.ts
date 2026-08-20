@@ -31,7 +31,10 @@ export interface IpcLogger {
   error(event: string, error: unknown, details?: Record<string, unknown>): void
 }
 
-export const APP_IPC_CHANNELS: readonly IpcChannel[] = Object.values(IPC_CHANNELS)
+export const APP_IPC_CHANNELS: readonly IpcChannel[] = [
+  IPC_CHANNELS.getAppVersion,
+  IPC_CHANNELS.getWorkspaceInfo,
+]
 
 class IpcRequestError extends Error {
   readonly code: IpcErrorCode

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import type { TeacherWorkbenchError } from '../shared/ipc-contracts'
+import CourseDashboard from './course-dashboard'
 
 const navigationItems = ['我的课程', '素材库', '学生', '设置'] as const
 
@@ -55,11 +56,15 @@ export default function App(): React.JSX.Element {
           </div>
           <div className="status-pill">{workspaceStatus}</div>
         </header>
-        <section className="placeholder-card" aria-live="polite">
-          <div className="placeholder-icon" aria-hidden="true">✦</div>
-          <h2>{activeItem}功能即将就绪</h2>
-          <p>当前任务只建立安全的桌面应用骨架，业务功能将在后续任务中按顺序实现。</p>
-        </section>
+        {activeItem === '我的课程' ? (
+          <CourseDashboard />
+        ) : (
+          <section className="placeholder-card" aria-live="polite">
+            <div className="placeholder-icon" aria-hidden="true">✦</div>
+            <h2>{activeItem}功能将在后续里程碑接入</h2>
+            <p>当前先完成课程、阶段、课次和学生记录的核心管理流程。</p>
+          </section>
+        )}
       </main>
     </div>
   )

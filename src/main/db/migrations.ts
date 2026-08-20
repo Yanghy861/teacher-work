@@ -21,6 +21,62 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 2,
+    name: 'create_core_data_tree',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS nodes (
+          id TEXT PRIMARY KEY NOT NULL,
+          parent_id TEXT REFERENCES nodes(id) ON DELETE RESTRICT,
+          kind TEXT NOT NULL CHECK (kind IN ('course', 'period', 'lesson')),
+          title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+          course_mode TEXT CHECK (course_mode IN ('class', 'one_to_one') OR course_mode IS NULL),
+          sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+          content_md TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_nodes_parent_sort
+          ON nodes (parent_id, sort_order, created_at, id);
+        CREATE INDEX IF NOT EXISTS idx_nodes_deleted
+          ON nodes (deleted_at);
+
+        CREATE TABLE IF NOT EXISTS students (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS course_students (
+          course_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+          student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (course_id, student_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_course_students_student
+          ON course_students (student_id, course_id);
+
+        CREATE TABLE IF NOT EXISTS notes (
+          id TEXT PRIMARY KEY NOT NULL,
+          student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+          lesson_id TEXT REFERENCES nodes(id) ON DELETE SET NULL,
+          body_md TEXT NOT NULL CHECK (length(trim(body_md)) > 0),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_notes_student_created
+          ON notes (student_id, created_at, id);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

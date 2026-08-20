@@ -1,0 +1,107 @@
+import Database from 'better-sqlite3'
+import { describe, expect, it } from 'vitest'
+
+import { CoreDataService } from '../src/main/data/core-data-service'
+import { runMigrations } from '../src/main/db/migrations'
+
+function createService(): { database: Database.Database; service: CoreDataService } {
+  const database = new Database(':memory:')
+  database.pragma('foreign_keys = ON')
+  runMigrations(database)
+  let nextId = 0
+  const service = new CoreDataService(database, {
+    idFactory: () => `test-id-${nextId++}`,
+    now: () => '2026-08-20T00:00:00.000Z',
+  })
+  return { database, service }
+}
+
+describe('L01 core data tree', () => {
+  it('moves nested nodes without losing children and rejects cycles', () => {
+    const { database, service } = createService()
+    try {
+      const firstCourse = service.nodes.createCourse('班课 A', 'class')
+      const secondCourse = service.nodes.createCourse('班课 B', 'class')
+      const firstPeriod = service.nodes.createPeriod(firstCourse.id, '2026 春')
+      const secondPeriod = service.nodes.createPeriod(firstCourse.id, '2028 秋')
+      const lesson = service.nodes.createLesson(firstPeriod.id, '第一课')
+
+      const moved = service.nodes.moveNode(firstPeriod.id, secondCourse.id)
+      expect(moved.parentId).toBe(secondCourse.id)
+      expect(service.nodes.getNode(lesson.id)?.parentId).toBe(firstPeriod.id)
+      expect(service.nodes.getNode(secondPeriod.id)?.parentId).toBe(firstCourse.id)
+
+      expect(() => service.nodes.moveNode(firstPeriod.id, lesson.id)).toThrowError(
+        expect.objectContaining({ code: 'NODE_CYCLE' }),
+      )
+    } finally {
+      database.close()
+    }
+  })
+
+  it('soft deletes and restores a subtree while preserving its hierarchy', () => {
+    const { database, service } = createService()
+    try {
+      const course = service.nodes.createCourse('一对一', 'one_to_one')
+      const period = service.nodes.createPeriod(course.id, '六下')
+      const lesson = service.nodes.createLesson(period.id, '有理数')
+
+      const deleted = service.nodes.softDeleteNode(period.id)
+      expect(deleted.deletedAt).toBe('2026-08-20T00:00:00.000Z')
+      expect(service.nodes.getNode(period.id)).toBeUndefined()
+      expect(service.nodes.getNode(lesson.id)).toBeUndefined()
+      expect(service.nodes.getNode(lesson.id, true)?.parentId).toBe(period.id)
+
+      const restored = service.nodes.restoreNode(period.id)
+      expect(restored.deletedAt).toBeNull()
+      expect(service.nodes.getNode(lesson.id)?.parentId).toBe(period.id)
+    } finally {
+      database.close()
+    }
+  })
+
+  it('supports discontinuous one-to-one periods, course links and student notes', () => {
+    const { database, service } = createService()
+    try {
+      const course = service.nodes.createCourse('张三一对一', 'one_to_one')
+      const spring = service.nodes.createPeriod(course.id, '2026 春·六下')
+      const autumn = service.nodes.createPeriod(course.id, '2028 秋·八上')
+      const lesson = service.nodes.createLesson(autumn.id, '二次函数')
+      const student = service.createStudentForCourse(course.id, '张三')
+      const note = service.createNote(student.id, '本次记录：能独立完成基础题。', lesson.id)
+
+      const overview = service.getOverview()
+      expect(overview.nodes.filter((node) => node.kind === 'period').map((node) => node.title)).toEqual([
+        '2026 春·六下',
+        '2028 秋·八上',
+      ])
+      expect(overview.courseStudentLinks).toEqual([
+        { courseId: course.id, studentId: student.id, createdAt: '2026-08-20T00:00:00.000Z' },
+      ])
+      expect(overview.notes).toEqual([note])
+      expect(service.listStudentsForCourse(course.id)).toEqual([student])
+      expect(spring.parentId).toBe(course.id)
+    } finally {
+      database.close()
+    }
+  })
+
+  it('renames and reorders siblings through transactional writes', () => {
+    const { database, service } = createService()
+    try {
+      const course = service.nodes.createCourse('课程', 'class')
+      const first = service.nodes.createPeriod(course.id, '第一阶段')
+      const second = service.nodes.createPeriod(course.id, '第二阶段')
+      service.nodes.renameNode(first.id, '已重命名阶段')
+      service.nodes.reorderNode(second.id, 0)
+
+      const periods = service.nodes
+        .listNodes()
+        .filter((node) => node.parentId === course.id)
+      expect(periods.map((period) => period.title)).toEqual(['第二阶段', '已重命名阶段'])
+      expect(periods.map((period) => period.sortOrder)).toEqual([0, 1])
+    } finally {
+      database.close()
+    }
+  })
+})
