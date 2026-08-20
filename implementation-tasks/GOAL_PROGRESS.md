@@ -151,3 +151,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：`officeparser` 的 DOCX heading、复杂表格/公式与打包资源仍需后续格式任务/Windows 交付复核；搜索语料对部分术语无正例；WPS 自动恢复/大文件/保存中退出和外部文件锁未宣称；跨卷/网络路径与最终打包恢复仍未证实。上述均已列为 ADR known limitations，不作为未解释的“通过”。
 - 下一任务可依赖的接口：四份 ADR、`spikes/decision-gate/verify-gate.mjs`、精确锁定的候选版本，以及 `docs/spike-results.md` 的样本/方法/指标/失败边界。
 - 若阻塞，缺少条件与最小解阻动作：无；T08 任务证据齐全，现按硬闸门协议送 Sol 审核并停止。
+
+## 2026-08-20 18:11 +08:00 · T08 · REVIEW_HANDOFF
+
+- 审核区间：T04–T08；审核基线：`checkpoint-T03-pass`。
+- 候选提交 SHA：`43e368d1f423fdaf60a586dd6da94d219fced719`（`task(T08): freeze spike decisions`）。
+- 审核状态：`SOL_REVIEW_STATUS.md` 已将 T08 改为 `AWAITING_REVIEW`；Luna 未修改为 `PASS`，未创建 `checkpoint-T08-pass` 标签。
+- 送审证据：四项 Spike 均为 `DONE`；四份 ADR 已冻结方案与限制；`node spikes/decision-gate/verify-gate.mjs --require-done` 为 19/19；`npm run typecheck`、`npm run lint`、`npm test`（7 files/17 tests）、`npm run build` 通过。
+- 建议 Sol 重点：审查 `T04–T07` 真实证据是否足以支撑 ADR 决策；确认 `officeparser@7.3.0` 与 `chokidar@4.0.3` 的许可证/维护/打包边界；确认 SearchNormalizer/短词 fallback/TokenExtractor 二次校验、watcher 单文件任务重检、临时文件与 `processing` 恢复顺序没有越过 V1 范围；复核所有已知限制未被写成通过。
+- 下一步：创建 `review(T08): request Sol review` 本地送审提交后停止，等待 Sol 审核；不进入 T09，不 push。

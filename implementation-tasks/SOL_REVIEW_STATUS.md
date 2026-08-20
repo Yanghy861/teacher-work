@@ -12,7 +12,7 @@
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|
 | T03 | T01–T03 | PASS | bfad00596e2b8ce5e0958829169d0141f99528e9 | checkpoint-T03-pass | `docs/reviews/T03-sol-review.md` 第二次复审通过；完整 Node 内置模块守卫与独立遍历探针均通过 |
-| T08 | T04–T08 | PENDING | | | |
+| T08 | T04–T08 | AWAITING_REVIEW | 43e368d1f423fdaf60a586dd6da94d219fced719 | | T08 task commit completed; four Spike ADRs, exact candidate pins, gate check 19/19, typecheck/lint/test/build passed |
 | T15 | T09–T15 | PENDING | | | |
 | T20 | T16–T20 | PENDING | | | |
 | T24 | T21–T24 | PENDING | | | |
