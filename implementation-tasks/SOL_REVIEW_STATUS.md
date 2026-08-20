@@ -11,7 +11,7 @@
 
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|
-| T03 | T01–T03 | AWAITING_REVIEW | bfad00596e2b8ce5e0958829169d0141f99528e9 | | `docs/reviews/T03-sol-review.md` 第一次复审修复：从 `builtinModules` 完整禁止裸名与 `node:` Node 内置模块，并加入 `http`/`worker_threads`/`inspector` 回归覆盖 |
+| T03 | T01–T03 | PASS | bfad00596e2b8ce5e0958829169d0141f99528e9 | checkpoint-T03-pass | `docs/reviews/T03-sol-review.md` 第二次复审通过；完整 Node 内置模块守卫与独立遍历探针均通过 |
 | T08 | T04–T08 | PENDING | | | |
 | T15 | T09–T15 | PENDING | | | |
 | T20 | T16–T20 | PENDING | | | |

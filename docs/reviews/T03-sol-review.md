@@ -104,3 +104,27 @@ import http from 'node:http'
 相关位置：`eslint.config.mjs:20`、`tests/renderer-boundary.test.ts:25`。
 
 Luna 仍不得进入 T04。完成此单项最小修复后，重新运行 typecheck、lint、全部测试和 production build，创建新的 `fix(T03-review): <摘要>` 提交，更新候选 SHA 并再次标记 `AWAITING_REVIEW` 后停止。本次仍不得创建 `checkpoint-T03-pass` 标签。
+
+## 2026-08-20 15:42 +08:00 · 第二次复审
+
+- 新候选提交：`bfad00596e2b8ce5e0958829169d0141f99528e9`
+- 新送审提交：`a923c3f1efab3db0744cbd62088f7145b348f62c`
+- 结论：`PASS`
+
+### 范围与修复确认
+
+- `checkpoint-T00`、上一轮审核提交 `ab383bc` 均为新候选提交的祖先，新候选提交又是当前送审提交的祖先；送审提交只修改 `GOAL_PROGRESS.md` 与 `SOL_REVIEW_STATUS.md`，未混入产品实现。
+- 本轮候选只修改 `eslint.config.mjs` 与 `tests/renderer-boundary.test.ts`。ESLint 守卫和 TypeScript AST 守卫均直接使用 `node:module` 的 `builtinModules`，统一生成裸模块名与 `node:` 前缀名，不再依赖少量手写 Node 模块枚举。
+- 回归夹具覆盖裸 `http`、`worker_threads`、`inspector`，以及原有静态、副作用、动态导入、require 别名和 Node 全局形式。
+- 独立 ESLint API 探针遍历当前 Node 运行时生成的全部 144 个裸名及 `node:` 名入口，全部触发 `no-restricted-imports`，漏拦截数为 0。
+
+### 独立验证结果
+
+- `npm run typecheck`：通过。
+- `npm run lint`：通过。
+- `npm test`：通过，7 个测试文件、17 项测试。
+- `npm run build`：通过，Main、Preload、Renderer 均生成 production 产物。
+- Electron 43.4.1 / Node 24.18.1 / modules ABI 148：可加载 `better-sqlite3`，内存 SQLite 查询返回 1。
+- `git diff --check checkpoint-T00..bfad005`：通过；审核结束前工作区干净。
+
+上一轮唯一剩余的 P2 Renderer 裸 Node 内置模块绕过已关闭；初审中另外两项 P1 与 Renderer 其余边界问题已在第一次复审确认修复。T01–T03 无未解决的阻塞问题，可以创建 `review(T03): pass` 审核提交，并在该提交上创建带说明的本地标签 `checkpoint-T03-pass`。
