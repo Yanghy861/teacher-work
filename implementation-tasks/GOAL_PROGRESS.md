@@ -71,3 +71,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 验证命令与结果：`npm run typecheck` ✅；`npm run lint` ✅；`npm test` ✅（7 files / 17 tests）；`npm run build` ✅；Electron 43.4.1 Node runtime 加载 `better-sqlite3` 并执行内存 SQLite 查询（返回 1）✅。
 - Git 任务提交：`a3ea75af88e06b14af20a4a643c68db7d9cf83dc`（`fix(T03-review): close Sol findings`）已创建；不 push。
 - 审核交接：T03 审核区间仍为 T01–T03；新候选 SHA 为 `a3ea75af88e06b14af20a4a643c68db7d9cf83dc`，`SOL_REVIEW_STATUS.md` 已改回 `AWAITING_REVIEW`；将创建新的 `review(T03): request Sol review`，随后停止，不进入 T04，不创建通过标签。
+
+## 2026-08-20 15:31 +08:00 · T03 · REVIEW_HANDOFF
+
+- 关键改动：修复第一次复审剩余的 Renderer 裸 Node 内置模块绕过问题；ESLint 与 TypeScript AST 守卫均使用 Node `builtinModules` 生成完整的裸模块名和 `node:` 模块名集合，不再手写少数 Node 内置模块；回归夹具新增裸 `http`、`worker_threads` 和未手写枚举的 `inspector`。
+- 修改文件：`eslint.config.mjs`、`tests/renderer-boundary.test.ts`、本文件与 `SOL_REVIEW_STATUS.md`。
+- 验证命令与结果：`npm run typecheck` ✅；`npm run lint` ✅；`npm test` ✅（7 files / 17 tests）；`npm run build` ✅（Main、Preload、Renderer 均生成 production 产物）；Electron 43.4.1 主进程 ABI 探针加载 `better-sqlite3` 并执行内存 SQLite 查询，Node 24.18.1、modules ABI 148、查询返回 1 ✅。一次性探针已移除，未进入提交。
+- Git 任务提交：`bfad00596e2b8ce5e0958829169d0141f99528e9`（`fix(T03-review): cover all Node builtin modules`），不 push。
+- 若为审核点，审核基线与候选提交：T03 审核区间为 T01–T03，基线为 `checkpoint-T00`；候选 SHA 已更新为 `bfad00596e2b8ce5e0958829169d0141f99528e9`，`SOL_REVIEW_STATUS.md` 已改为 `AWAITING_REVIEW`；待创建新的 `review(T03): request Sol review` 送审提交后立即停止，不进入 T04。
+- 已知限制：等待 Sol 复审；Luna 未标记 `PASS`，未创建 `checkpoint-T03-pass` 标签。
+- 下一任务可依赖的接口：本次仅收紧既有 Renderer 架构边界守卫，T04 仍须等待 T03 Sol 审核通过后才能开始。

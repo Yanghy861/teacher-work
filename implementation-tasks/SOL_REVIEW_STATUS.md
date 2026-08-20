@@ -11,7 +11,7 @@
 
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|
-| T03 | T01–T03 | CHANGES_REQUIRED | a3ea75af88e06b14af20a4a643c68db7d9cf83dc | | `docs/reviews/T03-sol-review.md` 第一次复审：裸 `http`/`worker_threads` 等 Node 内置模块仍可绕过 Renderer 守卫 |
+| T03 | T01–T03 | AWAITING_REVIEW | bfad00596e2b8ce5e0958829169d0141f99528e9 | | `docs/reviews/T03-sol-review.md` 第一次复审修复：从 `builtinModules` 完整禁止裸名与 `node:` Node 内置模块，并加入 `http`/`worker_threads`/`inspector` 回归覆盖 |
 | T08 | T04–T08 | PENDING | | | |
 | T15 | T09–T15 | PENDING | | | |
 | T20 | T16–T20 | PENDING | | | |
