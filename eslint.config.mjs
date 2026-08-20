@@ -1,6 +1,14 @@
 import eslint from '@eslint/js'
 import globals from 'globals'
+import { builtinModules } from 'node:module'
 import tseslint from 'typescript-eslint'
+
+const nodeBuiltinModuleNames = new Set(
+  builtinModules.flatMap((moduleName) => {
+    const bareModuleName = moduleName.startsWith('node:') ? moduleName.slice(5) : moduleName
+    return [bareModuleName, `node:${bareModuleName}`]
+  }),
+)
 
 export default tseslint.config(
   {
@@ -39,12 +47,8 @@ export default tseslint.config(
         'error',
         {
           paths: [
+            ...nodeBuiltinModuleNames,
             'electron',
-            'fs',
-            'path',
-            'os',
-            'crypto',
-            'child_process',
             'better-sqlite3',
             'sqlite3',
           ],

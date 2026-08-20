@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs'
+import { builtinModules } from 'node:module'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as ts from 'typescript'
@@ -19,13 +20,14 @@ const forbiddenGlobals = new Set([
   'clearImmediate',
   'NodeJS',
 ])
+const forbiddenNodeModuleNames = new Set(
+  builtinModules.flatMap((moduleName) => {
+    const bareModuleName = moduleName.startsWith('node:') ? moduleName.slice(5) : moduleName
+    return [bareModuleName, `node:${bareModuleName}`]
+  }),
+)
 const forbiddenBareModules = new Set([
   'electron',
-  'fs',
-  'path',
-  'os',
-  'crypto',
-  'child_process',
   'better-sqlite3',
   'sqlite3',
 ])
@@ -115,6 +117,7 @@ function isForbiddenModule(moduleName: string): boolean {
   const normalized = moduleName.replace(/\\/g, '/')
   return (
     moduleName.startsWith('node:') ||
+    forbiddenNodeModuleNames.has(moduleName) ||
     forbiddenBareModules.has(moduleName) ||
     /(^|\/)main(\/|$)/.test(normalized)
   )
@@ -146,6 +149,9 @@ describe('renderer process boundary', () => {
     const fixture = [
       "import 'node:fs'",
       "import fs from 'fs'",
+      "import http from 'http'",
+      "import { Worker } from 'worker_threads'",
+      "import inspector from 'inspector'",
       "const dynamicallyLoaded = import('node:path')",
       "const loaded = require('electron')",
       'const load = require',
@@ -161,6 +167,9 @@ describe('renderer process boundary', () => {
       expect.arrayContaining([
         expect.stringContaining('node:fs'),
         expect.stringContaining('forbidden static import fs'),
+        expect.stringContaining('forbidden static import http'),
+        expect.stringContaining('forbidden static import worker_threads'),
+        expect.stringContaining('forbidden static import inspector'),
         expect.stringContaining('dynamic import is forbidden'),
         expect.stringContaining('require is forbidden'),
         expect.stringContaining('forbidden Node global process'),
