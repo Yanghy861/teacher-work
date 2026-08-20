@@ -5,6 +5,8 @@
     "lib": ["ES2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "allowImportingTsExtensions": false,
     "verbatimModuleSyntax": true,
     "strict": true,

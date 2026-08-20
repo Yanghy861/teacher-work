@@ -26,13 +26,13 @@ temp/
 *.secret
 
 # Local runtime data and real teaching content
-workspace/
-workspaces/
-user-data/
-runtime-data/
-app-data/
-backups/
-managed-files/
+/workspace/
+/workspaces/
+/user-data/
+/runtime-data/
+/app-data/
+/backups/
+/managed-files/
 *.db
 *.db-*
 *.sqlite

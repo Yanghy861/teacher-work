@@ -41,3 +41,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：从 Codex 的受限命令沙箱内直接启动 GUI 会因 Chromium 默认用户目录的 DPAPI/磁盘缓存访问被拒绝而失败；真实 Windows 验收必须在该进程沙箱之外执行。这不改变应用自身 Electron 沙箱配置。
 - 下一任务可依赖的接口：Electron Main/Preload/Renderer/Shared 分层；`window.teacherWorkbench.app.getVersion()` 窄 API；安全窗口配置；Windows build 26200 启动兼容入口。
 - 若阻塞，缺少条件与最小解阻动作：无，T01 已解阻，可从 T02 继续。
+
+## 2026-08-20 14:08 · T02 · DONE
+
+- 关键改动：建立与应用安装目录分离的 `WorkspacePaths` 和默认工作区入口，集中解析 `data/workspace.db`、`files/objects`、`search/search.db`、`cache`、`backups`；加入目录创建、写入探针、非法路径和应用内路径拒绝，错误包含稳定错误码且不回退到程序目录。加入 `better-sqlite3` 连接封装、SQLite pragma、显式 close 生命周期与后续一致性 backup API seam；加入幂等迁移 runner、`schema_migrations`、`workspace_meta`、`workspaceId` 和 `schemaVersion` 持久化。未创建 nodes/files/search/ai_runs 业务表，未实现备份/恢复。
+- 修改文件：`.gitignore`、`package.json`、`package-lock.json`、`tsconfig.json`、`src/main/workspace/workspace-paths.ts`、`src/main/workspace/workspace-service.ts`、`src/main/db/connection.ts`、`src/main/db/migrations.ts`、`tests/workspace-foundation.test.ts`、`docs/t02-workspace-sqlite.md`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm run typecheck` ✅；`npm run lint` ✅；`npm test` ✅（4 files / 10 tests）；`npm run build` ✅（Electron Main、Preload、Renderer 均产出）；T02 专项测试覆盖首次/重复打开、失败迁移回滚、构建目录替换后工作区身份保留、默认路径隔离及非法/应用内/非目录/不可写路径拒绝。
+- 人工/真实环境验证：本任务只涉及本地工作区目录和 SQLite 基础层，未写入开发者真实用户目录；测试工作区均位于系统临时目录，仓库中的 `out` 仍为构建产物并未纳入 Git。
+- Git 任务提交：状态与进度记录、T02 实现和测试将由 `task(T02): establish workspace and sqlite foundation` 本地提交收束；不 push。
+- 若为审核点，审核基线与候选提交：不适用；T02 不是审核点。下一个 Sol 审核点为 T03，T03 完成后必须停止等待审核。
+- 已知限制：SQLite 原生模块的 Electron ABI/打包集成属于后续运行时交付验证；T02 当前提供 Main 侧连接封装和 Node/Vitest 可重复测试，未提前实现 T03 IPC 或 T42 打包流程。
+- 下一任务可依赖的接口：`WorkspacePaths`、`initializeWorkspace`/`initializeDefaultWorkspace`、`WorkspaceDatabase`、`runMigrations`、`workspaceMigrations`、`readWorkspaceIdentity`。
