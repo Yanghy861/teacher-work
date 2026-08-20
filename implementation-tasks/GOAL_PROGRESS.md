@@ -220,3 +220,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线与候选提交：不适用；L02 不是 Sol 审核闸门，下一里程碑为 L03，L04 完成后才送 Sol 审核并停止。
 - 已知限制 / Later：文件页面、素材/学生页面入口、外部编辑后 size/mtime/Hash 刷新核对属于 L03；不实现后台 watcher、external roots、去重、精细进度或断点续传。
 - 下一任务可依赖的接口：schema v3、`ManagedFileService`、`window.teacherWorkbench.files` 类型化 API、`files/objects/<uuid>/content` 受控布局和 `MANAGED_FILE_ERROR` 错误码。
+
+## 2026-08-21 · L03 · DONE
+
+- 关键改动：schema v4 为 managed 文件保存 `mtime_ms` 与 `content_hash`；刷新服务在启动、焦点返回、资料 overview、重新打开和手动刷新路径核对受控对象，按需异步 SHA-256，并以 `files:content-changed` 通知 Renderer。素材库、课程页当前课次/学生资料区和学生页接入导入、刷新、打开、显示位置、关联、软删除/恢复入口。
+- 修改文件：`src/main/db/migrations.ts`、`src/main/files/managed-file-service.ts`、`src/main/ipc/file-ipc.ts`、`src/main/index.ts`、`src/preload/index.ts`、`src/shared/file-contracts.ts`、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/renderer/App.tsx`、`src/renderer/course-dashboard.tsx`、`src/renderer/managed-files-panel.tsx`、`src/renderer/styles.css`、相关测试、`docs/l03-file-pages-refresh.md`、本文件与 `STATUS.md`。
+- 验证结果：`npm test` ✅（12 files / 33 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。自动化覆盖首次 Hash、无变化短路、外部编辑后的 Hash 变化和 open IPC 事件；既有 L02 文件边界回归继续通过。
+- 人工/真实环境验证：在隔离临时 workspace 中通过真实 Windows Electron 窗口创建 L03 课程结构，用原生文件选择器导入测试资料，确认资料列表显示“已核对”，再验证加入当前课次和加入当前学生均生成独立副本。临时 fixture、workspace 与 Electron 进程均已清理，未接触真实教学资料；未启用 `--no-sandbox`，未关闭 `contextIsolation` 或 GPU sandbox。
+- Git 任务提交：待 staged diff 审查后创建 `lean(L03): file pages and refresh` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：不适用；L03 不是审核点。下一步为 L04，L04 完成后填写候选 SHA、标记 `AWAITING_REVIEW` 并创建送审提交，随后停止。
+- 已知限制 / Later：watcher 只保留为后续加速选项；缩略图、Markdown 编辑器、全文预览、复杂进度和精确续传不在 L03 范围。当前权威一致性来自启动、焦点返回、重新打开和手动刷新核对。
+- 下一任务可依赖的接口：schema v4、`ManagedFileService.refreshFile/refreshAll`、`ManagedFileRefreshResult`、`files:content-changed` 事件和 `ManagedFilesPanel`。

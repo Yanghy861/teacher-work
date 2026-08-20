@@ -18,6 +18,8 @@ import {
   type CopyFileToLessonRequest,
   type CopyFileToStudentRequest,
   type FileIdRequest,
+  type ManagedFileContentChanged,
+  type ManagedFileRefreshResult,
 } from '../../shared/file-contracts'
 import { ManagedFileError, ManagedFileService } from '../files/managed-file-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
@@ -27,6 +29,7 @@ export interface FileIpcDependencies {
   readonly chooseSourcePath: () => Promise<string | null>
   readonly openPath: (path: string) => Promise<string>
   readonly showInFolder: (path: string) => void
+  readonly notifyContentChanged: (event: ManagedFileContentChanged) => void
 }
 
 export const FILE_CHANNELS: readonly IpcChannel[] = Object.values(FILE_IPC_CHANNELS)
@@ -72,6 +75,7 @@ export async function dispatchFileIpc(
     switch (channel) {
       case FILE_IPC_CHANNELS.getManagedFileOverview:
         assertRequest(payload, isEmptyIpcRequest)
+        notifyContentChanges(await fileService.refreshAll(), dependencies)
         return ensureResponse(fileService.getOverview(), isManagedFileOverview)
       case FILE_IPC_CHANNELS.importFromPicker: {
         assertRequest(payload, isEmptyIpcRequest)
@@ -81,7 +85,9 @@ export async function dispatchFileIpc(
       }
       case FILE_IPC_CHANNELS.openFile: {
         assertRequest(payload, isFileIdRequest)
-        const contentPath = fileService.openFile((payload as FileIdRequest).fileId)
+        const fileId = (payload as FileIdRequest).fileId
+        notifyContentChanges([await fileService.refreshFile(fileId)], dependencies)
+        const contentPath = fileService.openFile(fileId)
         const openError = await dependencies.openPath(contentPath)
         if (openError.trim() !== '') {
           throw new ManagedFileError('FILE_OPEN_FAILED', '无法用系统应用打开文件。')
@@ -164,4 +170,19 @@ function mapFileIpcError(error: unknown): IpcResponse<never> {
 
 function isKnownFileChannel(channel: string): channel is IpcChannel {
   return FILE_CHANNELS.includes(channel as IpcChannel)
+}
+
+function notifyContentChanges(
+  results: readonly ManagedFileRefreshResult[],
+  dependencies: FileIpcDependencies,
+): void {
+  for (const result of results) {
+    if (result.contentChanged) {
+      dependencies.notifyContentChanged({
+        fileId: result.file.id,
+        contentChanged: true,
+        file: result.file,
+      })
+    }
+  }
 }

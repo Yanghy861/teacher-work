@@ -120,6 +120,16 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 4,
+    name: 'add_managed_file_refresh_metadata',
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE files ADD COLUMN mtime_ms REAL;
+        ALTER TABLE files ADD COLUMN content_hash TEXT;
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

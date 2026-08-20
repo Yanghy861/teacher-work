@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import type { TeacherWorkbenchError } from '../shared/ipc-contracts'
 import CourseDashboard from './course-dashboard'
+import ManagedFilesPanel from './managed-files-panel'
 
 const navigationItems = ['我的课程', '素材库', '学生', '设置'] as const
 
@@ -58,6 +59,10 @@ export default function App(): React.JSX.Element {
         </header>
         {activeItem === '我的课程' ? (
           <CourseDashboard />
+        ) : activeItem === '素材库' ? (
+          <ManagedFilesPanel />
+        ) : activeItem === '学生' ? (
+          <ManagedFilesPanel heading="学生资料" />
         ) : (
           <section className="placeholder-card" aria-live="polite">
             <div className="placeholder-icon" aria-hidden="true">✦</div>

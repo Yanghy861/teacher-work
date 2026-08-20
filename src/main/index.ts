@@ -15,7 +15,8 @@ import {
   initializeDefaultWorkspace,
   type WorkspaceHandle,
 } from './workspace/workspace-service'
-import type { WorkspaceInfo } from '../shared/ipc-contracts'
+import { FILE_IPC_EVENTS, type WorkspaceInfo } from '../shared/ipc-contracts'
+import type { ManagedFileContentChanged } from '../shared/file-contracts'
 
 let mainWindow: BrowserWindow | null = null
 let workspaceHandle: WorkspaceHandle | null = null
@@ -62,6 +63,31 @@ function getManagedFiles(): ManagedFileService {
   return managedFileService
 }
 
+function refreshManagedFilesInBackground(trigger: string): void {
+  void getManagedFiles()
+    .refreshAll()
+    .then((results) => {
+      for (const result of results) {
+        if (result.contentChanged) {
+          emitContentChanged({
+            fileId: result.file.id,
+            contentChanged: true,
+            file: result.file,
+          })
+        }
+      }
+    })
+    .catch((error: unknown) => {
+      logger.error('managed_files.refresh_failed', error, { trigger })
+  })
+}
+
+function emitContentChanged(event: ManagedFileContentChanged): void {
+  if (mainWindow !== null && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(FILE_IPC_EVENTS.contentChanged, event)
+  }
+}
+
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
@@ -85,6 +111,10 @@ function createMainWindow(): BrowserWindow {
     if (mainWindow === window) {
       mainWindow = null
     }
+  })
+
+  window.on('focus', () => {
+    refreshManagedFilesInBackground('window_focus')
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -124,10 +154,12 @@ void app.whenReady().then(() => {
       },
       openPath: (path) => shell.openPath(path),
       showInFolder: (path) => shell.showItemInFolder(path),
+      notifyContentChanged: emitContentChanged,
     },
     logger,
   )
   mainWindow = createMainWindow()
+  refreshManagedFilesInBackground('workspace_startup')
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

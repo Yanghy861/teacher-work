@@ -38,6 +38,8 @@ import {
   isFileActionResult,
   isFileIdRequest,
   isManagedFileOverview,
+  isManagedFileContentChanged,
+  isManagedFileRefreshResult,
   isManagedFileRecord,
   isNullableManagedFileRecord,
   type CopyFileToLessonRequest,
@@ -45,10 +47,11 @@ import {
   type FileActionResult,
   type FileIdRequest,
   type ManagedFileOverview,
+  type ManagedFileContentChanged,
   type ManagedFileRecord,
 } from './file-contracts'
 
-export { CORE_IPC_CHANNELS, FILE_IPC_CHANNELS, IPC_CHANNELS } from './ipc-contracts'
+export { CORE_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS } from './ipc-contracts'
 export type { IpcChannel, WorkspaceInfo } from './ipc-contracts'
 export type {
   CoreOverview,
@@ -70,8 +73,10 @@ export type {
   CopyFileToStudentRequest,
   FileActionResult,
   FileIdRequest,
+  ManagedFileContentChanged,
   ManagedFileOverview,
   ManagedFileRecord,
+  ManagedFileRefreshResult,
 } from './file-contracts'
 
 export interface TeacherWorkbenchApi {
@@ -103,6 +108,7 @@ export interface TeacherWorkbenchApi {
     restoreFile: (request: FileIdRequest) => Promise<ManagedFileRecord>
     copyToLesson: (request: CopyFileToLessonRequest) => Promise<ManagedFileRecord>
     copyToStudent: (request: CopyFileToStudentRequest) => Promise<ManagedFileRecord>
+    onContentChanged: (listener: (event: ManagedFileContentChanged) => void) => () => void
   }
 }
 
@@ -126,7 +132,9 @@ export {
   isCopyFileToStudentRequest,
   isFileActionResult,
   isFileIdRequest,
+  isManagedFileContentChanged,
   isManagedFileOverview,
+  isManagedFileRefreshResult,
   isManagedFileRecord,
   isNullableManagedFileRecord,
   parseIpcResponse,

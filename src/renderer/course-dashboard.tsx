@@ -5,11 +5,13 @@ import type {
   CourseMode,
   NodeRecord,
 } from '../shared/core-contracts'
+import ManagedFilesPanel from './managed-files-panel'
 
 export default function CourseDashboard(): React.JSX.Element {
   const [overview, setOverview] = useState<CoreOverview | null>(null)
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [selectedPeriodId, setSelectedPeriodId] = useState('')
+  const [selectedLessonId, setSelectedLessonId] = useState('')
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [courseTitle, setCourseTitle] = useState('')
   const [courseMode, setCourseMode] = useState<CourseMode>('one_to_one')
@@ -69,6 +71,12 @@ export default function CourseDashboard(): React.JSX.Element {
       setSelectedPeriodId(periods[0]?.id ?? '')
     }
   }, [periods, selectedPeriodId])
+
+  useEffect(() => {
+    if (selectedLessonId === '' || !lessons.some((lesson) => lesson.id === selectedLessonId)) {
+      setSelectedLessonId(lessons[0]?.id ?? '')
+    }
+  }, [lessons, selectedLessonId])
 
   useEffect(() => {
     if (selectedStudentId === '' || !students.some((student) => student.id === selectedStudentId)) {
@@ -137,11 +145,12 @@ export default function CourseDashboard(): React.JSX.Element {
       return
     }
     void runAction(async () => {
-      setLessonTitle('')
-      await window.teacherWorkbench.core.createLesson({
+      const created = await window.teacherWorkbench.core.createLesson({
         periodId: selectedPeriodId,
         title: lessonTitle,
       })
+      setSelectedLessonId(created.id)
+      setLessonTitle('')
     })
   }
 
@@ -299,10 +308,18 @@ export default function CourseDashboard(): React.JSX.Element {
               创建课次
             </button>
           </form>
-          <ul className="compact-list">
-            {lessons.map((lesson) => <li key={lesson.id}>{lesson.title}</li>)}
-            {lessons.length === 0 && <li className="empty-state">当前阶段还没有课次。</li>}
-          </ul>
+          <label className="select-field">
+            当前课次
+            <select
+              aria-label="当前课次"
+              value={selectedLessonId}
+              onChange={(event) => setSelectedLessonId(event.target.value)}
+              disabled={busy || lessons.length === 0}
+            >
+              {lessons.length === 0 && <option value="">暂无课次</option>}
+              {lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
+            </select>
+          </label>
         </section>
 
         <section className="workspace-card">
@@ -369,6 +386,14 @@ export default function CourseDashboard(): React.JSX.Element {
           </ul>
         </section>
       </div>
+      <ManagedFilesPanel
+        compact
+        heading="当前课次与学生资料"
+        lessonId={selectedLessonId}
+        lessonLabel={lessons.find((lesson) => lesson.id === selectedLessonId)?.title}
+        studentId={selectedStudentId}
+        studentLabel={selectedStudent?.name}
+      />
     </div>
   )
 }

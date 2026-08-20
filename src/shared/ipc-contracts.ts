@@ -28,6 +28,10 @@ export const FILE_IPC_CHANNELS = {
   copyToStudent: 'files:copy-to-student',
 } as const
 
+export const FILE_IPC_EVENTS = {
+  contentChanged: 'files:content-changed',
+} as const
+
 export type IpcChannel =
   | (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
   | (typeof CORE_IPC_CHANNELS)[keyof typeof CORE_IPC_CHANNELS]

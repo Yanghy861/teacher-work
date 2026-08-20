@@ -79,6 +79,7 @@ function createDependencies(): {
     chooseSourcePath: async () => sourcePath,
     openPath: async () => '',
     showInFolder: () => undefined,
+    notifyContentChanged: () => undefined,
   }
   return { workspace, service, sourcePath, dependencies }
 }
@@ -106,6 +107,7 @@ describe('L02 managed file IPC', () => {
     let chooserCalls = 0
     let openedPath = ''
     let shownPath = ''
+    const contentChangedEvents: unknown[] = []
     const guardedDependencies: FileIpcDependencies = {
       ...dependencies,
       chooseSourcePath: async () => {
@@ -118,6 +120,9 @@ describe('L02 managed file IPC', () => {
       },
       showInFolder: (path) => {
         shownPath = path
+      },
+      notifyContentChanged: (event) => {
+        contentChangedEvents.push(event)
       },
     }
 
@@ -162,6 +167,16 @@ describe('L02 managed file IPC', () => {
     expect(shown).toEqual({ ok: true, data: { accepted: true } })
     expect(openedPath).toBe(service.getObjectContentPath(record.id))
     expect(shownPath).toBe(openedPath)
+
+    writeFileSync(openedPath, 'external editor changed the file', 'utf8')
+    await dispatchFileIpc(
+      FILE_IPC_CHANNELS.openFile,
+      { fileId: record.id },
+      guardedDependencies,
+      logger,
+    )
+    expect(contentChangedEvents).toHaveLength(1)
+    expect(contentChangedEvents[0]).toMatchObject({ fileId: record.id, contentChanged: true })
   })
 
   it('maps an unregistered ID to a stable managed-file error', async () => {

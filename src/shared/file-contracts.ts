@@ -4,6 +4,8 @@ export interface ManagedFileRecord {
   readonly sizeBytes: number
   readonly mimeType: string
   readonly originFileId: string | null
+  readonly mtimeMs: number | null
+  readonly contentHash: string | null
   readonly createdAt: string
   readonly updatedAt: string
   readonly deletedAt: string | null
@@ -21,6 +23,18 @@ export interface ManagedFileLink {
 export interface ManagedFileOverview {
   readonly files: readonly ManagedFileRecord[]
   readonly links: readonly ManagedFileLink[]
+}
+
+export interface ManagedFileRefreshResult {
+  readonly file: ManagedFileRecord
+  readonly contentChanged: boolean
+  readonly hashComputed: boolean
+}
+
+export interface ManagedFileContentChanged {
+  readonly fileId: string
+  readonly contentChanged: true
+  readonly file: ManagedFileRecord
 }
 
 export interface FileIdRequest {
@@ -49,6 +63,8 @@ export function isManagedFileRecord(value: unknown): value is ManagedFileRecord 
     isNonNegativeNumber(value.sizeBytes) &&
     isNonEmptyString(value.mimeType) &&
     (value.originFileId === null || isNonEmptyString(value.originFileId)) &&
+    (value.mtimeMs === null || isFiniteNumber(value.mtimeMs)) &&
+    (value.contentHash === null || isNonEmptyString(value.contentHash)) &&
     isNonEmptyString(value.createdAt) &&
     isNonEmptyString(value.updatedAt) &&
     (value.deletedAt === null || isNonEmptyString(value.deletedAt))
@@ -103,6 +119,24 @@ export function isNullableManagedFileRecord(value: unknown): value is ManagedFil
   return value === null || isManagedFileRecord(value)
 }
 
+export function isManagedFileRefreshResult(value: unknown): value is ManagedFileRefreshResult {
+  return (
+    isRecord(value) &&
+    isManagedFileRecord(value.file) &&
+    typeof value.contentChanged === 'boolean' &&
+    typeof value.hashComputed === 'boolean'
+  )
+}
+
+export function isManagedFileContentChanged(value: unknown): value is ManagedFileContentChanged {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.fileId) &&
+    value.contentChanged === true &&
+    isManagedFileRecord(value.file)
+  )
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -113,6 +147,10 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isNonNegativeNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
 }
 
 function hasOnlyKeys(

@@ -129,6 +129,34 @@ describe('L02 managed file service', () => {
     expect(fixture.files.openFile(record.id)).toBe(contentPath)
   })
 
+  it('reconciles external edits asynchronously and avoids repeat hashing when metadata is unchanged', async () => {
+    const fixture = createFixture()
+    const record = fixture.files.importFile(createSource(fixture))
+
+    const baseline = await fixture.files.refreshFile(record.id)
+    expect(baseline.hashComputed).toBe(true)
+    expect(baseline.contentChanged).toBe(false)
+    expect(baseline.file.contentHash).toMatch(/^[0-9a-f]{64}$/)
+    expect(baseline.file.mtimeMs).toEqual(expect.any(Number))
+
+    const unchanged = await fixture.files.refreshFile(record.id)
+    expect(unchanged).toMatchObject({ hashComputed: false, contentChanged: false })
+
+    writeFileSync(
+      fixture.files.getObjectContentPath(record.id),
+      'external editor changed this managed file',
+      'utf8',
+    )
+    const changed = await fixture.files.refreshFile(record.id)
+    expect(changed.hashComputed).toBe(true)
+    expect(changed.contentChanged).toBe(true)
+    expect(changed.file.sizeBytes).toBeGreaterThan(record.sizeBytes)
+    expect(changed.file.contentHash).not.toBe(baseline.file.contentHash)
+
+    const afterChange = await fixture.files.refreshFile(record.id)
+    expect(afterChange).toMatchObject({ hashComputed: false, contentChanged: false })
+  })
+
   it('cleans the object directory when the copy operation fails', () => {
     const fixture = createFixture()
     const failingService = new ManagedFileService(fixture.workspace.database.raw, fixture.workspace.paths, {

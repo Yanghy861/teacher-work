@@ -1,10 +1,11 @@
-import { accessSync, constants, copyFileSync, lstatSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs'
+import { createReadStream, accessSync, constants, copyFileSync, lstatSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs'
 import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 
 import type {
   ManagedFileLink,
   ManagedFileOverview,
+  ManagedFileRefreshResult,
   ManagedFileRecord,
 } from '../../shared/file-contracts'
 import type { SqliteDatabase } from '../db/migrations'
@@ -38,6 +39,7 @@ export interface ManagedFileServiceOptions {
   readonly copyFile?: (sourcePath: string, destinationPath: string) => void
   readonly renameFile?: (sourcePath: string, destinationPath: string) => void
   readonly removePath?: (path: string) => void
+  readonly hashFile?: (path: string) => Promise<string>
 }
 
 interface FileRow {
@@ -46,6 +48,8 @@ interface FileRow {
   readonly size_bytes: number
   readonly mime_type: string
   readonly origin_file_id: string | null
+  readonly mtime_ms: number | null
+  readonly content_hash: string | null
   readonly created_at: string
   readonly updated_at: string
   readonly deleted_at: string | null
@@ -64,6 +68,8 @@ export class ManagedFileService {
   private readonly copyFile: (sourcePath: string, destinationPath: string) => void
   private readonly renameFile: (sourcePath: string, destinationPath: string) => void
   private readonly removePath: (path: string) => void
+  private readonly hashFile: (path: string) => Promise<string>
+  private refreshTail: Promise<void> = Promise.resolve()
 
   constructor(
     private readonly database: SqliteDatabase,
@@ -75,6 +81,7 @@ export class ManagedFileService {
     this.copyFile = options.copyFile ?? copyFileSync
     this.renameFile = options.renameFile ?? renameSync
     this.removePath = options.removePath ?? ((path) => rmSync(path, { recursive: true, force: true }))
+    this.hashFile = options.hashFile ?? hashManagedFile
   }
 
   importFile(sourcePath: string): ManagedFileRecord {
@@ -85,9 +92,10 @@ export class ManagedFileService {
   }
 
   getOverview(options: { readonly includeDeleted?: boolean } = {}): ManagedFileOverview {
+    const overviewOptions = { includeDeleted: options.includeDeleted ?? true }
     return {
-      files: this.listFiles(options),
-      links: this.listLinks(options),
+      files: this.listFiles(overviewOptions),
+      links: this.listLinks(overviewOptions),
     }
   }
 
@@ -95,7 +103,7 @@ export class ManagedFileService {
     const rows = this.database
       .prepare(
         `SELECT id, original_name, size_bytes, mime_type, origin_file_id,
-                created_at, updated_at, deleted_at
+                mtime_ms, content_hash, created_at, updated_at, deleted_at
            FROM files
           ${options.includeDeleted ? '' : 'WHERE deleted_at IS NULL'}
           ORDER BY created_at, id`,
@@ -162,6 +170,27 @@ export class ManagedFileService {
     )
   }
 
+  refreshFile(fileId: string): Promise<ManagedFileRefreshResult> {
+    return this.withRefreshLock(() => this.refreshFileInternal(fileId))
+  }
+
+  refreshAll(): Promise<ManagedFileRefreshResult[]> {
+    return this.withRefreshLock(async () => {
+      const results: ManagedFileRefreshResult[] = []
+      for (const file of this.listFiles()) {
+        try {
+          results.push(await this.refreshFileInternal(file.id))
+        } catch (error) {
+          if (error instanceof ManagedFileError && error.code === 'FILE_OBJECT_MISSING') {
+            continue
+          }
+          throw error
+        }
+      }
+      return results
+    })
+  }
+
   getObjectContentPath(fileId: string): string {
     return resolveManagedObjectPath(this.paths, fileId).contentPath
   }
@@ -198,8 +227,8 @@ export class ManagedFileService {
           .prepare(
             `INSERT INTO files
                (id, original_name, size_bytes, mime_type, origin_file_id,
-                created_at, updated_at, deleted_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
+                mtime_ms, content_hash, created_at, updated_at, deleted_at)
+             VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL)`,
           )
           .run(
             fileId,
@@ -207,6 +236,7 @@ export class ManagedFileService {
             contentStats.size,
             mimeType,
             originFileId,
+            contentStats.mtimeMs,
             createdAt,
             createdAt,
           )
@@ -253,11 +283,40 @@ export class ManagedFileService {
     return file
   }
 
+  private async refreshFileInternal(fileId: string): Promise<ManagedFileRefreshResult> {
+    const file = this.requireActiveFile(fileId)
+    const contentPath = this.requireReadableObject(file.id)
+    const currentStats = statSync(contentPath)
+    const needsHash =
+      file.contentHash === null ||
+      file.sizeBytes !== currentStats.size ||
+      file.mtimeMs !== currentStats.mtimeMs
+    if (!needsHash) {
+      return { file, contentChanged: false, hashComputed: false }
+    }
+
+    const contentHash = await this.hashFile(contentPath)
+    const contentChanged = file.contentHash !== null && file.contentHash !== contentHash
+    const updatedAt = this.now()
+    const updatedFile = this.transaction(() => {
+      this.database
+        .prepare(
+          `UPDATE files
+              SET size_bytes = ?, mtime_ms = ?, content_hash = ?, updated_at = ?
+            WHERE id = ?`,
+        )
+        .run(currentStats.size, currentStats.mtimeMs, contentHash, updatedAt, file.id)
+      return this.requireFile(file.id)
+    })
+    return { file: updatedFile, contentChanged, hashComputed: true }
+  }
+
   private requireFile(fileId: string, includeDeleted = false): ManagedFileRecord {
     assertFileId(fileId)
     const row = this.database
       .prepare(
         `SELECT id, original_name, size_bytes, mime_type, origin_file_id,
+                mtime_ms, content_hash,
                 created_at, updated_at, deleted_at
            FROM files
           WHERE id = ? ${includeDeleted ? '' : 'AND deleted_at IS NULL'}`,
@@ -328,6 +387,20 @@ export class ManagedFileService {
   private transaction<T>(callback: () => T): T {
     return this.database.transaction(callback).immediate()
   }
+
+  private async withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+    const previous = this.refreshTail
+    let release!: () => void
+    this.refreshTail = new Promise<void>((resolveRelease) => {
+      release = resolveRelease
+    })
+    await previous
+    try {
+      return await task()
+    } finally {
+      release()
+    }
+  }
 }
 
 export function resolveManagedObjectPath(
@@ -391,9 +464,26 @@ function mapFile(row: FileRow): ManagedFileRecord {
     sizeBytes: row.size_bytes,
     mimeType: row.mime_type,
     originFileId: row.origin_file_id,
+    mtimeMs: row.mtime_ms,
+    contentHash: row.content_hash,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
+  }
+}
+
+async function hashManagedFile(path: string): Promise<string> {
+  const hash = createHash('sha256')
+  const stream = createReadStream(path)
+  try {
+    for await (const chunk of stream) {
+      hash.update(chunk)
+      await new Promise<void>((resolveYield) => setImmediate(resolveYield))
+    }
+    return hash.digest('hex')
+  } catch (error) {
+    stream.destroy()
+    throw error
   }
 }
 

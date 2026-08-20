@@ -2,9 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import {
   CORE_IPC_CHANNELS,
+  FILE_IPC_EVENTS,
   FILE_IPC_CHANNELS,
   IPC_CHANNELS,
   isFileActionResult,
+  isManagedFileContentChanged,
   isManagedFileOverview,
   isManagedFileRecord,
   isNullableManagedFileRecord,
@@ -24,6 +26,7 @@ import {
   type CopyFileToLessonRequest,
   type CopyFileToStudentRequest,
   type FileIdRequest,
+  type ManagedFileContentChanged,
   type MoveNodeRequest,
   type NodeIdRequest,
   type ReorderNodeRequest,
@@ -73,6 +76,15 @@ const api = Object.freeze({
     restoreFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.restoreFile, request, isManagedFileRecord),
     copyToLesson: (request: CopyFileToLessonRequest) => invoke(FILE_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
     copyToStudent: (request: CopyFileToStudentRequest) => invoke(FILE_IPC_CHANNELS.copyToStudent, request, isManagedFileRecord),
+    onContentChanged: (listener: (event: ManagedFileContentChanged) => void): (() => void) => {
+      const handler = (_event: unknown, payload: unknown): void => {
+        if (isManagedFileContentChanged(payload)) {
+          listener(payload)
+        }
+      }
+      ipcRenderer.on(FILE_IPC_EVENTS.contentChanged, handler)
+      return () => ipcRenderer.removeListener(FILE_IPC_EVENTS.contentChanged, handler)
+    },
   }),
 }) satisfies TeacherWorkbenchApi
 
