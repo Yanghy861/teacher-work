@@ -1,0 +1,161 @@
+:root {
+  color: #1f2937;
+  background: #f5f7fb;
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 960px;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  width: 248px;
+  flex-direction: column;
+  padding: 28px 18px 20px;
+  color: #dce7ff;
+  background: #172554;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 12px 34px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #67e8f9;
+  box-shadow: 0 0 0 5px rgb(103 232 249 / 12%);
+}
+
+nav {
+  display: grid;
+  gap: 8px;
+}
+
+.nav-item {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #bfdbfe;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.nav-item:hover,
+.nav-item.is-active {
+  color: #fff;
+  background: rgb(96 165 250 / 20%);
+}
+
+.sidebar-version {
+  margin: auto 12px 0;
+  color: #93c5fd;
+  font-size: 12px;
+}
+
+.content-area {
+  flex: 1;
+  padding: 46px 64px;
+}
+
+.content-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  max-width: 960px;
+  margin: 0 auto 38px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #6366f1;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  color: #111827;
+  font-size: 34px;
+}
+
+.status-pill {
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  padding: 8px 13px;
+  color: #15803d;
+  background: #f0fdf4;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.placeholder-card {
+  max-width: 960px;
+  margin: 0 auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 72px 48px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgb(30 41 59 / 7%);
+  text-align: center;
+}
+
+.placeholder-icon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 22px;
+  place-items: center;
+  border-radius: 16px;
+  color: #4338ca;
+  background: #eef2ff;
+  font-size: 25px;
+}
+
+.placeholder-card h2 {
+  margin-bottom: 12px;
+  color: #1e293b;
+  font-size: 22px;
+}
+
+.placeholder-card p {
+  max-width: 540px;
+  margin: 0 auto;
+  color: #64748b;
+  line-height: 1.8;
+}
