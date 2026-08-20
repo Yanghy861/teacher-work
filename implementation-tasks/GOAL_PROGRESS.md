@@ -115,3 +115,15 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git 任务提交：待 staged diff 审查后创建 `task(T05): chinese math search spike` 本地提交；不 push。
 - 若为审核点，审核基线与候选提交：不适用；T05 已完成，下一任务为 T06，T08 仍是本次目标审核点。
 - 下一任务可依赖的接口：SearchNormalizer 规则、FTS5 trigram 优先路径、短词 fallback 边界、TokenExtractor 二次校验条件和匿名 benchmark/真值格式。
+
+## 2026-08-20 17:49 +08:00 · T06 · DONE
+
+- 关键改动：建立 Chokidar `4.0.3` Office/WPS 保存事件实验器；实现 dirty 标记、可配置 debounce、多次 size+mtime+SHA-256 稳定采样、可读重试、Hash 去重、同文件任务合并、任务执行中保存后的单次重检，以及 watcher 收尾后的最终只读快照。
+- 修改文件：`.gitignore`、`package.json`、`package-lock.json`、`spikes/office-watcher/run-experiment.mjs`、`spikes/office-watcher/README.md`、`docs/spike-results.md`、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`node --check spikes/office-watcher/run-experiment.mjs` ✅；`npm run lint` ✅；WPS 修正版 XLSX 实验报告记录自定义参数、`mtimeMs`、最终快照和稳定采样；完整三格式报告记录 `add/change/unlink`、锁/临时文件、Hash 去重与任务合并；`git diff --check`、`npm run typecheck`、`npm test`、`npm run build` 将在提交前复核。
+- 人工/真实环境验证：WPS Office `12.1.0.28043` 在 Windows 11 25H2/build `26200` 上实际打开并保存由 WPS 创建的 DOCX、PPTX、XLSX 临时文件；执行未改保存、连续 `Ctrl+S`、另存为、内容变化保存和关闭流程。未修改已有用户文档；本机未检测到 Microsoft Office，因此不作 Microsoft Office 结论。
+- Git 任务提交：待 staged diff 审查后创建 `task(T06): office watcher spike` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：不适用；T06 不是审核点，下一任务为 T07，T08 仍是本次目标审核点。
+- 已知限制：WPS 自动恢复式保存、大文件容量和保存中退出时序本轮未稳定触发，已在 `docs/spike-results.md` 明确标为未宣称；后续不能从 T06 结果外推这些语义。Microsoft Office 未安装，未声称其行为。
+- 下一任务可依赖的接口：`spikes/office-watcher/run-experiment.mjs` 的匿名事件/决策报告、Chokidar 候选、推荐 debounce/stability/readability/hash/task 参数范围。
+- 若阻塞，缺少条件与最小解阻动作：无；核心真实 WPS 多格式验收已完成。若后续产品需要未覆盖的自动恢复、大文件或保存中退出承诺，应在对应真实环境补做专项实验。

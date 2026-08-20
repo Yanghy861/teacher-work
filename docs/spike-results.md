@@ -96,7 +96,58 @@
 
 ## Spike C：Office/WPS 保存事件
 
-状态：`PENDING`（T06 尚未开始）。
+状态：`DONE`
+
+### 环境、范围与可复现报告
+
+- 实测应用：WPS Office `12.1.0.28043`，Windows 11 25H2 / build `26200`；本机未检测到 Microsoft Office，因此不对 Microsoft Office 的行为作结论。
+- 实验文件：由 WPS 在工作区临时目录中创建的 DOCX、PPTX、XLSX 文件，不使用真实教学资料。对每种格式执行了打开未改、普通保存、连续 `Ctrl+S`、内容变化后保存、另存为/关闭流程；同一 WPS 应用完成多轮可复现实验。
+- watcher：`chokidar@4.0.3`，实验器为 `spikes/office-watcher/run-experiment.mjs`。报告只保存匿名 `file-xxx`、扩展名、事件、size、mtime、可读性、Hash 前缀和决策，不保存路径、文件名或正文。
+- 机器报告（均被 `.gitignore` 忽略）：`wps-12.1.0.28043-all-formats.json`、`wps-12.1.0.28043-xlsx-followup.json`、`wps-12.1.0.28043-xlsx-post-fix.json`、`wps-12.1.0.28043-final-scan.json`。
+
+### 原始事件与应用特征
+
+- WPS 主文件出现 `add`/`change`，保存或关闭时出现 `unlink`；DOCX/PPTX 还出现 Office 锁文件，临时 `.tmp` 文件会经历 `add`/`change`/`unlink`，且部分中间状态不可读。
+- Chokidar 在 Windows 本轮没有给出独立的原生 `rename` 事件；重命名/替换应按 `unlink` + `add` 的组合归一化，不能把单一事件名当作跨平台契约。
+- 修正版 XLSX 报告使用了显式参数 `debounceMs=300`、`stableSamples=3`、`stableIntervalMs=100`、`taskDurationMs=900`、`readRetryMs=100`、`readRetries=3`；报告记录了 `mtimeMs` 和关闭等待后的 `finalSnapshots`。
+- 前一轮 XLSX 事件风暴中，同一匿名 `file_id` 的多个 `change` 合并为同一任务；保存发生在模拟任务执行期间时，报告为 1 次 `task_recheck`、`savesObservedDuringTask=1`，没有并发重复任务。修正版收尾轮次另外验证了关闭任务和最终快照字段。
+
+### 观察到的决策
+
+- 初始/另存为/真实内容变化的稳定样本为 3 次，最终 Hash 变化时产生 `rebuild_required`；真实内容变化的每个保存轮次最终只产生一个该决定。
+- 未改变内容的重复保存/锁文件事件出现过 `hash_unchanged`，决定为 `no_rebuild`；不可读或缺失的临时文件只产生 `retry_later`，不伪造重建。
+- 独立收尾读取发现 WPS 在最后一个文件事件之后仍可能完成同大小的 ZIP 元数据写入，因此实验器在关闭 watcher、等待 pending task 和 debounce 完成后，对已见路径再做最终只读检查；这也是生产层必须保留稳定采样和最终 Hash 复核的依据。
+
+### 场景覆盖与限制
+
+| 场景 | WPS 证据 | 结论 |
+|---|---|---|
+| 普通保存、连续 `Ctrl+S`、打开未改 | DOCX/PPTX/XLSX 多轮 | 已观察；未变 Hash 不重建 |
+| 另存为、真实内容变化后保存 | DOCX/PPTX/XLSX 实际 WPS UI 流程 | 已观察；变化最终只产生一次重建决定 |
+| 事件风暴、锁文件、临时文件、关闭后清理 | 三种格式报告；XLSX 另有任务重检轮次 | 已观察；同文件任务合并 |
+| 自动恢复式保存 | 本轮未能在不强制破坏 WPS 会话的条件下稳定触发 | 未宣称支持；留作后续真实环境专项验证 |
+| 大文件保存 | 本轮只使用脱敏临时实验文件，未人为制造固定大小门槛 | 未宣称性能结论；不得把本 Spike 当作大文件容量验收 |
+| 保存进行中退出 | 实测为保存后关闭；未把“关闭前恰好处于写入中”伪造成通过 | 未宣称该时序已覆盖 |
+
+上述未覆盖场景是边界记录，不改变本 Spike 已满足的核心验收：真实应用多轮保存、真实内容变化的单次重建、Hash 去重以及事件风暴中的同文件任务合并。后续若产品要承诺自动恢复、大文件上限或保存中退出语义，必须重新执行对应真实场景并补充证据。
+
+### 候选对照与推荐参数
+
+| 候选 | 本 Spike 结论 |
+|---|---|
+| `chokidar@4.0.3` | 采用为当前 watcher 实验候选；提供统一 `add/change/unlink` 入口，但 Windows rename 仍需由应用层按事件组合归一化 |
+| Node `fs.watch` | 保留为后续 A/B 候选；本轮未把平台后端差异直接作为生产契约，避免用未实测语义替代真实证据 |
+
+- 只把文件标记为 dirty；使用可配置 debounce，建议初始范围 `300–500 ms`。
+- 读取后至少做 3 次相同 `size + mtime + SHA-256` 的稳定采样，间隔建议 `100–150 ms`；文件不可读时按 `100–200 ms` 重试 3–5 次。
+- Hash 只用于去重和最终确认，不保存正文；同一 `file_id` 同时只有一个任务，任务运行中再次保存只补一次必要重检。
+- 不使用固定 2–3 秒作为唯一判据；最终条件是可读、连续稳定采样和 Hash 去重。
+
+### Spike C 决策
+
+- **采用候选：** 后续正式 Main/Worker watcher 可从 Chokidar `4.0.3` 开始，保留 `fs.watch` 作为替代候选和回归对照；正式实现必须继续输出匿名、可审计的 dirty/debounce/stable/readable/hash/task 状态。
+- **不接入正式索引器：** 本 Spike 只证明保存事件归一化和任务调度边界，不创建索引、不读取 Renderer 文件系统，也不改变原始教学资料。
+- **已知风险：** WPS 自动恢复、大文件容量和保存中退出仍无本轮证据；产品若依赖这些语义，必须在对应支持版本上补做专项测试，不能从本轮结果外推。
 
 ## Spike D：强杀与恢复
 

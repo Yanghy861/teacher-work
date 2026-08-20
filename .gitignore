@@ -42,6 +42,7 @@ temp/
 /spikes/document-parser/samples/
 /spikes/document-parser/results/
 /spikes/chinese-search/results/
+/spikes/office-watcher/results/
 
 # Explicitly sanitized test databases may be versioned
 !tests/fixtures/**/*.db
