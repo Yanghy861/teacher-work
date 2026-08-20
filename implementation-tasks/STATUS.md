@@ -8,7 +8,7 @@
 | T02 工作区与 SQLite 基础 | DONE | `WorkspacePaths`、SQLite 连接/迁移/身份封装完成；重复打开、迁移回滚、构建目录替换后数据保留及路径错误测试通过 |
 | T03 安全 IPC 与基础可观测性 | DONE | 共享契约/运行时校验、白名单 IPC、getWorkspaceInfo、Renderer Error Boundary、Main 脱敏日志与边界测试完成；安装目录隔离、正文/凭据脱敏和 Renderer AST/ESLint 边界复审修复；类型检查、lint、17 项测试、production build 通过 |
 | T04 文档解析 Spike | DONE | 40 份外部脱敏样本（PPTX 10、DOCX 14、PDF 14、XLSX 2）已用 `officeparser@7.3.0` 实测；35 indexed、5 no_text、0 parse_failed，结果与风险已记录在 `docs/spike-results.md` |
-| T05 中文/数学搜索 Spike | TODO | |
+| T05 中文/数学搜索 Spike | DONE | 40 份真实样本重提取 12,512 个 chunk；完成 FTS5 trigram、SearchNormalizer、TokenExtractor、短词 fallback、标题/文件名精确匹配对比，真值、top-k 排名、误召、索引成本与冷/热延迟已记录在 `docs/spike-results.md` |
 | T06 Office/WPS 保存监听 Spike | TODO | |
 | T07 强杀与恢复 Spike | TODO | |
 | T08 Spike 决策闸门 | TODO | |

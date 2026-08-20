@@ -54,7 +54,45 @@
 
 ## Spike B：中文/数学混合搜索
 
-状态：`PENDING`（T05 尚未开始）。
+状态：`DONE`
+
+### 样本、方法与可复现命令
+
+- 语料直接复用 Spike A 的 40 份真实样本和 `officeparser@7.3.0` Adapter；重新提取得到 12,512 个非空 chunk，超过 T05 要求的 10,000，未加入合成教学正文。
+- 运行命令：
+
+  ```powershell
+  node spikes/chinese-search/run-benchmark.mjs `
+    --samples D:\teacher_work-samples\T04-20260820 `
+    --adapter D:\teacher_work\spikes\document-parser\officeparser-adapter.mjs `
+    --truth D:\teacher_work\spikes\chinese-search\ground-truth.json `
+    --output D:\teacher_work\spikes\chinese-search\results\officeparser-7.3.0.json
+  ```
+
+- 真值文件：`spikes/chinese-search/ground-truth.json`，人工复核的最小真值只保存匿名 `sample-xxx:chunk-xxxx` ID；6 个正例查询列出真实出现的样本/代表片段，5 个固定术语和 2 个额外查询标为语料负例。
+- 机器报告：`spikes/chinese-search/results/officeparser-7.3.0.json`（被 `.gitignore` 忽略）。报告不保存正文、原始文件名或路径；原文只在临时 SQLite 文件中用于建索引，报告完成后删除。
+
+### 实测对比
+
+- 索引构建：164.545 ms；临时 SQLite 体积 5,197,824 bytes；规范化 Token 数 40,741；Normalizer 的大小写、全角/半角、平方/立方、常见数学符号等价检查 6/6 通过，展示原文未被改写。
+
+| 变体 | 冷首查 ms | 热 P50 ms | 热 P95 ms | 固定正例命中 | 负例误召片段 |
+|---|---:|---:|---:|---:|---:|
+| raw FTS5 trigram | 1.147 | 0.050 | 0.194 | 2/6 | 0 |
+| FTS5 trigram + SearchNormalizer | 0.866 | 0.050 | 0.211 | 3/6 | 0 |
+| 应用层 TokenExtractor | 0.986 | 0.015 | 0.613 | 6/6 | 30 |
+| 短词 fallback（仅 ≤2 字符） | 0.088 | 0.005 | 0.169 | 3/6 | 0 |
+| 标题/文件名精确匹配 | 0.205 | 0.046 | 0.056 | 0/6 | 0 |
+
+- 标题/文件名路径另做匿名控制查询 `sample-001`：精确匹配命中同一匿名样本；固定内容查询不应依赖该字段。
+- 每个固定查询的 top-k 实际排名、期望 sample/chunk、`recallAtK`、片段召回、判定和负例误召均写入机器报告；`AMC8`、`P16`、`|x|`、`∠ABC`、`△ABC` 在这批真实语料中没有出现，因此按真值文件记录为负例，不能把“无结果”误报成格式召回通过。
+
+### Level 1 / Level 2 决策
+
+- **Level 1 采用：** 正文和查询统一使用版本化 SearchNormalizer，再使用 FTS5 `trigram`；三字符及以上连续中文、英文/数字和已规范化数学表达式走 FTS。结果显示它对 `有理数`、`一元二次`、`x²` 有稳定命中且负例误召为 0，但对二字/单字中文词不够，因此保留短词 fallback。
+- **Level 2 有条件采用：** 短词查询（规范化后不超过 2 个字符）走应用层短词索引；TokenExtractor 只作为候选召回层，不接受当前“单字中文 token 直接返回”的宽松结果作为最终命中。当前宽松 TokenExtractor 虽命中 6/6 正例，却产生 30 个负例误召，生产层必须加规范化正文二次校验/精确数学 token 校验后才能启用。
+- **标题/文件名：** 作为独立的精确字段匹配，不能混入正文 FTS 排名；展示仍读取原始正文/位置。
+- **Later / 未解决：** 本批样本没有覆盖 `AMC8` 等固定术语的正例；复杂公式、题号和图片文字不因本 Spike 自动 OCR；若 Level 1 + 经过二次校验的 Level 2 在后续真实资料仍不足，再记录 V1.1 的 tokenizer/本地搜索方案评估，不引入向量库、Elasticsearch、Meilisearch 或大型 NLP 服务。
 
 ## Spike C：Office/WPS 保存事件
 

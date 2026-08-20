@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "annotation": "人工复核的最小真值；只使用匿名 sample/chunk ID，不保存正文、原始文件名或路径。正例列出该查询在真实提取语料中出现的样本与代表片段；负例表示本批真实语料中预期无命中。",
+  "queries": [
+    {
+      "id": "rationalNumber",
+      "expectation": "positive",
+      "expectedSampleIds": ["sample-001", "sample-002", "sample-003", "sample-004", "sample-005", "sample-006", "sample-011", "sample-013", "sample-015", "sample-017", "sample-018", "sample-019", "sample-020", "sample-021", "sample-022", "sample-033", "sample-040"],
+      "expectedChunkIds": ["sample-001:chunk-0009", "sample-002:chunk-0009", "sample-003:chunk-0009", "sample-004:chunk-0009", "sample-005:chunk-0009", "sample-006:chunk-0009", "sample-011:chunk-0025", "sample-013:chunk-0374", "sample-015:chunk-0069", "sample-017:chunk-0001", "sample-018:chunk-0001", "sample-019:chunk-0006", "sample-020:chunk-0011", "sample-021:chunk-0004", "sample-022:chunk-0004", "sample-033:chunk-0056", "sample-040:chunk-0079"]
+    },
+    {
+      "id": "quadraticEquation",
+      "expectation": "positive",
+      "expectedSampleIds": ["sample-013", "sample-031", "sample-032", "sample-033", "sample-040"],
+      "expectedChunkIds": ["sample-013:chunk-0269", "sample-031:chunk-0014", "sample-032:chunk-0064", "sample-033:chunk-0057", "sample-040:chunk-0303"]
+    },
+    {
+      "id": "function",
+      "expectation": "positive",
+      "expectedSampleIds": ["sample-025", "sample-028", "sample-029", "sample-030", "sample-031", "sample-032", "sample-039"],
+      "expectedChunkIds": ["sample-025:chunk-0014", "sample-028:chunk-0019", "sample-029:chunk-0028", "sample-030:chunk-0060", "sample-031:chunk-0019", "sample-032:chunk-0026", "sample-039:chunk-0008"]
+    },
+    {
+      "id": "geometry",
+      "expectation": "positive",
+      "expectedSampleIds": ["sample-011", "sample-012", "sample-021", "sample-022", "sample-023", "sample-033", "sample-039"],
+      "expectedChunkIds": ["sample-011:chunk-0376", "sample-012:chunk-0076", "sample-021:chunk-0304", "sample-022:chunk-0064", "sample-023:chunk-0233", "sample-033:chunk-5628", "sample-039:chunk-0031"]
+    },
+    {
+      "id": "circle",
+      "expectation": "positive",
+      "expectedSampleIds": ["sample-006", "sample-011", "sample-012", "sample-015", "sample-016", "sample-017", "sample-021", "sample-022", "sample-023", "sample-024", "sample-025", "sample-031", "sample-032", "sample-033", "sample-039", "sample-040"],
+      "expectedChunkIds": ["sample-006:chunk-0060", "sample-011:chunk-0287", "sample-012:chunk-0063", "sample-015:chunk-0174", "sample-016:chunk-0041", "sample-017:chunk-0107", "sample-021:chunk-0247", "sample-022:chunk-0053", "sample-023:chunk-0153", "sample-024:chunk-0027", "sample-025:chunk-0041", "sample-031:chunk-0026", "sample-032:chunk-0046", "sample-033:chunk-0100", "sample-039:chunk-0075", "sample-040:chunk-0073"]
+    },
+    {
+      "id": "amc8",
+      "expectation": "negative",
+      "expectedSampleIds": [],
+      "expectedChunkIds": [],
+      "note": "本批真实提取语料未出现该固定术语，作为语料负例。"
+    },
+    {
+      "id": "p16",
+      "expectation": "negative",
+      "expectedSampleIds": [],
+      "expectedChunkIds": [],
+      "note": "本批真实提取语料未出现该固定术语，作为语料负例。"
+    },
+    {
+      "id": "absoluteValue",
+      "expectation": "negative",
+      "expectedSampleIds": [],
+      "expectedChunkIds": [],
+      "note": "本批真实提取语料未出现该固定术语，作为语料负例。"
+    },
+    {
+      "id": "angleAbc",
+      "expectation": "negative",
+      "expectedSampleIds": [],
+      "expectedChunkIds": [],
+      "note": "本批真实提取语料未出现该固定术语，作为语料负例。"
+    },
+    {
+      "id": "triangleAbc",
+      "expectation": "negative",
+      "expectedSampleIds": [],
+      "expectedChunkIds": [],
+      "note": "本批真实提取语料未出现该固定术语，作为语料负例。"
+    },
+    {
+      "id": "xSquared",
+      "expectation": "positive",
+      "expectedSampleIds": ["sample-040"],
+      "expectedChunkIds": ["sample-040:chunk-0168"]
+    },
+    {
+      "id": "negativeNonexistentChinese",
+      "expectation": "negative",
+      "expectedSampleIds": [],
+      "expectedChunkIds": [],
+      "note": "人工构造的不存在中文负例。"
+    },
+    {
+      "id": "negativeNonexistentMath",
+      "expectation": "negative",
+      "expectedSampleIds": [],
+      "expectedChunkIds": [],
+      "note": "人工构造的不存在数学负例。"
+    }
+  ]
+}

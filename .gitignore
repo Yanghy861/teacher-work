@@ -41,6 +41,7 @@ temp/
 # T04 external sample inputs and generated spike reports
 /spikes/document-parser/samples/
 /spikes/document-parser/results/
+/spikes/chinese-search/results/
 
 # Explicitly sanitized test databases may be versioned
 !tests/fixtures/**/*.db

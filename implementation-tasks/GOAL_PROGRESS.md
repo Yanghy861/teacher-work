@@ -104,3 +104,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线与候选提交：不适用；T04 已完成，下一任务为 T05，T08 仍是本次目标审核点。
 - 已知限制：`officeparser` 直接依赖包含 PDF.js/Tesseract 资源，虽然本次 OCR 关闭且 smoke 通过，正式打包仍需复核资源加载与体积；DOCX heading 位置需在生产 Adapter 层补齐或明确降级。
 - 下一任务可依赖的接口：`spikes/document-parser/officeparser-adapter.mjs` 的自有解析结果契约、`indexed/no_text/parse_failed` 状态、PPTX slide/PDF page/XLSX sheet 位置，以及 `docs/spike-results.md` 中的候选决策与风险。
+
+## 2026-08-20 17:04 +08:00 · T05 · DONE
+
+- 关键改动：新增独立 `spikes/chinese-search/run-benchmark.mjs` 和匿名最小真值 `ground-truth.json`；以 T04 真实 Adapter 重建语料，比较 raw/规范化 FTS5 trigram、应用层 TokenExtractor、短词 fallback、标题/文件名精确匹配；临时 SQLite 与报告均不进入 Git。
+- 验证结果：40 份样本生成 12,512 个非空 chunk，超过 10,000 门槛；索引 164.545 ms、临时数据库 5,197,824 bytes、Token 40,741；Normalizer 等价检查 6/6 通过；每个固定查询均有真值、top-k 排名和判定，另有 2 个额外人工负例；冷首查和热 P50/P95 已写入机器报告；`npm run typecheck`、`npm run lint`、`npm test`（7 files / 17 tests）、`npm run build` 均通过 ✅。
+- 生产决策：Level 1 冻结为 SearchNormalizer + FTS5 trigram；规范化后不超过 2 个字符走短词 fallback；标题/文件名仅做精确字段匹配。当前 TokenExtractor 只允许作为候选层，必须经过规范化正文/数学 token 二次校验，不能直接采用其 30 个负例误召结果；不引入大型搜索系统。
+- 已知限制：`AMC8`、`P16`、`|x|`、`∠ABC`、`△ABC` 在本批真实语料无正例，按负例记录；复杂公式、图片文字、题号和更丰富标题语义需后续真实资料继续验证。
+- 修改文件：`.gitignore`、`spikes/chinese-search/run-benchmark.mjs`、`spikes/chinese-search/ground-truth.json`、`docs/spike-results.md`、`implementation-tasks/STATUS.md`、本文件。
+- Git 任务提交：待 staged diff 审查后创建 `task(T05): chinese math search spike` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：不适用；T05 已完成，下一任务为 T06，T08 仍是本次目标审核点。
+- 下一任务可依赖的接口：SearchNormalizer 规则、FTS5 trigram 优先路径、短词 fallback 边界、TokenExtractor 二次校验条件和匿名 benchmark/真值格式。
