@@ -11,7 +11,7 @@
 
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|
-| T03 | T01–T03 | CHANGES_REQUIRED | e360204499552029f86be0afbcd1096c7fa38b9d | | `docs/reviews/T03-sol-review.md`：安装目录隔离、日志脱敏与 Renderer 边界守卫需修复 |
+| T03 | T01–T03 | AWAITING_REVIEW | a3ea75af88e06b14af20a4a643c68db7d9cf83dc | | 复审修复提交已完成，等待 Sol 复审 |
 | T08 | T04–T08 | PENDING | | | |
 | T15 | T09–T15 | PENDING | | | |
 | T20 | T16–T20 | PENDING | | | |
