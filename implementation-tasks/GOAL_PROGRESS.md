@@ -242,3 +242,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线与候选提交：L04 审核基线为 `checkpoint-T08-pass`；任务提交后将填写完整候选 SHA、把 `SOL_REVIEW_STATUS.md` 的 L04 改为 `AWAITING_REVIEW`，创建送审提交并立即停止，不进入 L05。
 - 已知限制 / Later：未增加 external roots、生产 watcher、拖拽、极端磁盘/强杀矩阵和大规模压力测试；这些不属于 L04 的 Lean V1 验收条件。
 - 下一任务可依赖的接口：L01–L03 的课程树、`ManagedFileService`、`ManagedFilesPanel`、刷新/内容变化事件；L05 只能在 Sol 将 L04 标为 `PASS` 后开始。
+
+## 2026-08-21 · L04 · REVIEW_HANDOFF
+
+- 审核区间：L01–L04；审核基线：`checkpoint-T08-pass`。
+- 候选提交 SHA：`b09467d110d9b6ea662e0eb111475e362f702548`（`lean(L04): phase1 acceptance`）。
+- 送审证据：`docs/phase1-acceptance.md` 与 `tests/phase1-acceptance.test.ts`；一对一课程、两个不连续阶段、两个课次副本、外部编辑后刷新、源/副本隔离、软删除/恢复均已验证；`npm test`（13 files / 34 tests）、typecheck、lint、production build、diff check 和既有 Windows Electron UI smoke 通过。
+- 安全边界：未提交真实教学资料、workspace、Key、日志或构建产物；继续保持 Renderer/Main/路径/原子写入边界；未启用 `--no-sandbox`，未关闭 `contextIsolation` 或 sandbox。
+- 审核状态：`SOL_REVIEW_STATUS.md` 已将 L04 标为 `AWAITING_REVIEW`；Luna 未写 `PASS`，未创建 `checkpoint-L04-pass`。
+- 下一步：创建 `review(L04): request Sol review` 元数据提交后立即停止，等待 Sol 审核；不得进入 L05。
