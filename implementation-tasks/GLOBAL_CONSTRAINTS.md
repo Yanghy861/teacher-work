@@ -1,63 +1,66 @@
-# 全局实施约束
+# Lean V1 全局实施约束
 
-## 1. 产品边界
+## 1. 产品目标
 
-V1 只证明三件事：管理资料、全文找资料、基于老师确认的资料完成 AI 备课。未写入 V1 的能力默认进入 Later，不得顺手加入。
+V1 只证明三条核心流程：
 
-明确禁止在 V1 引入：云端账号/多人协作、向量数据库或语义搜索、Embedding、OCR、知识图谱、课程继承/同步/合并、文件去重、通用 Workflow/Agent 框架、AI 生成或修改 PPT、题库整体迁移、旧式 DOC/PPT/XLS 支持、多端实时同步。
+1. 老师能按课程、学生和课次管理导入到工作台的资料；
+2. 老师能搜索文件名、记录和常见教学文档正文，并打开来源；
+3. 老师能选择资料，调用自己的兼容 API 生成可编辑、可保存的讲义/例题/作业草稿。
 
-## 2. 固定技术与数据边界
+没有直接服务这三条流程的能力默认进入 Later。旧 T09–T42 中与 Lean 任务冲突的设计不再是验收要求。
 
-- Windows 优先的 Electron + React + TypeScript 桌面应用；业务库为 SQLite `workspace.db`，派生全文库为 SQLite `search.db`；
-- React Renderer 只能通过类型化 IPC 使用能力，不能直接访问 SQLite、任意文件系统、Node API 或 API Key；
-- Electron Main 只做短事务、IPC 编排和任务协调；文档解析、批量 Hash、首次/大批量索引放入 `worker_threads`；
-- 业务服务边界至少包含 NodeService、FileService、LinkService、SearchService、ContextBuilder、AIService、BackupService、SettingsService；
-- 第三方解析库必须包在自有 `DocumentParser` Adapter 后；业务库和搜索库不得保存第三方库私有 AST；
-- 第三方库在采用前记录许可证、维护状态、Electron 打包兼容性及 Windows/WPS 实测结果。
+## 2. 简单优先
 
-## 3. 文件安全
+- 手动刷新、重新打开或失败后重试，优先于实时监听和精确续传；
+- 单个顺序 Worker 和内存队列，优先于 Worker 池、持久化调度器和优先级系统；
+- 一个统一 Parser Adapter，优先于按格式拆成多套生产框架；
+- 清晰按钮和普通表单，优先于拖拽、复杂树交互和超大规模优化；
+- 每个任务只验证代表性正常流程、常见失败与适用的安全边界，不穷举第三方软件内部时序；
+- 若复杂方案的额外收益不影响核心流程，应采用简单替代或写入 Later，而不是阻塞项目。
 
-- 程序安装目录与用户工作区彻底分离；升级/卸载不得自动删除工作区；
-- managed 文件使用 `files/objects/<file-uuid>/<sanitized-name>` 一类对象布局，物理路径不能由课程树标题或路径拼接；
-- external 文件只保存根目录 ID + 相对路径，默认只读；找不到时标记 `missing`，不得删除数据库记录或原文件；
-- 素材或 external 加入课次时必须真实复制，副本从此独立，并记录 `origin_file_id`；
-- 正式文件先写 `.tmp`，完成和校验后原子重命名，再以事务提交业务状态；中断不能留下“正式半文件”；
-- 拖动/重命名课程树只改变逻辑关系，绝不移动 managed 物理文件；
-- managed 文件变化以刷新核对保证正确性：启动后台核对、工作台重新获得焦点、重新打开文件或手动刷新时，经过稳定检测、可读检查、Hash 去重和单文件任务合并；Office/WPS watcher 只能作为可选加速器标 dirty，不能成为唯一变化来源，也不能直接触发解析或索引。
+详细取舍见 `LEAN_V1_DECISIONS.md`。
 
-## 4. 数据一致性与可恢复性
+## 3. 不可放松的技术与安全边界
 
-- 核心写操作必须使用事务；要么完整提交，要么回滚；
-- 软删除必须可恢复，禁止业务数据的隐式硬删除；
-- 长任务必须有明确持久化状态；原 `processing` 项在异常重启后回到 `pending`；
-- 搜索是派生数据：`search.db` 可删除并从 `workspace.db` + 真实文件重建，不能成为业务真相；
-- 索引必须文件级恢复、持续显示进度、允许已完成文件先搜索；单文件失败不能阻塞队列；
-- AI 任务必须步骤级保存；完成步骤保留，中断步骤允许整步重做，不做 token 级续传。
+- Windows 优先的 Electron + React + TypeScript 桌面应用；业务真相在 `workspace.db`，全文索引在可删除重建的 `search.db`；
+- Renderer 只能通过类型化、运行时校验、白名单 IPC 使用能力，不能直接访问 SQLite、Node、任意文件系统或 API Key；
+- Electron Main 只做短事务和编排；解析、批量 Hash、批量索引放入 Worker，顺序执行即可；
+- managed 文件使用不由课程标题拼接的安全对象路径；路径解析必须防止逃逸工作区；
+- 正式 managed 文件写入先落同目录临时文件，成功后原子重命名；失败不得留下被当成正式文件的半成品；
+- 课程树移动或重命名只改变逻辑关系，不移动 managed 文件；
+- API Key 只进入 OS-backed secure storage；若当前 Windows/Electron 环境无法安全落盘，可以仅在本次会话内使用，不得退回明文配置；
+- Key、真实教学资料、工作区数据库、日志和备份不得进入 Git；
+- AI 只生成普通可编辑草稿，不覆盖、删除或静默修改老师原资料。
 
-## 5. 搜索边界
+## 4. 文件刷新、搜索与解析
 
-- 搜索节点标题、文件名、note/body_md，以及 TXT/MD/PDF 文本层/DOCX/PPTX/XLSX 可提取正文；
-- 图片、扫描 PDF、PPT 图片文字不 OCR；必须区分 `no_text` 与 `parse_failed`；
-- 中文/数学策略由真实 Spike 决定，至少验证 `有理数`、`一元二次`、`函数`、`几何`、`圆`、`AMC8`、`P16`、`|x|`、`∠ABC`、`△ABC`、`x²`；
-- 优先路径是 FTS5 trigram + SearchNormalizer，必要时使用 TokenExtractor/短词 fallback；不得用大型搜索系统替代未完成的验证；
-- 结果保留 PPT slide、PDF page、DOCX/MD heading、XLSX sheet/cell 等来源位置，并能打开原文件。
+- V1 只管理导入到工作台的副本；任意外部根目录扫描、重定位和长期同步进入 Later；
+- 启动、窗口重新获得焦点、重新打开文件和手动刷新时做轻量核对；watcher 可以省略，不能成为正确性的前置条件；
+- 搜索覆盖标题、文件名、note/body，以及 TXT、MD、文本 PDF、DOCX、PPTX、XLSX 的可提取文本；不做 OCR；
+- 必须区分 `indexed`、`no_text` 和 `parse_failed`，但单个文件失败不能阻止其他文件可用；
+- 搜索采用已验证的 SearchNormalizer + SQLite FTS5 路线；复杂分词、向量搜索和独立搜索服务进入 Later；
+- 应保存可获得的 slide/page/heading/sheet 等来源位置；第三方库不给出稳定位置时允许明确降级到文件级来源。
 
-## 6. AI 与秘密
+## 5. AI、备份与交付
 
-- 没有 API Key 时，树、文件、学生、素材、搜索仍须完整可用；
-- API Key 只进 OS-backed secure storage；不得明文进入 SQLite、配置文件、日志、错误、遥测、测试快照或备份；
-- V1 只有固定 `prepareLesson()` 流程，不抽象通用 Agent/Skill/Workflow；
-- ContextBuilder 只发送老师选择或命中的有限片段，去重、排序、控制预算，并保留 `file_id + position + content_hash`；
-- AI 输出均为可审阅、可编辑的普通草稿 note，不覆盖原课程文件；
-- `ai_runs` 至少保留 provider、model、prompt_version、选中来源与步骤状态。
+- 没有 API Key 时，资料管理和搜索仍可完整使用；
+- 只发送老师明确选择的有限文本片段，并保留足以显示来源的 `file_id + position`；不要求内容哈希清单或通用 Workflow；
+- 讲义、例题和作业可独立生成、独立保存、失败后整次重试；不建立持久化 AI 步骤状态机；
+- 备份在暂停业务写入后进行，使用 SQLite backup API 和 managed 文件复制，恢复到新的空目录；不要求在线并发快照、孤儿文件修复系统或攻击矩阵；
+- Windows 最终交付采用当前工具链中最简单可复现的安装包或便携包；自动更新、升级矩阵和签名发布进入 Later。
 
-## 7. 每个任务的完成协议
+## 6. 完成与阻塞规则
 
-1. 开始前确认所有前置任务在 `STATUS.md` 为 `DONE`，并确认 `SOL_REVIEW_STATUS.md` 中前一审核点为 `PASS`；闸门或 Sol 审核未过不得绕过。
-2. 只读当前任务需要的代码和文档；保留用户已有改动，不做无关重构。
-3. 先补/写能证明验收条件的测试，再完成最小实现；测试不得只验证 mock 调用次数而忽略真实状态。
-4. 至少运行当前相关测试、TypeScript 类型检查、lint；会影响打包时还要运行 production build。
-5. 不以“测试太难”“当前环境没有 Office/真实文件”为理由伪造结果；缺真实条件就标 `BLOCKED`。
-6. 完成后只把本任务状态改为 `DONE`，并在 `implementation-tasks/GOAL_PROGRESS.md` 追加记录：改动文件、运行命令、测试结果、人工验证、已知限制、下一任务可依赖的接口。
-7. 用户已明确要求使用 Git 版本控制。完成并验证每个任务后，必须按 `VERSION_CONTROL.md` 创建范围可审计的本地提交；审核点按协议创建送审提交与通过标签。不得自动 push、添加远程、发布、改写历史、提交秘密或迁移真实教学资料。
-8. Luna 到达 T03、T08、T15、T20、T24、T32、T33、T38、T40、T42 后必须设置 `AWAITING_REVIEW` 并停止；只有 Sol 审核会话可以把对应审核状态改为 `PASS`。
+普通 Lxx 里程碑必须运行相关测试、typecheck、lint；L04、L07、L10、L12 额外运行全量测试和 production build，并接受 Sol 审核。
+
+只有以下情况可以标记 `BLOCKED`：
+
+- 核心用户流程在当前环境中无法实现或复现；
+- 继续会产生资料损坏、路径逃逸或秘密泄漏风险；
+- 缺少该核心流程必需的系统权限、凭据或工具；
+- 两种选择会明显改变产品方向，需要用户决定。
+
+实现很麻烦、自动化不完美、缺少极端矩阵、非核心增强做不完，不属于真实阻塞。此时必须选择简单实现或写入 Later，并继续推进。
+
+完成里程碑后更新 `STATUS.md` 与 `GOAL_PROGRESS.md`，按 `VERSION_CONTROL.md` 创建范围清晰的本地提交；不得自动 push。

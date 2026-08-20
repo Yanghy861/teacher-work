@@ -1,19 +1,15 @@
-# Luna Max 单任务提示词
+# Luna Max 单个 Lean 里程碑提示词
 
-把下面内容复制给 Luna Max，并替换两处任务编号/文件名：
+把 `LXX` 与文件名替换为当前活动里程碑：
 
 ```text
-请实现教师工作台 V1 的任务 TXX：implementation-tasks/tasks/TXX-name.md。
+请实现教师工作台 Lean V1 的 LXX：implementation-tasks/lean-tasks/LXX-name.md。
 
-执行规则：
-1. 先完整阅读 AGENTS.md、implementation-tasks/GLOBAL_CONSTRAINTS.md、implementation-tasks/VERSION_CONTROL.md、当前任务文件，以及任务明确列出的前置产物；原产品规格只用于核对歧义。
-2. 检查 implementation-tasks/STATUS.md；前置任务或阶段闸门未完成时停止并说明，不能跳过。
-3. 只实现 TXX，不提前做后续功能，不加入 Later 能力，不做无关重构。
-4. 保留工作区现有修改；开始前检查相关代码和测试。
-5. 完成任务要求的自动测试、类型检查、lint；需要时执行 production build 和人工验证。
-6. 只有验收证据齐全时才把 TXX 标为 DONE；环境或真实样本不足时标为 BLOCKED，并给出最小解阻步骤。
-7. 验收齐全并更新状态与进度后，只暂存当前任务相关文件，检查 staged diff，创建 `task(TXX): <任务名称>` 本地提交；不得自动 push。
-8. 最终汇报：结果、关键设计、修改文件、验证命令与结果、本地提交 SHA、未解决风险、下一任务可依赖的接口。
+先完整阅读 AGENTS.md、implementation-tasks/LEAN_V1_DECISIONS.md、GLOBAL_CONSTRAINTS.md、VERSION_CONTROL.md、STATUS.md、SOL_REVIEW_STATUS.md、当前任务及其前置产物。前一审核点不是 PASS 时停止。
 
-现在直接执行，不要把整份实施重新规划一遍，也不要只给建议。
+只完成当前 LXX。采用能完成核心流程的最简单可靠实现；文档列为 Later 的实时 watcher、external roots、持久化队列、精确续传、Worker 池、复杂状态机和极端矩阵不得重新加入，也不得因此标记阻塞。数据损坏、路径越界、Renderer/Main/Key 边界和 AI 不覆盖原资料仍须严格验证。
+
+普通里程碑运行相关测试、typecheck、lint；L04/L07/L10/L12 额外运行全量测试和 production build。验收完成后更新 STATUS.md 与 GOAL_PROGRESS.md，按 VERSION_CONTROL.md 创建 `lean(LXX): <名称>` 本地提交；审核点再完成 AWAITING_REVIEW 交接并停止。禁止执行旧 T09–T42，禁止自动 push。
+
+现在直接执行，不要只给计划。
 ```

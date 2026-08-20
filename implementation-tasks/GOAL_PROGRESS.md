@@ -179,3 +179,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 需求调整：产品负责人明确取消 T06 的 WPS 自动恢复/大文件保存/保存中退出穷举门禁，改为启动、焦点返回、重新打开和手动刷新进行权威核对；watcher 只做加速。Sol 应按更新后的主规格、T06/T18/T31 任务契约和 ADR-003 审核，不再要求旧的 21 组合矩阵。
 - 送审证据：`node spikes/decision-gate/verify-gate.mjs --require-done` 23/23；typecheck、lint、8 个测试文件/18 项测试、production build 通过；40 份样本 T04/T05 重跑、三个损坏 OOXML、恶意 PDF、npm audit 0 vulnerabilities、Electron 43.4.1/PDF.js 6.2.108 smoke、T07 16/16 与零 watcher 刷新核对探针均通过。
 - 状态：`SOL_REVIEW_STATUS.md` 已改回 `AWAITING_REVIEW`；待创建 `review(T08): request Sol review` 送审提交后立即停止，不进入 T09，不创建通过标签，不 push。
+
+## 2026-08-20 · T08 · SCOPE_UPDATE
+
+- 产品负责人裁决：旧 T09–T42 的后续企业级实施链退役；T01–T08 已完成成果继续保留，T08 通过 Sol 后只执行 L01–L12。
+- 核心目标保持为“管资料、找资料、AI 备课”；后续删去 external roots、生产 watcher、持久化索引调度/精确续传、Worker 池、四套独立 Parser 任务、AI Workflow 状态机、在线并发备份与完整升级矩阵。
+- 简化后的替代：导入 managed 副本；启动/焦点返回/重新打开/手动刷新；一个顺序 Worker 与重启重扫；统一 Parser；三类草稿独立生成/保存；空闲态备份；一种可复现 Windows 交付方式。
+- 仍保留硬门槛：原资料不被覆盖、Renderer/Main/秘密隔离、路径防逃逸、managed 临时写入加原子重命名、长任务不阻塞 Main、Key 不明文落盘/进日志/进备份、AI 只保存草稿。
+- 控制文件已切换为 `LEAN_V1_DECISIONS.md`、`lean-tasks/L01–L12`、新 `TASK_INDEX.md`、`STATUS.md`、`TRACEABILITY.md`、`GLOBAL_CONSTRAINTS.md`、`VERSION_CONTROL.md` 与 `LUNA_MAX_GOAL.md`；主规格增加高优先级 Lean 裁决。旧任务文件只保留历史参考。
+- 验证结果：Markdown 相对链接检查通过；`node spikes/decision-gate/verify-gate.mjs --require-done` 为 23/23；`npm run typecheck`、`npm run lint`、`npm test`（8 files / 18 tests）、`npm run build` 全部通过。
+- 下一步：创建新的 T08 修复候选并重新送 Sol 审核；T08 未 `PASS` 前不进入 L01，不 push。
