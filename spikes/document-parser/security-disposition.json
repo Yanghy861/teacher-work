@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "status": "clean",
+  "verifiedAt": "2026-08-20",
+  "auditCommand": "npm audit --json --registry=https://registry.npmjs.org",
+  "advisory": "GHSA-hq66-cqwq-w95j",
+  "vulnerableRange": ">=5.6.83 <6.2.108",
+  "fixedVersion": "6.2.108",
+  "officeparser": "7.5.1",
+  "pdfjsDistDeclaredByOfficeparser": "6.1.200",
+  "pdfjsDistOverride": "6.2.108",
+  "resolvedPdfjsDist": "6.2.108",
+  "auditHigh": 0,
+  "auditCritical": 0,
+  "maliciousPdfProbe": "passed",
+  "maliciousPdfProbeCommand": "node spikes/document-parser/run-fixture-probe.mjs",
+  "nodeWorkerResolution": "officeparser Node and Electron 43.4.1 parser smokes resolved the local pdfjs-dist 6.2.108 worker",
+  "electronSmoke": "passed",
+  "electronSmokeCommand": "node_modules/.bin/electron.cmd spikes/document-parser/run-electron-smoke.mjs --samples <external-sanitized-samples>",
+  "scriptingMitigation": "officeparser 7.5.1 PDF path sets isEvalSupported:false; the probe's JavaScript canary remained false",
+  "remainingRisk": "The officeparser manifest still declares 6.1.200, so the override must remain exact and any browser worker must be bundled from the resolved 6.2.108 package; final packaged Electron validation remains required by T42"
+}

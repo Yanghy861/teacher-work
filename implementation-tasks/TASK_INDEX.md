@@ -9,7 +9,7 @@
 | [T03](tasks/T03-secure-ipc-observability.md) | T01–T02 | 安全 IPC、错误与日志边界 |
 | [T04](tasks/T04-spike-document-parser.md) | T01–T03 + 真实样本 | 文档解析证据 |
 | [T05](tasks/T05-spike-chinese-math-search.md) | T04 + 真实语料 | 中文/数学搜索证据 |
-| [T06](tasks/T06-spike-office-wps-watcher.md) | T01–T03 + 真机 Office/WPS | 保存事件证据 |
+| [T06](tasks/T06-spike-office-wps-watcher.md) | T01–T03 + 真机 Office/WPS | 刷新核对与代表性保存证据 |
 | [T07](tasks/T07-spike-crash-recovery.md) | T01–T03 | 强杀恢复证据 |
 | [T08](tasks/T08-spike-decision-gate.md) | T04–T07 | ADR 与技术决策闸门 |
 | [T09](tasks/T09-nodes-data-layer.md) | T08 | nodes Migration/Repository |
@@ -21,7 +21,7 @@
 | [T15](tasks/T15-managed-file-operations.md) | T14、T07 | managed 原子文件操作 |
 | [T16](tasks/T16-material-library-isolation.md) | T11、T12、T15 | 素材库与副本隔离 |
 | [T17](tasks/T17-external-roots.md) | T14、T15、T08 | external root 扫描/重定位 |
-| [T18](tasks/T18-stable-managed-file-change.md) | T06、T15 | 稳定变化领域事件 |
+| [T18](tasks/T18-stable-managed-file-change.md) | T06、T15 | 刷新核对与稳定变化领域事件 |
 | [T19](tasks/T19-file-facing-pages.md) | T13、T16–T18 | 课次/素材/附件文件 UI |
 | [T20](tasks/T20-phase1-gate.md) | T09–T19 | Phase 1 验收闸门 |
 | [T21](tasks/T21-search-storage-state-queue.md) | T20、T05、T08 | 搜索库/状态/队列数据层 |
@@ -46,4 +46,3 @@
 | [T40](tasks/T40-validate-restore-new-workspace.md) | T39、T31、T02 | 校验与新工作区恢复 |
 | [T41](tasks/T41-startup-integrity-backup-security.md) | T39–T40、T31 | 启动检查与备份安全 |
 | [T42](tasks/T42-windows-release-v1-gate.md) | T01–T41 | Windows 正式交付总闸门 |
-

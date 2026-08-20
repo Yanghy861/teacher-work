@@ -5,7 +5,7 @@
 
 ## 实现范围
 
-- FileChangeService 的稳定 contentChanged → 标 stale/dirty → 稳定检查 → Hash；Hash 未变不建任务，变化时合并为唯一任务；
+- FileChangeService 的启动/焦点返回/重新打开/手动刷新核对或可选 watcher dirty → 稳定检查 → Hash；Hash 未变不建任务，变化时合并为唯一任务；
 - 当前索引任务执行期间再次变化，只在结束后补一次稳定/Hash 检查；旧解析结果不得覆盖较新 hash；
 - 新 managed/external 文件进入 pending；missing/软删除正确移除或标记搜索内容；
 - 启动恢复 processing→pending；已 indexed 且 hash 相同不重做；单项失败可重试；
@@ -20,7 +20,6 @@
 ## 验收
 
 - 覆盖原规格测试 10–12、17、22–24；
-- 修改 PPTX 后新词可搜、旧词消失，连续保存最多一次必要重建；
+- 修改 PPTX 后返回工作台或手动刷新，新词可搜、旧词消失；watcher 完全漏报仍可恢复一致，同一新 Hash 最多一次必要重建；
 - 删除 search.db 后可完整重建且课程/学生/files 不变；
 - 强杀后只继续未完成/过期文件，已完成内容立即可用。
-

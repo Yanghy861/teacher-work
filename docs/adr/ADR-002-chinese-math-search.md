@@ -1,12 +1,12 @@
 # ADR-002 · Chinese/math local search strategy
 
-- Status: Proposed for T08 Sol review
+- Status: Accepted for T08 Sol review
 - Date: 2026-08-20
 - Scope: T05 → T08; consumed later by T21–T32
 
 ## Context and evidence
 
-T05 rebuilt 12,512 non-empty chunks from the T04 real sample set. It measured raw FTS5 trigram, FTS5 plus normalization, application TokenExtractor, short-word fallback and exact title/filename matching. The benchmark and anonymous truth set are recorded in `docs/spike-results.md` under Spike B.
+T05 rebuilt 12,797 non-empty chunks from the T04 real sample set with `officeparser@7.5.1`. It measured raw FTS5 trigram, FTS5 plus normalization, application TokenExtractor, short-word fallback and exact title/filename matching. The benchmark and anonymous truth set are recorded in `docs/spike-results.md` under Spike B.
 
 The observed tradeoff is material: the current broad TokenExtractor reached 6/6 positive queries but produced 30 false-positive fragments; normalized FTS5 had zero false positives in the recorded negative checks but was weak for short Chinese terms; the short-word fallback was useful for queries no longer than two normalized characters. The corpus had no positive examples for some requested terms such as `AMC8`, so absence in that corpus is not product coverage evidence.
 

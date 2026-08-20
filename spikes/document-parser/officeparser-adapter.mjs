@@ -1,5 +1,16 @@
 import { OfficeParser } from 'officeparser'
 
+const parseFailureCodes = new Set([
+  'FILE_CORRUPTED',
+  'ZIP_ENTRY_COUNT_LIMIT_EXCEEDED',
+  'ZIP_ENTRY_INVALID_SIZE',
+  'ZIP_SIZE_LIMIT_EXCEEDED',
+  'ZIP_NO_ENTRIES_FOUND',
+  'ZIP_TRUNCATED',
+  'REQUIRED_PART_MISSING',
+  'MAX_NESTING_DEPTH_EXCEEDED',
+])
+
 const diagnosticQueries = [
   ['有理数', 'rationalNumber'],
   ['一元二次', 'quadraticEquation'],
@@ -80,51 +91,73 @@ function toChunks(sourceType, value) {
     })
 }
 
-export async function parse(filePath) {
-  const ast = await OfficeParser.parseOffice(filePath, {
-    ocr: false,
-    extractAttachments: false,
-    includeRawContent: false,
-    ignoreSlideMasters: true,
-  })
-  const textResult = await ast.to('text', {
-    includeImages: false,
-    renderMetadata: false,
-    textConfig: { preserveLayout: true },
-  })
-  const chunkResult = await ast.to('chunks', {
-    strategy: 'document-structure',
-    maxChunkSize: 1000,
-    chunkOverlap: 0,
-    includeMetadata: true,
-  })
-  const text = typeof textResult.value === 'string' ? textResult.value : ''
-  const chunks = toChunks(ast.type, chunkResult.value)
-  const nodeTypeCounts = collectNodeDiagnostics(ast.content)
-  const warningCodes = [...new Set(
-    (Array.isArray(ast.warnings) ? ast.warnings : [])
-      .map((warning) => warning?.code)
-      .filter((code) => typeof code === 'string'),
-  )]
-
+function parserErrorDetails(error) {
+  const issue = error?.officeIssue
+  const code = typeof issue?.code === 'string'
+    ? issue.code
+    : error instanceof Error && typeof error.name === 'string'
+      ? error.name
+      : 'UNKNOWN_PARSE_ERROR'
   return {
-    text,
-    chunks,
-    parseStatus: text.trim().length > 0 || chunks.some((chunk) => chunk.text.trim().length > 0)
-      ? 'indexed'
-      : 'no_text',
-    diagnostics: {
-      parserType: ast.type,
-      warningCount: Array.isArray(ast.warnings) ? ast.warnings.length : 0,
-      warningCodes,
-      nodeTypeCounts,
-      textSignals: {
-        cjkCharCount: countSignalCharacters(text, /[\u3400-\u9fff]/g),
-        mathSymbolCount: countSignalCharacters(text, /[∠△²√∑≤≥≠∞]/g),
-        queryMatches: Object.fromEntries(
-          diagnosticQueries.map(([query, key]) => [key, countOccurrences(text, query)]),
-        ),
+    parserErrorCode: code,
+    parserErrorKind: parseFailureCodes.has(code) ? 'invalid_input' : 'parser_error',
+  }
+}
+
+export async function parse(filePath) {
+  try {
+    const ast = await OfficeParser.parseOffice(filePath, {
+      ocr: false,
+      extractAttachments: false,
+      includeRawContent: false,
+      ignoreSlideMasters: true,
+    })
+    const textResult = await ast.to('text', {
+      includeImages: false,
+      renderMetadata: false,
+      textConfig: { preserveLayout: true },
+    })
+    const chunkResult = await ast.to('chunks', {
+      strategy: 'document-structure',
+      maxChunkSize: 1000,
+      chunkOverlap: 0,
+      includeMetadata: true,
+    })
+    const text = typeof textResult.value === 'string' ? textResult.value : ''
+    const chunks = toChunks(ast.type, chunkResult.value)
+    const nodeTypeCounts = collectNodeDiagnostics(ast.content)
+    const warningCodes = [...new Set(
+      (Array.isArray(ast.warnings) ? ast.warnings : [])
+        .map((warning) => warning?.code)
+        .filter((code) => typeof code === 'string'),
+    )]
+
+    return {
+      text,
+      chunks,
+      parseStatus: text.trim().length > 0 || chunks.some((chunk) => chunk.text.trim().length > 0)
+        ? 'indexed'
+        : 'no_text',
+      diagnostics: {
+        parserType: ast.type,
+        warningCount: Array.isArray(ast.warnings) ? ast.warnings.length : 0,
+        warningCodes,
+        nodeTypeCounts,
+        textSignals: {
+          cjkCharCount: countSignalCharacters(text, /[\u3400-\u9fff]/g),
+          mathSymbolCount: countSignalCharacters(text, /[∠△²√∑≤≥≠∞]/g),
+          queryMatches: Object.fromEntries(
+            diagnosticQueries.map(([query, key]) => [key, countOccurrences(text, query)]),
+          ),
+        },
       },
-    },
+    }
+  } catch (error) {
+    return {
+      text: '',
+      chunks: [],
+      parseStatus: 'parse_failed',
+      diagnostics: parserErrorDetails(error),
+    }
   }
 }

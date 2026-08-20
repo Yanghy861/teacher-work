@@ -7,11 +7,11 @@
 | T01 项目骨架 | DONE | 类型检查、lint、5 项测试、production build 均通过；Windows 真实开发窗口已在保留 `sandbox: true`、未使用 `--no-sandbox`/`--disable-gpu-sandbox` 的条件下正常显示并以 Alt+F4 退出，进程退出码 0 |
 | T02 工作区与 SQLite 基础 | DONE | `WorkspacePaths`、SQLite 连接/迁移/身份封装完成；重复打开、迁移回滚、构建目录替换后数据保留及路径错误测试通过 |
 | T03 安全 IPC 与基础可观测性 | DONE | 共享契约/运行时校验、白名单 IPC、getWorkspaceInfo、Renderer Error Boundary、Main 脱敏日志与边界测试完成；安装目录隔离、正文/凭据脱敏和 Renderer AST/ESLint 边界复审修复；类型检查、lint、17 项测试、production build 通过 |
-| T04 文档解析 Spike | DONE | 40 份外部脱敏样本（PPTX 10、DOCX 14、PDF 14、XLSX 2）已用 `officeparser@7.3.0` 实测；35 indexed、5 no_text、0 parse_failed，结果与风险已记录在 `docs/spike-results.md` |
-| T05 中文/数学搜索 Spike | DONE | 40 份真实样本重提取 12,512 个 chunk；完成 FTS5 trigram、SearchNormalizer、TokenExtractor、短词 fallback、标题/文件名精确匹配对比，真值、top-k 排名、误召、索引成本与冷/热延迟已记录在 `docs/spike-results.md` |
-| T06 Office/WPS 保存监听 Spike | DONE | WPS Office 12.1.0.28043 在 Windows 11 25H2/build 26200 上对 DOCX/PPTX/XLSX 完成多轮真实保存事件实验；Chokidar watcher、稳定采样、可读重试、SHA-256 去重、同文件任务合并和任务中保存后重检已实现，结果已写入 `docs/spike-results.md` |
+| T04 文档解析 Spike | DONE | 40 份外部脱敏样本已用 `officeparser@7.5.1` 重跑：35 indexed、5 no_text、0 parse_failed、12,797 chunks；三个损坏 OOXML 夹具均正确为 parse_failed，PDF.js 6.2.108 安全处置探针通过 |
+| T05 中文/数学搜索 Spike | DONE | 40 份真实样本以新 Adapter 重提取 12,797 个 chunk；FTS5 trigram、SearchNormalizer、TokenExtractor、短词 fallback、标题/文件名对比结论保持一致 |
+| T06 Office/WPS 刷新核对 Spike | DONE | 产品决策改为“启动/焦点返回/重新打开/手动刷新保证一致，watcher 仅可选加速”；刷新探针在零 watcher 事件下通过全部断言，已有 WPS DOCX/PPTX/XLSX 普通保存与打开未改真机证据保留；不再以自动恢复、大文件保存和保存中退出矩阵阻塞 V1 |
 | T07 强杀与恢复 Spike | DONE | 严格固定临时 root 的 crash harness 双轮运行 16/16 场景通过；实际 SIGKILL 覆盖临时文件、原子 rename、SQLite 事务、processing 恢复、Hash、解析、索引和损坏输入队列，结果已写入 `docs/spike-results.md` |
-| T08 Spike 决策闸门 | DONE | 四份 ADR 已冻结文档解析、中文/数学搜索、Office/WPS watcher 与崩溃恢复方案；候选依赖已精确固定，决策闸门验证器与全量检查通过，Phase 1 仍等待 Sol 审核 |
+| T08 Spike 决策闸门 | DONE | T08 复审修复完成：损坏 OOXML 正确分类、PDF.js 6.2.108 安全处置、刷新核对取代 WPS 极端场景矩阵、机器门禁 23/23；等待新的 Sol 复审，未进入 T09 |
 | T09 nodes 数据层 | TODO | |
 | T10 NodeService | TODO | |
 | T11 左侧树 UI | TODO | |

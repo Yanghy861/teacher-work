@@ -1,6 +1,6 @@
 # ADR-004 · Crash-safe file, transaction and task recovery
 
-- Status: Proposed for T08 Sol review
+- Status: Accepted for T08 Sol review
 - Date: 2026-08-20
 - Scope: T07 → T08; consumed later by T14–T31 and T39–T41
 

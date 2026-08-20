@@ -8,7 +8,7 @@
 | 四项工程风险 Spike | T04–T08 |
 | nodes、树、课程、一对一阶段、回收站 | T09–T12、T20 |
 | 学生、记录、课程关联、附件 | T13、T19 |
-| managed/external 文件、素材隔离、Office/WPS 变化检测 | T14–T20 |
+| managed/external 文件、素材隔离、Office/WPS 刷新核对与变化检测 | T14–T20 |
 | search.db、中文/数学混合检索、后台索引、进度与恢复 | T21–T32 |
 | PDF/DOCX/PPTX/MD/TXT/XLSX 解析 | T22、T27–T30 |
 | 安全 Key、AI Gateway、ContextBuilder、可恢复备课 | T33–T38 |
@@ -35,11 +35,10 @@
 | 19 | 中文/英文/题号/数学表达式 | T05、T23、T32 |
 | 20 | no_text 与 parse_failed | T22、T26–T30 |
 | 21 | 大规模索引不阻塞 Main | T24、T32 |
-| 22 | watcher 事件风暴只产生一次必要索引 | T18、T31 |
+| 22 | watcher/焦点/手动刷新重复触发只产生一次必要索引 | T18、T31 |
 | 23 | 进度恢复，processing 回 pending | T21、T31、T32 |
 | 24 | 未全部完成时已就绪内容可搜 | T26、T32 |
 | 25 | ContextBuilder 不发送未选中的整份大文档 | T35 |
 | 26 | source manifest + content_hash | T35、T37 |
 | 27 | SQLite 一致性快照并恢复到新工作区 | T39、T40 |
 | 28 | 备份排除 search.db、缓存和 API Key | T39、T41 |
-

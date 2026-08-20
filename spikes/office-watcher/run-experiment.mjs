@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
-import { access, mkdir, stat, writeFile } from 'node:fs/promises'
+import { access, mkdir, readdir, stat, writeFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
-import { dirname, extname, isAbsolute, resolve } from 'node:path'
+import { basename, dirname, extname, isAbsolute, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import chokidar from 'chokidar'
 
@@ -29,7 +29,7 @@ function option(args, name) {
 function printUsage() {
   console.log([
     'Usage:',
-    '  node spikes/office-watcher/run-experiment.mjs --directory <absolute-dir> --label <scenario> --output <absolute-json> [options]',
+    '  node spikes/office-watcher/run-experiment.mjs --directory <absolute-dir> --label <application> --output <absolute-json> --scenario-id <id> --action <action> --format <docx|pptx|xlsx> --round <number> --expected-outcome <text> [options]',
     '',
     'Options:',
     '  --duration-ms <number>       Experiment duration (default: 60000).',
@@ -39,6 +39,13 @@ function printUsage() {
     '  --task-duration-ms <number>  Simulated rebuild task duration (default: 800).',
     '  --read-retry-ms <number>     Read retry interval (default: 200).',
     '  --read-retries <number>      Read retries per sample (default: 5).',
+    '  --scenario-id <id>           Anonymous scenario identifier; required for attribution.',
+    '  --action <action>            Action identifier; required for attribution.',
+    '  --format <format>            Target format: docx, pptx or xlsx.',
+    '  --round <number>             Positive evidence round number.',
+    '  --expected-outcome <text>    Expected observable outcome, without paths/content.',
+    '  --ready-file <absolute-file> Write a readiness marker after the watcher baseline is ready.',
+    '  --stop-file <absolute-file>  Finish early after this external completion marker appears.',
     '',
     'The watcher records anonymous event/decision metadata only; it never writes paths, filenames, or document content.',
   ].join('\n'))
@@ -50,6 +57,25 @@ function sleep(milliseconds) {
 
 function roundMilliseconds(value) {
   return Math.round(value * 1000) / 1000
+}
+
+function classifyObservedPath(filePath, format) {
+  const name = basename(filePath).toLowerCase()
+  const extension = extname(filePath).toLowerCase()
+  if (name.startsWith('~$')) {
+    return 'office-lock'
+  }
+  if (name.endsWith('.tmp') || name.endsWith('.temp') || extension === '.tmp' || extension === '.temp') {
+    return 'temporary'
+  }
+  if (extension === `.${format}`) {
+    return 'managed-document'
+  }
+  return 'other'
+}
+
+function isManagedCandidate(filePath, format) {
+  return classifyObservedPath(filePath, format) === 'managed-document'
 }
 
 function createHashForFile(filePath) {
@@ -141,8 +167,9 @@ function createFileIdFactory() {
   }
 }
 
-function createExperiment({ label, parameters }) {
+function createExperiment({ label, parameters, scenario }) {
   const startedAt = performance.now()
+  const startedAtWall = new Date().toISOString()
   const getFileId = createFileIdFactory()
   const eventSequence = []
   const decisions = []
@@ -151,7 +178,9 @@ function createExperiment({ label, parameters }) {
   const fileHashByPath = new Map()
   const taskCounterByPath = new Map()
   const lastInspectionByPath = new Map()
+  const baselineByPath = new Map()
   const pendingWork = new Set()
+  let readyAtWall
 
   function track(promise) {
     pendingWork.add(promise)
@@ -168,6 +197,7 @@ function createExperiment({ label, parameters }) {
       event,
       fileId,
       extension: extname(filePath).toLowerCase() || 'none',
+      classification: classifyObservedPath(filePath, scenario.format),
       state: inspection?.state,
       sizeBytes: inspection?.sizeBytes,
       mtimeMs: inspection?.mtimeMs,
@@ -177,6 +207,7 @@ function createExperiment({ label, parameters }) {
     lastInspectionByPath.set(filePath, {
       fileId,
       extension: extname(filePath).toLowerCase() || 'none',
+      classification: classifyObservedPath(filePath, scenario.format),
       state: inspection?.state,
       sizeBytes: inspection?.sizeBytes,
       mtimeMs: inspection?.mtimeMs,
@@ -276,14 +307,43 @@ function createExperiment({ label, parameters }) {
     return track((async () => {
       const inspection = event === 'unlink' ? { state: 'missing' } : await inspectFile(filePath)
       recordEvent(event, filePath, inspection)
-      if (event === 'add' || event === 'change' || event === 'unlink') {
+      if (isManagedCandidate(filePath, scenario.format)
+        && (event === 'add' || event === 'change' || event === 'unlink')) {
         await schedule(filePath, event)
       }
     })())
   }
 
-  async function finish(watcher) {
-    await watcher.close()
+  async function primeBaseline(filePath) {
+    if (!isManagedCandidate(filePath, scenario.format)) {
+      return
+    }
+    const stable = await sampleStable(filePath, parameters)
+    if (stable.state !== 'stable' || stable.final?.state !== 'readable'
+      || typeof stable.final.hash !== 'string') {
+      throw new Error('baseline_not_stable')
+    }
+    const fileId = getFileId(filePath)
+    fileHashByPath.set(filePath, stable.final.hash)
+    const snapshot = {
+      fileId,
+      extension: extname(filePath).toLowerCase() || 'none',
+      classification: 'managed-document',
+      state: stable.final.state,
+      sizeBytes: stable.final.sizeBytes,
+      mtimeMs: stable.final.mtimeMs,
+      hashPrefix: stable.final.hash.slice(0, 16),
+      stableSampleCount: stable.samples.length,
+    }
+    baselineByPath.set(filePath, snapshot)
+    lastInspectionByPath.set(filePath, snapshot)
+  }
+
+  function markReady() {
+    readyAtWall = new Date().toISOString()
+  }
+
+  async function drainWork() {
     for (let attempt = 0; attempt < 20; attempt += 1) {
       if (pendingWork.size === 0 && timerByPath.size === 0) {
         break
@@ -295,12 +355,36 @@ function createExperiment({ label, parameters }) {
         parameters.taskDurationMs,
       ))
     }
-    for (const filePath of lastInspectionByPath.keys()) {
+  }
+
+  async function finish(watcher, finalManagedPaths) {
+    await watcher.close()
+    await drainWork()
+    for (const filePath of finalManagedPaths) {
+      const inspection = await inspectFileWithRetries(filePath, parameters)
+      if (inspection.state !== 'readable' || typeof inspection.hash !== 'string') {
+        continue
+      }
+      const previousHash = fileHashByPath.get(filePath)
+      if (inspection.hash !== previousHash) {
+        stateByPath.set(filePath, {
+          dirty: true,
+          running: false,
+          queuedDuringTask: false,
+          eventCount: 0,
+          mergedEvents: 0,
+        })
+        await processDirty(filePath, 'final_scan')
+      }
+    }
+    await drainWork()
+    for (const filePath of new Set([...lastInspectionByPath.keys(), ...finalManagedPaths])) {
       const inspection = await inspectFileWithRetries(filePath, parameters)
       const fileId = getFileId(filePath)
       lastInspectionByPath.set(filePath, {
         fileId,
         extension: extname(filePath).toLowerCase() || 'none',
+        classification: classifyObservedPath(filePath, scenario.format),
         state: inspection.state,
         sizeBytes: inspection.sizeBytes,
         mtimeMs: inspection.mtimeMs,
@@ -323,12 +407,22 @@ function createExperiment({ label, parameters }) {
       extensionSummary[event.extension] = summary
     }
     return {
-      schemaVersion: 1,
+      schemaVersion: 3,
       status: 'completed',
       benchmark: 'T06-Spike-C',
       application: label,
+      scenario: {
+        ...scenario,
+        startedAt: startedAtWall,
+        readyAt: readyAtWall,
+        endedAt: new Date().toISOString(),
+      },
       watcher: 'chokidar@4.0.3',
       parameters,
+      baseline: {
+        managedFileCount: baselineByPath.size,
+        snapshots: [...baselineByPath.values()],
+      },
       eventSequence,
       decisions,
       summary: {
@@ -346,6 +440,7 @@ function createExperiment({ label, parameters }) {
         hashUnchangedDecisionCount: decisions.filter((decision) => decision.reason === 'hash_unchanged').length,
         mergedEventCount: [...stateByPath.values()].reduce((total, state) => total + state.mergedEvents, 0),
         taskRecheckCount: decisions.filter((decision) => decision.triggerEvent === 'task_recheck').length,
+        finalScanDecisionCount: decisions.filter((decision) => decision.triggerEvent === 'final_scan').length,
         savesObservedDuringTask: decisions.filter((decision) => decision.queuedDuringTask).length,
       },
       finalSnapshots: [...lastInspectionByPath.values()],
@@ -358,7 +453,7 @@ function createExperiment({ label, parameters }) {
     }
   }
 
-  return { onFsEvent, finish }
+  return { finish, markReady, onFsEvent, primeBaseline }
 }
 
 async function main() {
@@ -370,19 +465,60 @@ async function main() {
   const directoryArgument = option(args, '--directory')
   const label = option(args, '--label') ?? 'unknown-application'
   const outputArgument = option(args, '--output')
+  const scenarioId = option(args, '--scenario-id')
+  const action = option(args, '--action')
+  const format = option(args, '--format')?.toLowerCase()
+  const roundArgument = option(args, '--round')
+  const expectedOutcome = option(args, '--expected-outcome')
+  const readyFileArgument = option(args, '--ready-file')
+  const stopFileArgument = option(args, '--stop-file')
   const durationArgument = option(args, '--duration-ms')
-  if (directoryArgument === undefined || outputArgument === undefined) {
+  if (directoryArgument === undefined || outputArgument === undefined
+    || scenarioId === undefined || action === undefined || format === undefined
+    || roundArgument === undefined || expectedOutcome === undefined) {
     printUsage()
     process.exitCode = 2
     return
   }
+  if (!['.docx', '.pptx', '.xlsx'].includes(`.${format}`)) {
+    throw new Error('format_invalid')
+  }
+  const round = Number(roundArgument)
+  if (!Number.isInteger(round) || round < 1) {
+    throw new Error('round_invalid')
+  }
   if (!isAbsolute(directoryArgument) || !isAbsolute(outputArgument)) {
     throw new Error('directory_and_output_must_be_absolute')
   }
+  if (readyFileArgument !== undefined && !isAbsolute(readyFileArgument)) {
+    throw new Error('ready_file_must_be_absolute')
+  }
+  if (stopFileArgument !== undefined && !isAbsolute(stopFileArgument)) {
+    throw new Error('stop_file_must_be_absolute')
+  }
   const directory = resolve(directoryArgument)
   const output = resolve(outputArgument)
+  const readyFile = readyFileArgument === undefined ? undefined : resolve(readyFileArgument)
+  const stopFile = stopFileArgument === undefined ? undefined : resolve(stopFileArgument)
   await mkdir(directory, { recursive: true })
   await mkdir(dirname(output), { recursive: true })
+  if (readyFile !== undefined) {
+    await mkdir(dirname(readyFile), { recursive: true })
+  }
+  if (stopFile !== undefined) {
+    await mkdir(dirname(stopFile), { recursive: true })
+    try {
+      await access(stopFile)
+      throw new Error('stop_file_already_exists')
+    } catch (error) {
+      if (error instanceof Error && error.message === 'stop_file_already_exists') {
+        throw error
+      }
+      if (!(error instanceof Error) || error.code !== 'ENOENT') {
+        throw error
+      }
+    }
+  }
   const durationMs = Number(durationArgument ?? 60_000)
   if (!Number.isFinite(durationMs) || durationMs < 1_000) {
     throw new Error('duration_ms_invalid')
@@ -408,9 +544,19 @@ async function main() {
     }
     parameters[key] = value
   }
-  const experiment = createExperiment({ label, parameters })
+  const experiment = createExperiment({
+    label,
+    parameters,
+    scenario: {
+      id: scenarioId,
+      action,
+      format,
+      round,
+      expectedOutcome,
+    },
+  })
   const watcher = chokidar.watch(directory, {
-    ignoreInitial: false,
+    ignoreInitial: true,
     awaitWriteFinish: false,
     persistent: true,
     depth: 0,
@@ -418,20 +564,78 @@ async function main() {
   watcher.on('all', (event, filePath) => {
     void experiment.onFsEvent(event, filePath)
   })
+  let finishReady
+  const readyPromise = new Promise((resolvePromise) => { finishReady = resolvePromise })
+  let readyError
+  watcher.once('ready', () => {
+    void (async () => {
+      try {
+        const entries = await readdir(directory, { withFileTypes: true })
+        for (const entry of entries) {
+          if (entry.isFile()) {
+            await experiment.primeBaseline(resolve(directory, entry.name))
+          }
+        }
+        experiment.markReady()
+        if (readyFile !== undefined) {
+          await writeFile(readyFile, JSON.stringify({
+            schemaVersion: 1,
+            scenarioId,
+            readyAt: new Date().toISOString(),
+          }) + '\n', 'utf8')
+        }
+      } catch (error) {
+        readyError = error
+      } finally {
+        finishReady()
+      }
+    })()
+  })
 
   let finished = false
+  let stopPoll
   const writeAndExit = async () => {
     if (finished) {
       return
     }
     finished = true
-    const report = await experiment.finish(watcher)
+    if (stopPoll !== undefined) {
+      clearInterval(stopPoll)
+    }
+    await readyPromise
+    if (readyError !== undefined) {
+      throw readyError
+    }
+    const finalEntries = await readdir(directory, { withFileTypes: true })
+    const finalManagedPaths = finalEntries
+      .filter((entry) => entry.isFile() && isManagedCandidate(resolve(directory, entry.name), format))
+      .map((entry) => resolve(directory, entry.name))
+    const report = await experiment.finish(watcher, finalManagedPaths)
     await writeFile(output, JSON.stringify(report, null, 2) + '\n', 'utf8')
     console.log(`wrote_machine_report ${report.schemaVersion}`)
   }
-  process.once('SIGINT', () => { void writeAndExit().then(() => process.exit(0)) })
-  process.once('SIGTERM', () => { void writeAndExit().then(() => process.exit(0)) })
-  setTimeout(() => { void writeAndExit().then(() => process.exit(0)) }, durationMs)
+  const requestExit = () => {
+    void writeAndExit()
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error(`watcher_error ${error instanceof Error ? error.message : 'unknown_error'}`)
+        process.exit(2)
+      })
+  }
+  process.once('SIGINT', requestExit)
+  process.once('SIGTERM', requestExit)
+  if (stopFile !== undefined) {
+    stopPoll = setInterval(() => {
+      void access(stopFile)
+        .then(requestExit)
+        .catch((error) => {
+          if (!(error instanceof Error) || error.code !== 'ENOENT') {
+            console.error(`stop_file_error ${error instanceof Error ? error.message : 'unknown_error'}`)
+          }
+        })
+    }, 250)
+  }
+  setTimeout(requestExit, durationMs)
 }
 
 main().catch((error) => {

@@ -31,8 +31,17 @@
 node spikes/document-parser/run-spike.mjs `
   --samples D:\path\to\sanitized-samples `
   --adapter D:\path\to\adapter.mjs `
-  --adapter-label officeparser-7.3.0 `
+  --adapter-label officeparser-7.5.1 `
   --output D:\path\outside\repo\document-parser-run.json
 ```
 
 输出目录应在仓库外；如果未提供 `--output`，机器报告只输出到 stdout。工具遇到样本门槛不足时返回退出码 `2`、报告状态 `blocked`，不会生成“通过”结论。
+
+更新解析依赖或 PDF.js override 后，另在 Electron Main runtime 运行匿名 smoke：
+
+```powershell
+node_modules\.bin\electron.cmd spikes\document-parser\run-electron-smoke.mjs `
+  --samples D:\path\to\sanitized-samples
+```
+
+输出只包含扩展名、解析状态、chunk 数和 Electron/Node/PDF.js 版本，不保存样本路径、文件名或正文。

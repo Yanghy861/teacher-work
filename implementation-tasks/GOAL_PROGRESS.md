@@ -160,3 +160,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 送审证据：四项 Spike 均为 `DONE`；四份 ADR 已冻结方案与限制；`node spikes/decision-gate/verify-gate.mjs --require-done` 为 19/19；`npm run typecheck`、`npm run lint`、`npm test`（7 files/17 tests）、`npm run build` 通过。
 - 建议 Sol 重点：审查 `T04–T07` 真实证据是否足以支撑 ADR 决策；确认 `officeparser@7.3.0` 与 `chokidar@4.0.3` 的许可证/维护/打包边界；确认 SearchNormalizer/短词 fallback/TokenExtractor 二次校验、watcher 单文件任务重检、临时文件与 `processing` 恢复顺序没有越过 V1 范围；复核所有已知限制未被写成通过。
 - 下一步：创建 `review(T08): request Sol review` 本地送审提交后停止，等待 Sol 审核；不进入 T09，不 push。
+
+## 2026-08-20 21:30 +08:00 · T08 · DONE
+
+- 关键改动：按产品负责人决定，将 T06 从“穷举 WPS 保存内部时序”收缩为“刷新核对保证正确性、watcher 仅可选加速”；启动后台核对、焦点返回、重新打开和手动刷新均为权威触发，自动恢复、大文件保存、保存中退出不再阻塞 V1。同步修改主规格、T06/T18/T19/T20/T31/T32 与 ADR-003，删除未提交的 21 组合证据门禁，新增零 watcher 事件刷新探针。其余复审项升级到 `officeparser@7.5.1`，精确 override `pdfjs-dist@6.2.108`，增加三类损坏 OOXML、恶意 PDF 与 Electron runtime 探针，并让 T08 gate 校验真实机器结果而非文字状态。
+- 修改文件：产品主规格；`implementation-tasks/GLOBAL_CONSTRAINTS.md`、任务/索引/追踪/状态文件；`package.json`、`package-lock.json`；`spikes/document-parser/**`、`spikes/office-watcher/**`、`spikes/decision-gate/verify-gate.mjs`；`tests/office-refresh-reconciliation.test.*`；`docs/spike-results.md` 与四份 ADR。
+- 验证命令与结果：T04 用 40 份外部脱敏样本重跑为 35 indexed、5 no_text、0 parse_failed、12,797 chunks、222,881 chars；T05 重跑 12,797 chunks，Normalizer 6/6 且搜索方案结论保持；刷新核对探针 10/10 断言通过，watcherRequiredForCorrectness=false；损坏/恶意夹具探针通过；T07 16/16 SIGKILL 恢复通过；官方 npm registry audit 为 0 vulnerabilities；Electron 43.4.1 / Node 24.18.1 / PDF.js 6.2.108 smoke 对 PPTX/PDF/XLSX 均 indexed；T08 非最终 gate 23/23 通过。完整 typecheck、lint、18 项测试、production build 与 `--require-done` gate 在提交前最终复核。
+- 人工/真实环境验证：复用已有 WPS Office `12.1.0.28043` 的 DOCX/PPTX/XLSX 普通保存与打开未改证据；本次不再操作 WPS、不触碰真实教学资料。刷新正确性由真实临时文件探针验证，不依赖 WPS 的具体保存事件。
+- Git 任务提交：待最终 diff 与验证通过后创建 `fix(T08-review): close parser security and refresh findings`；不 push。
+- 若为审核点，审核基线仍为 `checkpoint-T03-pass`；创建修复提交后填写新的候选 SHA，并将 T08 改回 `AWAITING_REVIEW` 后停止。
+- 已知限制：工作台长期在后台、文件从资源管理器直接修改且可选 watcher 同时漏报时，搜索可能暂时陈旧；下一次启动、焦点返回、重新打开或手动刷新恢复。UI 必须展示索引更新时间/更新中状态。最终 packaged Electron 的 PDF worker 资源一致性留到 T42 再验。
+- 下一任务可依赖的接口：权威 refresh reconciliation 触发契约、可选 watcher dirty 加速、`officeparser@7.5.1` 自有 Adapter、PDF.js 6.2.108 安全处置、损坏输入 `parse_failed` 契约与 23 项 T08 gate。T09 仍须等待 Sol PASS。
