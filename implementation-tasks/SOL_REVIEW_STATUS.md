@@ -4,20 +4,16 @@
 
 - `PENDING`：尚未到达审核点；
 - `AWAITING_REVIEW`：Luna 已完成该段并停止，等待 Sol；
-- `CHANGES_REQUIRED`：Sol 发现问题，Luna 只能修复本审核区间后再次送审；
+- `CHANGES_REQUIRED`：Sol 发现阻塞问题，Luna 只能修复当前审核区间后再次送审；
 - `PASS`：Sol 已审核通过，可以进入下一段。
 
-权限规则：Luna 只能把 `PENDING`/`CHANGES_REQUIRED` 改为 `AWAITING_REVIEW` 并填写候选提交；只有独立的 Sol 审核会话可以写 `PASS` 或 `CHANGES_REQUIRED`。Sol 审核默认只审查、不直接修改产品代码。所有提交与标签操作必须服从 `VERSION_CONTROL.md`。
+Luna 只能把 `PENDING`/`CHANGES_REQUIRED` 改为 `AWAITING_REVIEW` 并填写候选提交；只有独立 Sol 会话可以写 `PASS` 或 `CHANGES_REQUIRED`。旧 T15/T20/T24/T32/T33/T38/T40/T42 审核点随 T09–T42 一并退役；当前审核链只有 T08、L04、L07、L10、L12。
 
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|
-| T03 | T01–T03 | PASS | bfad00596e2b8ce5e0958829169d0141f99528e9 | checkpoint-T03-pass | `docs/reviews/T03-sol-review.md` 第二次复审通过；完整 Node 内置模块守卫与独立遍历探针均通过 |
-| T08 | T04–T08 | AWAITING_REVIEW | 8099887b6f367fb63e6c07ce55a5fdf867252bda | | 第二次复审候选：损坏输入与 PDF.js 安全项已修复；产品负责人将 T06 改为“刷新核对保证正确性、watcher 仅加速”，零 watcher 探针与 23/23 gate 通过；请复审新规格与实现证据 |
-| T15 | T09–T15 | PENDING | | | |
-| T20 | T16–T20 | PENDING | | | |
-| T24 | T21–T24 | PENDING | | | |
-| T32 | T25–T32 | PENDING | | | |
-| T33 | T33 | PENDING | | | |
-| T38 | T34–T38 | PENDING | | | |
-| T40 | T39–T40 | PENDING | | | |
-| T42 | T41–T42 | PENDING | | | |
+| T03 | T01–T03 | PASS | bfad00596e2b8ce5e0958829169d0141f99528e9 | checkpoint-T03-pass | `docs/reviews/T03-sol-review.md` 第二次复审通过 |
+| T08 | T04–T08 + Lean 范围裁决 | AWAITING_REVIEW | fe44b795830bdbcf96f17cc53a86402c1f9f0cd3 | | 新候选保留既有 Spike/安全修复，并按产品负责人决定将后续实现收缩为 L01–L12；请以 `LEAN_V1_DECISIONS.md`、主规格 0.2 和活动任务为准，不再按退役 T09–T42 验收 |
+| L04 | L01–L04 | PENDING | | | 管资料阶段 |
+| L07 | L05–L07 | PENDING | | | 找资料阶段 |
+| L10 | L08–L10 | PENDING | | | AI 备课阶段 |
+| L12 | L11–L12 | PENDING | | | 备份、Windows 交付与最终验收 |

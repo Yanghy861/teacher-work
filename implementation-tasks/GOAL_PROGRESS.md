@@ -189,3 +189,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 控制文件已切换为 `LEAN_V1_DECISIONS.md`、`lean-tasks/L01–L12`、新 `TASK_INDEX.md`、`STATUS.md`、`TRACEABILITY.md`、`GLOBAL_CONSTRAINTS.md`、`VERSION_CONTROL.md` 与 `LUNA_MAX_GOAL.md`；主规格增加高优先级 Lean 裁决。旧任务文件只保留历史参考。
 - 验证结果：Markdown 相对链接检查通过；`node spikes/decision-gate/verify-gate.mjs --require-done` 为 23/23；`npm run typecheck`、`npm run lint`、`npm test`（8 files / 18 tests）、`npm run build` 全部通过。
 - 下一步：创建新的 T08 修复候选并重新送 Sol 审核；T08 未 `PASS` 前不进入 L01，不 push。
+
+## 2026-08-20 · T08 · REVIEW_HANDOFF（Lean V1）
+
+- 审核区间：T04–T08 的有效 Spike/安全成果，加本次后续范围裁决；审核基线仍为 `checkpoint-T03-pass`。
+- 新候选提交 SHA：`fe44b795830bdbcf96f17cc53a86402c1f9f0cd3`（`fix(T08-review): adopt Lean V1 execution scope`）。
+- 产品裁决：旧 T09–T42 及其后续审核点退役；T08 通过后活动实施链只有 L01–L12，审核点只有 L04/L07/L10/L12。Sol 不应再以旧 enterprise 级增强条件拒绝通过。
+- 送审证据：Markdown 相对链接检查通过；T08 gate 23/23；typecheck、lint、8 files / 18 tests、production build 全部通过；26 个范围文件已在候选提交中可审计保存。
+- 建议 Sol 重点：确认简化没有放松原资料保护、Renderer/Main/秘密边界、managed 原子写入、路径防逃逸、后台长任务和 AI 草稿隔离；确认 Goal 的高成本非核心替代规则与四个后续阶段闸门一致。
+- 状态：T08 已重新设为 `AWAITING_REVIEW`；创建本次 `review(T08): request Sol review` 元数据提交后停止，不进入 L01、不创建通过标签、不 push。
