@@ -1,12 +1,32 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { release } from 'node:os'
 import { join } from 'node:path'
 
 import { registerAppIpc } from './ipc/app-ipc'
+import { installMainErrorHandlers } from './logging/main-error-handlers'
+import { StructuredLogger } from './logging/structured-logger'
 import { applyWindowsCompatibility } from './windows-compat'
 import { windowWebPreferences } from './window-security'
+import {
+  initializeDefaultWorkspace,
+  type WorkspaceHandle,
+} from './workspace/workspace-service'
+import type { WorkspaceInfo } from '../shared/ipc-contracts'
 
 let mainWindow: BrowserWindow | null = null
+let workspaceHandle: WorkspaceHandle | null = null
+let unregisterAppIpc: (() => void) | null = null
+let servicesClosed = false
+
+const logger = new StructuredLogger()
+const removeMainErrorHandlers = installMainErrorHandlers(logger)
+
+function getWorkspaceInfo(): WorkspaceInfo {
+  if (workspaceHandle === null) {
+    workspaceHandle = initializeDefaultWorkspace(app.getPath('appData'), app.getAppPath())
+  }
+  return workspaceHandle.identity
+}
 
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -44,8 +64,15 @@ function createMainWindow(): BrowserWindow {
 
 applyWindowsCompatibility(app.commandLine, process.platform, release())
 
-app.whenReady().then(() => {
-  registerAppIpc()
+void app.whenReady().then(() => {
+  unregisterAppIpc = registerAppIpc(
+    ipcMain,
+    {
+      getAppVersion: () => app.getVersion(),
+      getWorkspaceInfo,
+    },
+    logger,
+  )
   mainWindow = createMainWindow()
 
   app.on('activate', () => {
@@ -53,6 +80,18 @@ app.whenReady().then(() => {
       mainWindow = createMainWindow()
     }
   })
+}).catch((error: unknown) => {
+  logger.error('main.ready_failed', error)
+})
+
+app.on('before-quit', () => {
+  if (servicesClosed) {
+    return
+  }
+  servicesClosed = true
+  unregisterAppIpc?.()
+  workspaceHandle?.close()
+  removeMainErrorHandlers()
 })
 
 app.on('window-all-closed', () => {

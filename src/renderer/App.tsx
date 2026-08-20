@@ -1,16 +1,28 @@
 import { useEffect, useState } from 'react'
 
+import type { TeacherWorkbenchError } from '../shared/ipc-contracts'
+
 const navigationItems = ['我的课程', '素材库', '学生', '设置'] as const
 
 export default function App(): React.JSX.Element {
   const [activeItem, setActiveItem] = useState<(typeof navigationItems)[number]>('我的课程')
   const [appVersion, setAppVersion] = useState('读取中…')
+  const [workspaceStatus, setWorkspaceStatus] = useState('工作区读取中…')
 
   useEffect(() => {
-    void window.teacherWorkbench.app
-      .getVersion()
-      .then(setAppVersion)
-      .catch(() => setAppVersion('开发模式'))
+    void Promise.all([
+      window.teacherWorkbench.app.getVersion(),
+      window.teacherWorkbench.workspace.getInfo(),
+    ])
+      .then(([version, workspace]) => {
+        setAppVersion(version)
+        setWorkspaceStatus(`工作区已连接 · schema v${workspace.schemaVersion}`)
+      })
+      .catch((error: unknown) => {
+        setAppVersion('开发模式')
+        const code = isTeacherWorkbenchError(error) ? error.code : 'INTERNAL_ERROR'
+        setWorkspaceStatus(`工作区不可用 · ${code}`)
+      })
   }, [])
 
   return (
@@ -41,7 +53,7 @@ export default function App(): React.JSX.Element {
             <p className="eyebrow">教师工作台 V1</p>
             <h1>{activeItem}</h1>
           </div>
-          <div className="status-pill">骨架已启动</div>
+          <div className="status-pill">{workspaceStatus}</div>
         </header>
         <section className="placeholder-card" aria-live="polite">
           <div className="placeholder-icon" aria-hidden="true">✦</div>
@@ -51,4 +63,8 @@ export default function App(): React.JSX.Element {
       </main>
     </div>
   )
+}
+
+function isTeacherWorkbenchError(error: unknown): error is TeacherWorkbenchError {
+  return error instanceof Error && 'code' in error && typeof error.code === 'string'
 }

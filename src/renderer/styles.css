@@ -159,3 +159,23 @@ h1 {
   color: #64748b;
   line-height: 1.8;
 }
+
+.error-card {
+  max-width: 720px;
+  margin: 20vh auto 0;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  padding: 44px;
+  color: #7f1d1d;
+  background: #fff7f7;
+  text-align: center;
+}
+
+.error-card h2 {
+  margin-bottom: 12px;
+}
+
+.error-card p {
+  margin-bottom: 0;
+  color: #991b1b;
+}

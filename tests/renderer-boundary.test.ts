@@ -8,8 +8,9 @@ const rendererDirectory = fileURLToPath(new URL('../src/renderer', import.meta.u
 const prohibitedImports = [
   /from\s+['"]electron['"]/,
   /require\(\s*['"]electron['"]\s*\)/,
-  /from\s+['"]node:(?:fs|path|sqlite|child_process)['"]/,
+  /from\s+['"]node:[^'"]+['"]/,
   /from\s+['"](?:fs|path|better-sqlite3|sqlite3)['"]/,
+  /from\s+['"][^'"]*\/main(?:\/|['"])/,
 ]
 
 function rendererSourceFiles(directory: string): string[] {

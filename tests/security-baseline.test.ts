@@ -12,8 +12,9 @@ describe('desktop security baseline', () => {
     })
   })
 
-  it('exposes only a named, narrow IPC channel for the scaffold', () => {
-    expect(Object.keys(IPC_CHANNELS)).toEqual(['getAppVersion'])
+  it('exposes only named, narrow IPC channels', () => {
+    expect(Object.keys(IPC_CHANNELS)).toEqual(['getAppVersion', 'getWorkspaceInfo'])
     expect(IPC_CHANNELS.getAppVersion).toBe('app:get-version')
+    expect(IPC_CHANNELS.getWorkspaceInfo).toBe('workspace:get-info')
   })
 })

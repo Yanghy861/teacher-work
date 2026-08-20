@@ -52,3 +52,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线与候选提交：不适用；T02 不是审核点。下一个 Sol 审核点为 T03，T03 完成后必须停止等待审核。
 - 已知限制：SQLite 原生模块的 Electron ABI/打包集成属于后续运行时交付验证；T02 当前提供 Main 侧连接封装和 Node/Vitest 可重复测试，未提前实现 T03 IPC 或 T42 打包流程。
 - 下一任务可依赖的接口：`WorkspacePaths`、`initializeWorkspace`/`initializeDefaultWorkspace`、`WorkspaceDatabase`、`runMigrations`、`workspaceMigrations`、`readWorkspaceIdentity`。
+
+## 2026-08-20 14:23 · T03 · DONE
+
+- 关键改动：在 shared 层定义 `IpcChannel`、请求类型、`IpcResponse<T>`、稳定错误码、`WorkspaceInfo` 和运行时响应 schema；Preload 只暴露 `app.getVersion` 与 `workspace.getInfo` 两个白名单方法，内部 channel 采用联合类型，不暴露通用 invoke、路径或 SQL。Main 集中注册/注销 handler，拒绝未知 channel、非空/注入 payload，验证服务返回值，并将内部异常映射为不含 Main stack 的稳定错误。Renderer 启动时通过 `getWorkspaceInfo` 贯通到 T02 工作区服务；加入 Renderer Error Boundary。加入结构化 JSON logger、apiKey/token/authorization/password/secret 脱敏、文件正文字段省略，以及 Main 未捕获异常和未处理 Promise 拒绝记录。
+- 修改文件：`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/main/ipc/app-ipc.ts`、`src/main/logging/structured-logger.ts`、`src/main/logging/main-error-handlers.ts`、`src/main/index.ts`、`src/renderer/App.tsx`、`src/renderer/main.tsx`、`src/renderer/renderer-error-boundary.tsx`、`src/renderer/styles.css`、`tests/security-baseline.test.ts`、`tests/renderer-boundary.test.ts`、`tests/ipc-security.test.ts`、`tests/logging-redaction.test.ts`、`tests/renderer-error-boundary.test.ts`、`docs/t03-secure-ipc-observability.md`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm run typecheck` ✅；`npm run lint` ✅；`npm test` ✅（7 files / 16 tests）；`npm run build` ✅（Electron Main、Preload、Renderer 均产出）；Electron 43.4.1 的 Node runtime 加载 `better-sqlite3` 并执行内存 SQLite 查询 ✅。测试覆盖合法/非法 payload、路径与 SQL 注入、未知 channel、稳定错误响应、白名单注册/注销、脱敏、正文省略、Renderer Error Boundary 和 Renderer 进程边界。
+- 人工/真实环境验证：本任务未写入真实教学资料；IPC 业务验证使用依赖注入的 Main service 和临时/内存测试数据，Electron 原生模块 ABI 已在当前 Electron runtime 中单独验证。T01 的真实 Windows 窗口验收仍以已有 T01 DONE 记录为准。
+- Git 任务提交：待完成送审前，先创建 `task(T03): secure ipc and observability baseline` 本地任务提交；不 push。
+- 若为审核点，审核基线与候选提交：T03 是 Sol 审核点，审核基线为 `checkpoint-T00`；完成任务提交后将记录候选 SHA，更新 `SOL_REVIEW_STATUS.md` 为 `AWAITING_REVIEW`，创建 `review(T03): request Sol review`，然后立即停止，不进入 T04。
+- 已知限制：T03 只提供工作区信息示例和基础错误/日志边界，不实现业务 CRUD；未知 channel 在 Electron 原生层会被拒绝，内部可测试路由同时返回稳定 `UNKNOWN_CHANNEL` 错误。
+- 下一任务可依赖的接口：`window.teacherWorkbench.app.getVersion()`、`window.teacherWorkbench.workspace.getInfo()`、`IpcResponse<T>`/错误码、`registerAppIpc`、`StructuredLogger`、`RendererErrorBoundary`。
