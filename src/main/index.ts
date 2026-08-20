@@ -1,8 +1,12 @@
 import { app, BrowserWindow } from 'electron'
+import { release } from 'node:os'
 import { join } from 'node:path'
 
 import { registerAppIpc } from './ipc/app-ipc'
+import { applyWindowsCompatibility } from './windows-compat'
 import { windowWebPreferences } from './window-security'
+
+let mainWindow: BrowserWindow | null = null
 
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -17,8 +21,16 @@ function createMainWindow(): BrowserWindow {
     },
   })
 
-  window.once('ready-to-show', () => {
-    window.show()
+  window.webContents.once('did-finish-load', () => {
+    if (!window.isDestroyed()) {
+      window.show()
+    }
+  })
+
+  window.once('closed', () => {
+    if (mainWindow === window) {
+      mainWindow = null
+    }
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -30,13 +42,15 @@ function createMainWindow(): BrowserWindow {
   return window
 }
 
+applyWindowsCompatibility(app.commandLine, process.platform, release())
+
 app.whenReady().then(() => {
   registerAppIpc()
-  createMainWindow()
+  mainWindow = createMainWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow()
+      mainWindow = createMainWindow()
     }
   })
 })

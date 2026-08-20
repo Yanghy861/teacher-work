@@ -4,7 +4,7 @@
 
 | 任务 | 状态 | 完成/阻塞记录 |
 |---|---|---|
-| T01 项目骨架 | BLOCKED | 静态、测试与 production build 已通过；当前 Windows Electron Renderer/GPU 沙箱无法启动，只有 `--no-sandbox` 才能运行，不能降低 T01 安全验收标准。需在可启动 Electron 沙箱的 Windows 环境/权限下重验 `npm run dev` |
+| T01 项目骨架 | DONE | 类型检查、lint、5 项测试、production build 均通过；Windows 真实开发窗口已在保留 `sandbox: true`、未使用 `--no-sandbox`/`--disable-gpu-sandbox` 的条件下正常显示并以 Alt+F4 退出，进程退出码 0 |
 | T02 工作区与 SQLite 基础 | TODO | |
 | T03 安全 IPC 与基础可观测性 | TODO | |
 | T04 文档解析 Spike | TODO | |
