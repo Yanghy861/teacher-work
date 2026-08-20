@@ -4,7 +4,7 @@
 
 | 任务 | 状态 | 完成/阻塞记录 |
 |---|---|---|
-| T01 项目骨架 | TODO | |
+| T01 项目骨架 | BLOCKED | 静态、测试与 production build 已通过；当前 Windows Electron Renderer/GPU 沙箱无法启动，只有 `--no-sandbox` 才能运行，不能降低 T01 安全验收标准。需在可启动 Electron 沙箱的 Windows 环境/权限下重验 `npm run dev` |
 | T02 工作区与 SQLite 基础 | TODO | |
 | T03 安全 IPC 与基础可观测性 | TODO | |
 | T04 文档解析 Spike | TODO | |
@@ -46,4 +46,3 @@
 | T40 备份校验与新工作区恢复 | TODO | |
 | T41 启动完整性与备份安全 | TODO | |
 | T42 Windows 交付与 V1 总闸门 | TODO | |
-

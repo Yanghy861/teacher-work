@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "教师工作台 V1 的 Windows 优先 Electron 桌面应用",
-  "type": "module",
+  "type": "commonjs",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
