@@ -7,7 +7,7 @@
 | T01 项目骨架 | DONE | 类型检查、lint、5 项测试、production build 均通过；Windows 真实开发窗口已在保留 `sandbox: true`、未使用 `--no-sandbox`/`--disable-gpu-sandbox` 的条件下正常显示并以 Alt+F4 退出，进程退出码 0 |
 | T02 工作区与 SQLite 基础 | DONE | `WorkspacePaths`、SQLite 连接/迁移/身份封装完成；重复打开、迁移回滚、构建目录替换后数据保留及路径错误测试通过 |
 | T03 安全 IPC 与基础可观测性 | DONE | 共享契约/运行时校验、白名单 IPC、getWorkspaceInfo、Renderer Error Boundary、Main 脱敏日志与边界测试完成；安装目录隔离、正文/凭据脱敏和 Renderer AST/ESLint 边界复审修复；类型检查、lint、17 项测试、production build 通过 |
-| T04 文档解析 Spike | TODO | |
+| T04 文档解析 Spike | BLOCKED | 已建立安全的样本驱动实验工具，但当前 checkout 没有 30～100 份脱敏真实 PPTX/DOCX/PDF/XLSX 样本；缺少真实样本时不得运行候选解析库或标记 DONE |
 | T05 中文/数学搜索 Spike | TODO | |
 | T06 Office/WPS 保存监听 Spike | TODO | |
 | T07 强杀与恢复 Spike | TODO | |

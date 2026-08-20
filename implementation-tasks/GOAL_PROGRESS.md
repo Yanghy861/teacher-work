@@ -81,3 +81,15 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线与候选提交：T03 审核区间为 T01–T03，基线为 `checkpoint-T00`；候选 SHA 已更新为 `bfad00596e2b8ce5e0958829169d0141f99528e9`，`SOL_REVIEW_STATUS.md` 已改为 `AWAITING_REVIEW`；待创建新的 `review(T03): request Sol review` 送审提交后立即停止，不进入 T04。
 - 已知限制：等待 Sol 复审；Luna 未标记 `PASS`，未创建 `checkpoint-T03-pass` 标签。
 - 下一任务可依赖的接口：本次仅收紧既有 Renderer 架构边界守卫，T04 仍须等待 T03 Sol 审核通过后才能开始。
+
+## 2026-08-20 16:02 +08:00 · T04 · BLOCKED
+
+- 关键改动：建立独立的 `spikes/document-parser/run-spike.mjs` 样本驱动实验工具和 Adapter 契约说明；工具只输出匿名样本元数据、解析状态、位置计数、耗时与 RSS 峰值，不保存文件名、路径或正文；补充 Spike A 结果文档和样本/结果目录的 Git 忽略规则；为 Spike `.mjs` 增加 Node lint 环境配置。未接入生产解析器、OCR 或业务 SearchService。
+- 修改文件：`spikes/document-parser/run-spike.mjs`、`spikes/document-parser/README.md`、`docs/spike-results.md`、`.gitignore`、`eslint.config.mjs`、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`node --check spikes/document-parser/run-spike.mjs` ✅；工具 `--help` ✅；对当前 `docs` 目录运行样本门槛检查，机器报告为 `blocked`、样本数 0、`.pptx/.docx/.pdf/.xlsx` 均为 0，拒绝加载 Adapter ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm test` ✅（7 files / 17 tests）；`npm run build` ✅。
+- 人工/真实环境验证：当前 checkout 没有脱敏真实 `.pptx`、`.docx`、`.pdf` 或 `.xlsx` 样本，未运行任何候选解析库；因此没有伪造中文保真、slide/page/sheet 位置、公式/表格降级、耗时、峰值内存或 Electron/Windows 兼容结论。
+- Git 任务提交：待 staged diff 审查后创建 `blocked(T04): missing real document samples` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：不适用；T04 尚未完成，不能进入 T05，也不能推进 T08。
+- 已知限制：T04 的真实前置条件不足；T05 还要求 T04 的真实提取结果和至少 10,000 个 chunk，T06 还要求 Windows 真机及实际 Office/WPS 保存流程，均不能用合成样本、mock 或静态结论替代。
+- 下一任务可依赖的接口：提供仓库外的 30～100 份脱敏真实样本（至少 PPTX、DOCX、文本 PDF、扫描 PDF、XLSX，覆盖中文/数学/表格/图片/大文件），并提供或允许安装候选 Adapter 后，从 `spikes/document-parser/README.md` 的命令恢复 T04；解阻前不得开始 T05–T08。
+- 若阻塞，缺少条件与最小解阻动作：缺少可访问的真实脱敏样本目录。用户只需提供仓库外样本目录并允许按 Adapter 契约运行候选解析器；恢复后先运行样本门槛检查和 Spike A，补齐 `docs/spike-results.md` 真实指标与结论，再从 T04 继续。
