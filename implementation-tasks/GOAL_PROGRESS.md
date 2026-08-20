@@ -127,3 +127,15 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：WPS 自动恢复式保存、大文件容量和保存中退出时序本轮未稳定触发，已在 `docs/spike-results.md` 明确标为未宣称；后续不能从 T06 结果外推这些语义。Microsoft Office 未安装，未声称其行为。
 - 下一任务可依赖的接口：`spikes/office-watcher/run-experiment.mjs` 的匿名事件/决策报告、Chokidar 候选、推荐 debounce/stability/readability/hash/task 参数范围。
 - 若阻塞，缺少条件与最小解阻动作：无；核心真实 WPS 多格式验收已完成。若后续产品需要未覆盖的自动恢复、大文件或保存中退出承诺，应在对应真实环境补做专项实验。
+
+## 2026-08-20 18:03 +08:00 · T07 · DONE
+
+- 关键改动：建立只操作固定 `tmp/t07-crash-recovery` 的 crash harness；父进程在子进程 checkpoint 后实际强杀，并验证临时文件/原子 rename、SQLite 事务回滚、`processing → pending`、Hash、解析、派生索引和损坏输入队列恢复。
+- 修改文件：`.gitignore`、`spikes/crash-recovery/common.mjs`、`spikes/crash-recovery/worker.mjs`、`spikes/crash-recovery/run-harness.mjs`、`spikes/crash-recovery/README.md`、`docs/spike-results.md`、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`node --check` 三个 harness 模块 ✅；`node spikes/crash-recovery/run-harness.mjs --repeat 1` 8/8 通过 ✅；正式 `--repeat 2` 16/16 通过、16/16 `SIGKILL`、恢复失败 0 ✅；越界 root 负向测试拒绝 ✅；全量 `npm run lint`、`npm run typecheck`、`npm test`、`npm run build` 将在提交前复核。
+- 人工/真实环境验证：在当前 Windows 11 25H2/build `26200` 上实际启动并强杀 Node 子进程；同卷临时文件 rename 与 SQLite 重启完整性均实测。未触碰真实用户目录、真实教学资料或 WPS 用户文档。
+- Git 任务提交：待 staged diff 审查后创建 `task(T07): crash recovery spike` 本地提交；不 push。
+- 若为审核点，审核基线与候选提交：不适用；T07 不是审核点，下一任务为 T08，T08 是本次目标审核点。
+- 已知限制：未制造外部 Office 文件占用、跨卷/网络共享 rename、杀毒软件干预或真实生产队列；对 Windows `EPERM/EBUSY` 只记录有界重试建议，不宣称所有锁语义已通过。
+- 下一任务可依赖的接口：`spikes/crash-recovery/run-harness.mjs` 的严格临时 root 策略、checkpoint/强杀协议、匿名断言报告，以及 Spike D 中的文件/事务/processing/索引恢复顺序。
+- 若阻塞，缺少条件与最小解阻动作：无；当前强杀与恢复验收证据齐全。

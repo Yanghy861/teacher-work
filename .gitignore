@@ -43,6 +43,7 @@ temp/
 /spikes/document-parser/results/
 /spikes/chinese-search/results/
 /spikes/office-watcher/results/
+/spikes/crash-recovery/results/
 
 # Explicitly sanitized test databases may be versioned
 !tests/fixtures/**/*.db

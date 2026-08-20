@@ -151,4 +151,38 @@
 
 ## Spike D：强杀与恢复
 
-状态：`PENDING`（T07 尚未开始）。
+状态：`DONE`
+
+### Harness、边界和报告
+
+- 实验器：`spikes/crash-recovery/run-harness.mjs`、`worker.mjs`、`common.mjs`；每个场景启动独立 Node 子进程，在明确 checkpoint 后由父进程调用操作系统进程终止，随后在新的父进程流程中执行恢复检查。
+- 严格路径：实验 root 只能是工作区下固定的 `tmp/t07-crash-recovery`；每次执行创建新的 run/iteration/scenario 隔离目录，报告只能写入 `spikes/crash-recovery/results/`。越界 root 的负向测试被拒绝，未创建越界报告。
+- 输入：只生成合成二进制、JSON、SQLite 和索引数据，不访问真实用户目录、真实教学资料或已有工作区。机器报告 `spikes/crash-recovery/results/t07-crash-recovery.json` 被 `.gitignore` 忽略，只保存匿名场景、断言、状态、尺寸和 Hash 前缀。
+- 正式重复结果：`--repeat 2` 共 16 个场景，16/16 `passed`；16/16 子进程均 `SIGKILL`，恢复失败数为 0。所有“正式成功”断言都在恢复后重新读取/校验，而不是只检查 mock 调用次数。
+
+### 故障点和恢复结果
+
+| 故障点 | 强杀时刻 | 恢复检查与结果 |
+|---|---|---|
+| 复制到临时文件 | 临时文件只写入部分字节 | 识别并丢弃半成品，重新复制到同目录临时文件后校验并完成 rename；正式文件 size/Hash 完整，无残留临时文件 |
+| 校验后、原子 rename 前 | 临时文件已完整但尚未成为正式文件 | 重新校验后提升完整临时文件；未把未完成写入当作成功 |
+| SQLite 事务提交前 | `BEGIN IMMEDIATE` 和 insert 已执行，commit 未发生 | 重启 SQLite integrity check 为 `ok`，未提交行不存在；重试事务后才出现 `completed` |
+| `processing` 已提交后 | 任务状态已持久化为 `processing` | 启动恢复将其置回 `pending`；已完成项目保持一次 run，未被重做；中断项目重试后只完成一次 |
+| Hash 计算中 | 状态仍为 `computing`，Hash 尚未提交 | 不接受中间 Hash；重启重新计算并以完整文件 Hash 提交 `complete` |
+| 解析临时输出中 | 解析输出 `.tmp` 只有部分 JSON | 删除部分输出，重新解析并原子写入可读正式结果 |
+| 索引临时写入后 | 新索引 `.tmp` 不完整，旧正式索引仍存在 | 保留可读旧索引，删除半成品，再生成完整新索引；派生索引不成为业务真相 |
+| 损坏输入队列 | 队列尚未处理 | 坏输入单项标记 `failed/INPUT_UNREADABLE`，后续可读输入继续完成，队列不被阻塞 |
+
+### Windows 实测与限制
+
+- 当前 Windows 11 25H2/build `26200` 上，Node 子进程强杀报告为 `SIGKILL`；同卷完整临时文件的 `rename` 在实验中成功，SQLite 在进程终止后可恢复并通过完整性检查。
+- 本 Spike 没有持有 WPS/Office 外部句柄来制造文件占用，因此不能宣称所有 `EPERM`/`EBUSY` 文件锁场景都能立即 rename。生产实现必须对 Windows 占用错误使用有上限的重试/退避；仍失败时保留临时文件并让启动恢复处理，不覆盖正式文件。
+- 本实验只覆盖同一 Windows 本地卷。跨卷、网络共享、杀毒软件或同步盘的 rename/flush 语义没有证据，不能外推为 V1 支持。
+- Harness 自身不实现 token 级 AI 恢复，也不接入正式队列、解析器或索引器；它只验证中断边界、恢复状态和原子文件策略。
+
+### Spike D 决策
+
+- **文件顺序：** 正式实现先在目标对象目录写 `.tmp`，关闭句柄后做 size/可读/Hash 校验，再在同一卷原子 rename；只有 rename 成功且最终文件再次可读，才允许在事务中提交业务状态。启动时扫描 `.tmp` 和无业务记录的孤儿正式文件，恢复或隔离，不把半文件标成成功。
+- **事务与任务：** SQLite 事务必须短且显式；未提交事务交给 SQLite 回滚，已提交的 `processing` 在启动时统一回到 `pending`，`completed` 不重做。长解析、Hash 和索引写入放入 Worker/后台任务，主进程只协调状态。
+- **派生索引：** 搜索索引使用临时文件加原子替换，损坏或不完整时可删除重建；单项 parse/index 失败只记录该项失败并继续队列。
+- **不提前接入生产：** 本 Spike 证明了故障点和恢复策略，但不创建正式业务表、文件服务或索引队列；T14–T31 再按本结果实现生产边界。
