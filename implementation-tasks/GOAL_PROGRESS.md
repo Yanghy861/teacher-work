@@ -139,3 +139,15 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：未制造外部 Office 文件占用、跨卷/网络共享 rename、杀毒软件干预或真实生产队列；对 Windows `EPERM/EBUSY` 只记录有界重试建议，不宣称所有锁语义已通过。
 - 下一任务可依赖的接口：`spikes/crash-recovery/run-harness.mjs` 的严格临时 root 策略、checkpoint/强杀协议、匿名断言报告，以及 Spike D 中的文件/事务/processing/索引恢复顺序。
 - 若阻塞，缺少条件与最小解阻动作：无；当前强杀与恢复验收证据齐全。
+
+## 2026-08-20 18:09 +08:00 · T08 · DONE
+
+- 关键改动：基于四项真实 Spike 证据写入四份 ADR，冻结 `DocumentParser` 自有结果契约、SearchNormalizer/FTS5 trigram 与短词/TokenExtractor 边界、Chokidar dirty/debounce/stable/readable/Hash/单任务重检策略、临时文件/SQLite/processing/派生索引恢复状态机；将 `officeparser` 固定为 `7.3.0`、`chokidar` 固定为 `4.0.3`。
+- 修改文件：`package.json`、`package-lock.json`、`docs/adr/ADR-001-document-parser.md`、`docs/adr/ADR-002-chinese-math-search.md`、`docs/adr/ADR-003-office-watcher.md`、`docs/adr/ADR-004-crash-recovery.md`、`spikes/decision-gate/verify-gate.mjs`、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`node spikes/decision-gate/verify-gate.mjs` ✅（19/19 checks）；四项 Spike 均为 `DONE` 且无 `PENDING`；`node --check spikes/decision-gate/verify-gate.mjs` ✅；`npm run typecheck`、`npm run lint`、`npm test`（7 files/17 tests）、`npm run build` ✅；四份 ADR 均包含证据、决策、依赖检查和限制。
+- 人工/真实环境验证：T08 复核 T04 的 40 份真实样本、T05 的 12,512 chunks/真值 benchmark、T06 的 WPS Windows 实测和 T07 的 16 次 SIGKILL/恢复报告；未新增真实资料或电脑界面操作。
+- Git 任务提交：待 staged diff 审查后创建 `task(T08): freeze spike decisions` 本地提交；不 push。随后按协议生成候选 SHA 和送审提交。
+- 若为审核点，审核基线与候选提交：T08 审核区间为 T04–T08，基线为 `checkpoint-T03-pass`；候选 SHA 在任务提交后填写到 `SOL_REVIEW_STATUS.md`，状态改为 `AWAITING_REVIEW`，并创建 `review(T08): request Sol review`。
+- 已知限制：`officeparser` 的 DOCX heading、复杂表格/公式与打包资源仍需后续格式任务/Windows 交付复核；搜索语料对部分术语无正例；WPS 自动恢复/大文件/保存中退出和外部文件锁未宣称；跨卷/网络路径与最终打包恢复仍未证实。上述均已列为 ADR known limitations，不作为未解释的“通过”。
+- 下一任务可依赖的接口：四份 ADR、`spikes/decision-gate/verify-gate.mjs`、精确锁定的候选版本，以及 `docs/spike-results.md` 的样本/方法/指标/失败边界。
+- 若阻塞，缺少条件与最小解阻动作：无；T08 任务证据齐全，现按硬闸门协议送 Sol 审核并停止。

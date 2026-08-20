@@ -11,7 +11,7 @@
 | T05 中文/数学搜索 Spike | DONE | 40 份真实样本重提取 12,512 个 chunk；完成 FTS5 trigram、SearchNormalizer、TokenExtractor、短词 fallback、标题/文件名精确匹配对比，真值、top-k 排名、误召、索引成本与冷/热延迟已记录在 `docs/spike-results.md` |
 | T06 Office/WPS 保存监听 Spike | DONE | WPS Office 12.1.0.28043 在 Windows 11 25H2/build 26200 上对 DOCX/PPTX/XLSX 完成多轮真实保存事件实验；Chokidar watcher、稳定采样、可读重试、SHA-256 去重、同文件任务合并和任务中保存后重检已实现，结果已写入 `docs/spike-results.md` |
 | T07 强杀与恢复 Spike | DONE | 严格固定临时 root 的 crash harness 双轮运行 16/16 场景通过；实际 SIGKILL 覆盖临时文件、原子 rename、SQLite 事务、processing 恢复、Hash、解析、索引和损坏输入队列，结果已写入 `docs/spike-results.md` |
-| T08 Spike 决策闸门 | TODO | |
+| T08 Spike 决策闸门 | DONE | 四份 ADR 已冻结文档解析、中文/数学搜索、Office/WPS watcher 与崩溃恢复方案；候选依赖已精确固定，决策闸门验证器与全量检查通过，Phase 1 仍等待 Sol 审核 |
 | T09 nodes 数据层 | TODO | |
 | T10 NodeService | TODO | |
 | T11 左侧树 UI | TODO | |
