@@ -171,3 +171,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 若为审核点，审核基线仍为 `checkpoint-T03-pass`；创建修复提交后填写新的候选 SHA，并将 T08 改回 `AWAITING_REVIEW` 后停止。
 - 已知限制：工作台长期在后台、文件从资源管理器直接修改且可选 watcher 同时漏报时，搜索可能暂时陈旧；下一次启动、焦点返回、重新打开或手动刷新恢复。UI 必须展示索引更新时间/更新中状态。最终 packaged Electron 的 PDF worker 资源一致性留到 T42 再验。
 - 下一任务可依赖的接口：权威 refresh reconciliation 触发契约、可选 watcher dirty 加速、`officeparser@7.5.1` 自有 Adapter、PDF.js 6.2.108 安全处置、损坏输入 `parse_failed` 契约与 23 项 T08 gate。T09 仍须等待 Sol PASS。
+
+## 2026-08-20 21:32 +08:00 · T08 · REVIEW_HANDOFF
+
+- 审核区间：T04–T08；审核基线：`checkpoint-T03-pass`。
+- 新候选提交 SHA：`8099887b6f367fb63e6c07ce55a5fdf867252bda`（`fix(T08-review): close parser security and refresh findings`）。
+- 需求调整：产品负责人明确取消 T06 的 WPS 自动恢复/大文件保存/保存中退出穷举门禁，改为启动、焦点返回、重新打开和手动刷新进行权威核对；watcher 只做加速。Sol 应按更新后的主规格、T06/T18/T31 任务契约和 ADR-003 审核，不再要求旧的 21 组合矩阵。
+- 送审证据：`node spikes/decision-gate/verify-gate.mjs --require-done` 23/23；typecheck、lint、8 个测试文件/18 项测试、production build 通过；40 份样本 T04/T05 重跑、三个损坏 OOXML、恶意 PDF、npm audit 0 vulnerabilities、Electron 43.4.1/PDF.js 6.2.108 smoke、T07 16/16 与零 watcher 刷新核对探针均通过。
+- 状态：`SOL_REVIEW_STATUS.md` 已改回 `AWAITING_REVIEW`；待创建 `review(T08): request Sol review` 送审提交后立即停止，不进入 T09，不创建通过标签，不 push。

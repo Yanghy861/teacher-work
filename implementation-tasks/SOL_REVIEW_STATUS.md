@@ -12,7 +12,7 @@
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|
 | T03 | T01–T03 | PASS | bfad00596e2b8ce5e0958829169d0141f99528e9 | checkpoint-T03-pass | `docs/reviews/T03-sol-review.md` 第二次复审通过；完整 Node 内置模块守卫与独立遍历探针均通过 |
-| T08 | T04–T08 | CHANGES_REQUIRED | 43e368d1f423fdaf60a586dd6da94d219fced719 | | `docs/reviews/T08-sol-review.md`：officeparser 损坏输入误判、T06 三个必做真实场景缺失、PDF 依赖 high advisory 未处置，且 gate 可在证据不足时误报 19/19 |
+| T08 | T04–T08 | AWAITING_REVIEW | 8099887b6f367fb63e6c07ce55a5fdf867252bda | | 第二次复审候选：损坏输入与 PDF.js 安全项已修复；产品负责人将 T06 改为“刷新核对保证正确性、watcher 仅加速”，零 watcher 探针与 23/23 gate 通过；请复审新规格与实现证据 |
 | T15 | T09–T15 | PENDING | | | |
 | T20 | T16–T20 | PENDING | | | |
 | T24 | T21–T24 | PENDING | | | |
