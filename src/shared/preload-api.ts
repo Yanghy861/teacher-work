@@ -5,6 +5,22 @@ import {
   TeacherWorkbenchError,
 } from './ipc-contracts'
 import {
+  isAiCancelResult,
+  isAiConnectionTestResult,
+  isAiSettings,
+  isAiTextRequest,
+  isAiTextResult,
+  isAiRequestIdRequest,
+  isUpdateAiSettingsRequest,
+  type AiCancelResult,
+  type AiConnectionTestResult,
+  type AiRequestIdRequest,
+  type AiSettings,
+  type AiTextRequest,
+  type AiTextResult,
+  type UpdateAiSettingsRequest,
+} from './ai-contracts'
+import {
   isSearchHit,
   isSearchIndexStatusSummary,
   isSearchRebuildResult,
@@ -61,7 +77,7 @@ import {
   type ManagedFileRecord,
 } from './file-contracts'
 
-export { CORE_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
+export { AI_IPC_CHANNELS, CORE_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
 export type { IpcChannel, WorkspaceInfo } from './ipc-contracts'
 export type {
   CoreOverview,
@@ -89,6 +105,7 @@ export type {
   ManagedFileRefreshResult,
 } from './file-contracts'
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
+export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
 
 export interface TeacherWorkbenchApi {
   app: {
@@ -126,6 +143,13 @@ export interface TeacherWorkbenchApi {
     rebuild: () => Promise<SearchRebuildResult>
     getStatus: () => Promise<SearchIndexStatusSummary>
   }
+  ai: {
+    getSettings: () => Promise<AiSettings>
+    updateSettings: (request: UpdateAiSettingsRequest) => Promise<AiSettings>
+    testConnection: (request: AiRequestIdRequest) => Promise<AiConnectionTestResult>
+    requestText: (request: AiTextRequest) => Promise<AiTextResult>
+    cancel: (request: AiRequestIdRequest) => Promise<AiCancelResult>
+  }
 }
 
 export {
@@ -159,4 +183,11 @@ export {
   isSearchIndexStatusSummary,
   isSearchRebuildResult,
   isSearchQuery,
+  isAiCancelResult,
+  isAiConnectionTestResult,
+  isAiSettings,
+  isAiTextRequest,
+  isAiTextResult,
+  isAiRequestIdRequest,
+  isUpdateAiSettingsRequest,
 }

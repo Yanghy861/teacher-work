@@ -6,6 +6,7 @@ import { registerAppIpc } from './ipc/app-ipc'
 import { registerCoreIpc } from './ipc/core-ipc'
 import { registerFileIpc } from './ipc/file-ipc'
 import { registerSearchIpc } from './ipc/search-ipc'
+import { registerAiIpc } from './ipc/ai-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
@@ -15,6 +16,9 @@ import { installMainErrorHandlers } from './logging/main-error-handlers'
 import { StructuredLogger } from './logging/structured-logger'
 import { applyWindowsCompatibility } from './windows-compat'
 import { windowWebPreferences } from './window-security'
+import { AiGateway } from './ai/ai-gateway'
+import { AiSettingsService } from './ai/ai-settings-service'
+import { electronSecureStorage } from './ai/secure-storage'
 import {
   initializeDefaultWorkspace,
   type WorkspaceHandle,
@@ -33,6 +37,9 @@ let unregisterAppIpc: (() => void) | null = null
 let unregisterCoreIpc: (() => void) | null = null
 let unregisterFileIpc: (() => void) | null = null
 let unregisterSearchIpc: (() => void) | null = null
+let unregisterAiIpc: (() => void) | null = null
+let aiSettingsService: AiSettingsService | null = null
+let aiGateway: AiGateway | null = null
 let servicesClosed = false
 let shutdownStarted = false
 
@@ -101,6 +108,24 @@ function getDocumentIndexWorker(): DocumentIndexWorker {
     workspaceHandle.paths,
   )
   return documentIndexWorker
+}
+
+function getAiSettings(): AiSettingsService {
+  if (workspaceHandle === null) {
+    getWorkspaceInfo()
+  }
+  if (workspaceHandle === null) {
+    throw new Error('Workspace was not initialized')
+  }
+  aiSettingsService ??= new AiSettingsService(workspaceHandle.database.raw, {
+    secureStorage: electronSecureStorage,
+  })
+  return aiSettingsService
+}
+
+function getAiGateway(): AiGateway {
+  aiGateway ??= new AiGateway(getAiSettings(), { logger })
+  return aiGateway
 }
 
 function enqueueIndex(fileId: string): void {
@@ -233,6 +258,14 @@ void app.whenReady().then(() => {
     },
     logger,
   )
+  unregisterAiIpc = registerAiIpc(
+    ipcMain,
+    {
+      getSettingsService: getAiSettings,
+      getGateway: getAiGateway,
+    },
+    logger,
+  )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
   void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
@@ -263,8 +296,11 @@ app.on('before-quit', (event) => {
   unregisterCoreIpc?.()
   unregisterFileIpc?.()
   unregisterSearchIpc?.()
+  unregisterAiIpc?.()
   coreDataService = null
   managedFileService = null
+  aiGateway = null
+  aiSettingsService = null
   void (async () => {
     await documentIndexWorker?.close()
     documentIndexWorker = null

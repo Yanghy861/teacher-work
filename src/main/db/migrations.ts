@@ -143,6 +143,22 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 6,
+    name: 'create_ai_settings',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS ai_settings (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          provider TEXT NOT NULL CHECK (provider IN ('openai-compatible')),
+          model TEXT NOT NULL CHECK (length(trim(model)) > 0),
+          endpoint TEXT NOT NULL CHECK (length(trim(endpoint)) > 0),
+          updated_at TEXT NOT NULL
+        );
+
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

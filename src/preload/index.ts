@@ -6,6 +6,7 @@ import {
   FILE_IPC_CHANNELS,
   IPC_CHANNELS,
   SEARCH_IPC_CHANNELS,
+  AI_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContentChanged,
   isManagedFileOverview,
@@ -20,6 +21,10 @@ import {
   isSearchHit,
   isSearchIndexStatusSummary,
   isSearchRebuildResult,
+  isAiCancelResult,
+  isAiConnectionTestResult,
+  isAiSettings,
+  isAiTextResult,
   parseIpcResponse,
   TeacherWorkbenchError,
   type CreateCourseRequest,
@@ -39,6 +44,9 @@ import {
   type TeacherWorkbenchApi,
   type SearchQuery,
   type SearchHit,
+  type AiRequestIdRequest,
+  type AiTextRequest,
+  type UpdateAiSettingsRequest,
 } from '../shared/preload-api'
 
 async function invoke<T>(
@@ -98,6 +106,13 @@ const api = Object.freeze({
     ),
     rebuild: () => invoke(SEARCH_IPC_CHANNELS.rebuild, {}, isSearchRebuildResult),
     getStatus: () => invoke(SEARCH_IPC_CHANNELS.getStatus, {}, isSearchIndexStatusSummary),
+  }),
+  ai: Object.freeze({
+    getSettings: () => invoke(AI_IPC_CHANNELS.getSettings, {}, isAiSettings),
+    updateSettings: (request: UpdateAiSettingsRequest) => invoke(AI_IPC_CHANNELS.updateSettings, request, isAiSettings),
+    testConnection: (request: AiRequestIdRequest) => invoke(AI_IPC_CHANNELS.testConnection, request, isAiConnectionTestResult),
+    requestText: (request: AiTextRequest) => invoke(AI_IPC_CHANNELS.requestText, request, isAiTextResult),
+    cancel: (request: AiRequestIdRequest) => invoke(AI_IPC_CHANNELS.cancel, request, isAiCancelResult),
   }),
 }) satisfies TeacherWorkbenchApi
 

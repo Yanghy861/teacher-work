@@ -674,6 +674,25 @@ button:disabled {
 .search-result-meta { display: flex; gap: 6px; flex-wrap: wrap; }
 .search-result-kind { color: #64748b; font-size: 12px; white-space: nowrap; }
 
+.settings-panel {
+  display: grid;
+  gap: 20px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.key-status {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.key-status-ready { color: #166534; background: #dcfce7; }
+.key-status-empty { color: #64748b; background: #f1f5f9; }
+.settings-note { margin: 18px 0 0 !important; color: #64748b !important; font-size: 12px; }
+
 @media (max-width: 1100px) {
   .index-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .search-hero { align-items: flex-start; flex-direction: column; }

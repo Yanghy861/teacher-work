@@ -4,6 +4,7 @@ import type { TeacherWorkbenchError } from '../shared/ipc-contracts'
 import CourseDashboard from './course-dashboard'
 import ManagedFilesPanel from './managed-files-panel'
 import SearchPanel from './search-panel'
+import SettingsPanel from './settings-panel'
 
 const navigationItems = ['我的课程', '搜索', '素材库', '学生', '设置'] as const
 
@@ -66,6 +67,8 @@ export default function App(): React.JSX.Element {
           <ManagedFilesPanel />
         ) : activeItem === '学生' ? (
           <ManagedFilesPanel heading="学生资料" />
+        ) : activeItem === '设置' ? (
+          <SettingsPanel />
         ) : (
           <section className="placeholder-card" aria-live="polite">
             <div className="placeholder-icon" aria-hidden="true">✦</div>

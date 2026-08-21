@@ -324,3 +324,16 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Findings：P0–P3 无；初审发现的无扩展名 managed Parser 类型问题已关闭。
 - 审核结果：L07 状态为 `PASS`；将创建 `review(L07): pass` 与 `checkpoint-L07-pass`。
 - 下一任务：Luna 可开始 L08；不得跳过 L10 审核闸门。
+
+## 2026-08-21 · L08 · DONE
+
+- 关键改动：新增 schema v6 的普通 AI 设置表，仅持久化 provider/model/endpoint；API Key 由 Main 侧 Electron `safeStorage` 加密后写入应用数据目录的受控密文文件，安全存储不可用时仅保留当前会话，Renderer 只能查询 configured/unconfigured 与存储模式，不能读取 Key。
+- Gateway：新增单一 OpenAI-compatible provider，支持连接测试、文本请求、超时、显式取消、401、429、5xx、网络失败和无效响应的稳定错误；日志只记录 requestId/code/status，不记录 Authorization、Key 或上游错误正文。
+- IPC/UI：新增 `ai:get-settings`、`ai:update-settings`、`ai:test-connection`、`ai:request-text`、`ai:cancel` 白名单通道与 Preload runtime guards；设置页支持普通设置、Key 替换/删除和连接测试，不接入草稿生成或持久化 AI workflow。
+- 修改文件：`src/main/ai/secure-storage.ts`、`src/main/ai/ai-settings-service.ts`、`src/main/ai/ai-gateway.ts`、`src/main/ipc/ai-ipc.ts`、`src/main/db/migrations.ts`、`src/main/index.ts`、`src/shared/ai-contracts.ts`、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/renderer/settings-panel.tsx`、`src/renderer/App.tsx`、`src/renderer/styles.css`、`tests/ai-gateway.test.ts`、`tests/ai-ipc.test.ts`、`tests/workspace-foundation.test.ts`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm test` ✅（19 files / 51 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`git diff --check` ✅。fake provider 覆盖成功、401、429、503、超时、取消、无 Key、无效 Endpoint；安全存储测试确认 Key 不进入 SQLite 或 IPC 响应。
+- 人工/真实环境验证：未接入真实 API Key，未执行付费 API 调用；所有 Gateway 请求均使用本地 fake fetch。未修改 L09 草稿生成、L10 阶段闸门或任何审核状态。
+- Git 任务提交：待用户在外部 PowerShell 按路径清单创建 `lean(L08): secure key and ai gateway` 本地提交；本窗口未执行 `git add/commit/tag/push`。
+- 安全边界：Renderer 仅通过类型化 Preload 使用 AI IPC；Key 不明文落盘、不进入 workspace.db、日志、错误响应、备份或仓库；AI Gateway 只发送用户明确调用的请求；无 Key 时课程与搜索能力不受影响。
+- 已知限制 / Later：当前仅支持一个 OpenAI-compatible provider；未实现 L09 草稿生成、真实付费 smoke、持久化 AI workflow、流式输出和多 provider 管理。
+- 下一任务可依赖的接口：`window.teacherWorkbench.ai.getSettings/updateSettings/testConnection/requestText/cancel`、`AiSettingsService`、`AiGateway`、`AI_IPC_CHANNELS`；L10 仍需等待独立审核流程，不由本次自动改为 PASS。

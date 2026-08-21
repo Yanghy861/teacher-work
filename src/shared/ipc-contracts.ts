@@ -34,6 +34,14 @@ export const SEARCH_IPC_CHANNELS = {
   getStatus: 'search:get-status',
 } as const
 
+export const AI_IPC_CHANNELS = {
+  getSettings: 'ai:get-settings',
+  updateSettings: 'ai:update-settings',
+  testConnection: 'ai:test-connection',
+  requestText: 'ai:request-text',
+  cancel: 'ai:cancel',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -43,6 +51,7 @@ export type IpcChannel =
   | (typeof CORE_IPC_CHANNELS)[keyof typeof CORE_IPC_CHANNELS]
   | (typeof FILE_IPC_CHANNELS)[keyof typeof FILE_IPC_CHANNELS]
   | (typeof SEARCH_IPC_CHANNELS)[keyof typeof SEARCH_IPC_CHANNELS]
+  | (typeof AI_IPC_CHANNELS)[keyof typeof AI_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -51,6 +60,7 @@ export const IPC_ERROR_CODES = {
   CORE_DATA_ERROR: 'CORE_DATA_ERROR',
   MANAGED_FILE_ERROR: 'MANAGED_FILE_ERROR',
   SEARCH_ERROR: 'SEARCH_ERROR',
+  AI_ERROR: 'AI_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   INVALID_RESPONSE: 'INVALID_RESPONSE',
 } as const

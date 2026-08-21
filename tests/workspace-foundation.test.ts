@@ -45,13 +45,13 @@ describe('workspace paths and SQLite foundation', () => {
     expect(first.paths.searchDirectory).toBe(join(root, 'search'))
     expect(first.paths.cacheDirectory).toBe(join(root, 'cache'))
     expect(first.paths.backupsDirectory).toBe(join(root, 'backups'))
-    expect(first.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 5 })
-    expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1, 2, 3, 4, 5])
+    expect(first.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 6 })
+    expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1, 2, 3, 4, 5, 6])
     first.close()
 
     const second = initializeWorkspace(root, installDirectory, { idFactory: () => 'should-not-replace-id' })
-    expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 5 })
-    expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1, 2, 3, 4, 5])
+    expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 6 })
+    expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1, 2, 3, 4, 5, 6])
     expect(readWorkspaceIdentity(second.database.raw)).toEqual(second.identity)
     second.close()
   })
@@ -61,7 +61,7 @@ describe('workspace paths and SQLite foundation', () => {
     const root = join(temporaryRoot, 'workspace')
     const installDirectory = join(temporaryRoot, 'install')
     const failingMigration = {
-      version: 6,
+      version: 7,
       name: 'failing_test_migration',
       up: (database: SqliteDatabase) => {
         database.exec('CREATE TABLE should_rollback (value TEXT NOT NULL)')
@@ -76,8 +76,8 @@ describe('workspace paths and SQLite foundation', () => {
     ).toThrow('simulated migration failure')
 
     const reopened = initializeWorkspace(root, installDirectory)
-    expect(reopened.identity.schemaVersion).toBe(5)
-    expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1, 2, 3, 4, 5])
+    expect(reopened.identity.schemaVersion).toBe(6)
+    expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1, 2, 3, 4, 5, 6])
     const rolledBackTable = reopened.database.raw
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'should_rollback'")
       .get()
