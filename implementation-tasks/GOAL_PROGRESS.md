@@ -359,10 +359,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 审核区间与交接：L08–L10；审核基线为 `checkpoint-L07-pass`。`SOL_REVIEW_STATUS.md` 已设为 `AWAITING_REVIEW`；当前窗口不执行 Git 写操作，候选 SHA 与 `review(L10): request Sol review` 元数据提交由外部 PowerShell 命令完成；Luna 未写 `PASS`，未创建 `checkpoint-L10-pass`。
 - 已知限制 / Later：真实 provider smoke、持久化 AI workflow、流式输出、精确续跑、content hash manifest 和跨页面拖拽选取不在 L10 Lean 验收范围。
 
-## 2026-08-21 �� L10 �� REVIEW_HANDOFF
+## 2026-08-21 · L10 · REVIEW_HANDOFF
 
-- ������䣺L08�CL10����˻��ߣ�`checkpoint-L07-pass`��
-- L10 ��ѡ�ύ�Ѵ��������� SHA ��д�� `SOL_REVIEW_STATUS.md`��
-- ��֤��22 files / 61 tests��typecheck��lint��production build��diff check ȫ��ͨ����
-- ʹ�� fake provider ��֤ѡ���ϡ�����ݸ塢�˹��޸ı��桢ʧ�����ԡ�Key �����ԭ���ϱ�����
-- ״̬��L10 `AWAITING_REVIEW`��δд `PASS`��δ���� `checkpoint-L10-pass`��
+- 审核区间：L08–L10；审核基线：`checkpoint-L07-pass`。
+- L10 候选提交：`341212802ab9916da92e7a3b1b40b0b1aa130207`（`lean(L10): AI lesson-prep phase gate`）；送审提交：`851119f0ad84a422bd0e33b257cefe32fe30ec50`（`review(L10): request Sol review`）。
+- 验证：22 files / 61 tests、typecheck、lint、production build、diff check 全部通过。
+- 使用 fake provider 验证选资料、三类草稿、人工修改保存、失败重试、Key 隔离和原资料保护。
+- 状态：L10 `AWAITING_REVIEW`；未写 `PASS`，未创建 `checkpoint-L10-pass`。
