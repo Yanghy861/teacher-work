@@ -386,3 +386,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 验证命令与结果：`npm test` ✅（24 files / 70 tests）、`npm run typecheck` ✅、`npm run lint` ✅、`git diff --check` ✅。专项测试覆盖备份→新目录恢复往返、课程/学生/课次/managed 文件/note 一致、备份失败原工作区不变、排除项、路径穿越、非空目标、文件数量/总大小限制、暂停闸门、外部编辑器确认、manifest/数据库元数据一致性、恢复后搜索索引重建和失败不发布半成品。
 - 取舍 / Later：不实现增量、云端、加密、并发变化重试、复杂孤儿修复或恶意压缩包防护矩阵；备份采用目录格式，设置页选择父目录后发布固定 `teacher-workbench-backup` 子目录。
 - Git：当前只准备 L11 相关源码、测试、文档和状态文件；不修改 L10 PASS，不创建 `checkpoint-L12-pass`，不 push、不添加远程。
+
+## 2026-08-21 · L12 · DONE
+
+- 交付选择：采用最简单可复现的 unpacked Windows portable 目录，不引入安装器或卸载器；`package:portable` 使用 electron-builder `dir` target，输出目录为 `release-l12/win-unpacked`，最终可执行文件为 `教师工作台.exe`。
+- 交付配置：`package.json`/`package-lock.json` 增加 electron-builder、固定本地 Electron distribution、asar 与 production files 白名单；`release-l12/` 加入 `.gitignore`，不提交 out/release、运行数据库、日志或临时资料。
+- Windows 证据：在当前 Windows build 26200 上从最终目录启动成功；空隔离 app-data 首次启动创建 `TeacherWorkspace`、`workspace.db` 与 `search.db`，UI 显示 schema v7；正常退出后再次打开并恢复同一工作区。便携目录无卸载器，工作区位于包外。
+- 四条 smoke：`tests/phase1-acceptance.test.ts`、`tests/phase2-acceptance.test.ts`、`tests/phase3-acceptance.test.ts`、`tests/backup-restore.test.ts` 合计 4 files / 13 tests 通过，分别覆盖资料管理打开、搜索、fake-provider 三类草稿编辑保存、备份到新目录恢复并重建搜索索引。
+- 安全审计：Renderer 仅使用类型化 Preload API；`contextIsolation`、`nodeIntegration`、`sandbox` 分别保持 `true`、`false`、`true`；production 依赖含 better-sqlite3 native resource 与 officeparser；最终包未发现 API Key、真实教学资料、数据库、search.db、cache、备份、密文或日志；未使用 `--no-sandbox`，未启动开发服务器。
+- 命令结果：`npm test`（24 files / 70 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run package:portable`、`git diff --check` 全部通过。完整记录见 `docs/v1-acceptance.md`。
+- 已知限制 / Later：无签名 portable 目录、安装器/卸载器、自动更新、真实 provider、OCR、实时 watcher、向量搜索、流式 AI、持久化 workflow、增量/云端/加密备份和大规模压力矩阵仍留在 Later。
+- Git：先创建 `lean(L12): windows final gate` 候选提交；随后按协议写入候选 SHA、把 L12 设为 `AWAITING_REVIEW` 并创建 `review(L12): request Sol review`；不写 PASS、不创建 `checkpoint-L12-pass`、不 push。

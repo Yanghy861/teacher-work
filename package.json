@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "package:portable": "npm run build && electron-builder --win dir --publish never",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
@@ -16,8 +17,21 @@
   "build": {
     "appId": "com.teacherworkbench.desktop",
     "productName": "教师工作台",
+    "asar": true,
+    "npmRebuild": false,
     "directories": {
-      "output": "release"
+      "output": "release-l12"
+    },
+    "electronDist": "node_modules/electron/dist",
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "dir"
+      ],
+      "signAndEditExecutable": false
     }
   },
   "dependencies": {
@@ -36,6 +50,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "chokidar": "4.0.3",
     "electron": "^43.4.1",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^10.8.1",
     "globals": "^17.11.0",
