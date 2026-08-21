@@ -305,3 +305,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：本次未新增真实 Office 样本；T04/T08 外部真实样本与 Electron parser smoke 作为格式基线。实时 watcher、OCR、复杂查询语言、精确 Office 跳转和大规模强杀矩阵留在 Later。
 - 审核状态：`SOL_REVIEW_STATUS.md` 的 L07 已设为 `AWAITING_REVIEW`；Luna 不修改为 `PASS`，不创建 `checkpoint-L07-pass`。
 - 下一步：创建 `review(L07): request Sol review` 元数据提交后立即停止；只有独立 Sol 会话明确 `PASS` 后才可开始 L08。
+
+## 2026-08-21 · L07 · SOL_REVIEW_CHANGES_REQUIRED
+
+- 审核区间：L05–L07；审核基线：`checkpoint-L04-pass` (`6a9fc7c45cf75f054aef3b860e25d83e90a34e8f`)。
+- 候选提交：`486697145855a5a66827f47d84323ff71ed6a2d5`；送审提交：`04918272dd83d772bd19f54e43e455a3f7f747ee`。
+- 独立验证：`npm test`（17 files / 43 tests）、typecheck、lint、production build、diff check 中的常规门禁通过；搜索 UI/IPC/重建自动化通过。
+- 阻塞 finding：真实隔离 workspace 中导入 `sample-001.pptx`、`sample-011.docx`、`sample-025.pdf`、`sample-040.xlsx` 后，真实 `DocumentIndexWorker` 四项均 `parse_failed`。managed 正式路径无扩展名，而 Worker 未向 `officeparser` 传 `fileType`。
+- 审核结果：L07 状态改为 `CHANGES_REQUIRED`；未创建 `review(L07): pass`，未创建 `checkpoint-L07-pass`。
+- 最小修复方向：从 `original_name` 提取扩展名传入 Parser，并补充无扩展名 managed 对象的多格式 smoke；修复后只重审 L05–L07 区间。
+- 下一步：Luna 创建 `fix(L07-review): ...`，完成复验后重新送审；L08 保持未开始。
