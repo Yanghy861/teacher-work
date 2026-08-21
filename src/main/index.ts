@@ -24,7 +24,7 @@ import { electronSecureStorage } from './ai/secure-storage'
 import { DraftService } from './draft/draft-service'
 import { BackupRestoreService } from './backup/backup-service'
 import { BACKUP_DIRECTORY_NAME } from './backup/backup-service'
-import { WorkspaceActivityGate } from './workspace/activity-gate'
+import { WorkspaceActivityError, WorkspaceActivityGate } from './workspace/activity-gate'
 import {
   initializeDefaultWorkspace,
   type WorkspaceHandle,
@@ -219,6 +219,10 @@ function refreshManagedFilesInBackground(trigger: string): void {
       }
     })
     .catch((error: unknown) => {
+      if (error instanceof WorkspaceActivityError) {
+        deferredRefreshTriggers.add(trigger)
+        return
+      }
       logger.error('managed_files.refresh_failed', error, { trigger })
   })
 }

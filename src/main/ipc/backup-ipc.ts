@@ -12,6 +12,7 @@ import {
   type RestoreSummary,
 } from '../../shared/ipc-contracts'
 import { BackupRestoreError, type BackupRestoreService } from '../backup/backup-service'
+import { WorkspaceActivityError } from '../workspace/activity-gate'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
 
 export interface BackupIpcDependencies {
@@ -79,10 +80,15 @@ export async function dispatchBackupIpc(
     if (!isRestoreSummary(summary)) throw new Error('Restore service returned invalid summary')
     return success(summary)
   } catch (error) {
-    const response = error instanceof BackupRestoreError
+    const response = error instanceof WorkspaceActivityError
+      ? failure(IPC_ERROR_CODES.WORKSPACE_BUSY, error.message)
+      : error instanceof BackupRestoreError
       ? failure(IPC_ERROR_CODES.BACKUP_ERROR, error.message)
       : failure(IPC_ERROR_CODES.INTERNAL_ERROR, '无法完成备份或恢复，请稍后重试。')
-    logger.error('ipc.backup_request_failed', error, { channel, code: IPC_ERROR_CODES.BACKUP_ERROR })
+    logger.error('ipc.backup_request_failed', error, {
+      channel,
+      code: response.ok ? undefined : response.error.code,
+    })
     return response
   }
 }
