@@ -16,4 +16,4 @@ Luna 只能把 `PENDING`/`CHANGES_REQUIRED` 改为 `AWAITING_REVIEW` 并填写�
 | L04 | L01–L04 | PASS | b09467d110d9b6ea662e0eb111475e362f702548 | checkpoint-L04-pass | `docs/reviews/L04-sol-review.md` 独立审核通过；`review(L04): pass` 已提交 |
 | L07 | L05–L07 | PASS | f110614d96e85095640b2eb8b2414a7a5a0ca92e | checkpoint-L07-pass | `docs/reviews/L07-sol-review.md` 独立复审通过；初审 P1 已关闭 |
 | L10 | L08–L10 | PASS | 341212802ab9916da92e7a3b1b40b0b1aa130207 | checkpoint-L10-pass | `docs/reviews/L10-sol-review.md` 独立复审通过；无阻塞 finding |
-| L12 | L11–L12 | AWAITING_REVIEW | 1f09eb556cfb4242b61980b7ed2709976d454421 | | `docs/v1-acceptance.md`；基线 `checkpoint-L10-pass`；等待 Sol 独立复审 |
+| L12 | L11–L12 | PASS | 1f09eb556cfb4242b61980b7ed2709976d454421 | checkpoint-L12-pass | `docs/reviews/L12-sol-review.md` 独立复审通过；Lean V1 总验收完成 |

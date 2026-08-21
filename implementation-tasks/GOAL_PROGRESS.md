@@ -406,3 +406,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 门禁结果：`npm test`（24 files / 70 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run package:portable`、`git diff --check` 全部通过；四条专项 smoke 合计 4 files / 13 tests 通过。
 - 审核状态：`SOL_REVIEW_STATUS.md` 的 L12 已设为 `AWAITING_REVIEW`；Luna 不写 `PASS`，不创建 `checkpoint-L12-pass`。
 - 下一步：创建 `review(L12): request Sol review` 元数据提交后停止，等待独立 Sol 复审。
+
+## 2026-08-21 · L12 · SOL_REVIEW_PASS
+
+- 审核区间：L11–L12；审核基线：`checkpoint-L10-pass`。
+- 候选提交：`1f09eb556cfb4242b61980b7ed2709976d454421`；送审提交：`075694f49dac787129bc0696cd454a91388b1940`。
+- 独立审核报告：`docs/reviews/L12-sol-review.md`。
+- 结论：无 P0–P3 阻塞 finding；portable Windows 交付、首次启动/工作区创建/退出/重开、资料管理、搜索、fake-provider 备课、备份恢复、Renderer 安全边界与包内容审计均通过。
+- 验证：`npm test`（24 files / 70 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run package:portable`、`git diff --check` 全部通过。
+- 审核状态：L12 `PASS`；待在审核提交上创建 `checkpoint-L12-pass`。Lean V1 总验收完成。
