@@ -315,3 +315,10 @@ Luna Max æ¯å®Œæˆæˆ–é˜»å¡ä¸€ä¸ªä»»åŠ¡ï¼Œåœ¨æ–‡ä»¶æœ«å°¾è¿½åŠ ä¸€èŠ‚ã€‚ä¸è¦åˆ
 - å®¡æ ¸ç»“æœï¼šL07 çŠ¶æ€æ”¹ä¸º `CHANGES_REQUIRED`ï¼›æœªåˆ›å»º `review(L07): pass`ï¼Œæœªåˆ›å»º `checkpoint-L07-pass`ã€‚
 - æœ€å°ä¿®å¤æ–¹å‘ï¼šä» `original_name` æå–æ‰©å±•åä¼ å…¥ Parserï¼Œå¹¶è¡¥å……æ— æ‰©å±•å managed å¯¹è±¡çš„å¤šæ ¼å¼ smokeï¼›ä¿®å¤ååªé‡å®¡ L05â€“L07 åŒºé—´ã€‚
 - ä¸‹ä¸€æ­¥ï¼šLuna åˆ›å»º `fix(L07-review): ...`ï¼Œå®Œæˆå¤éªŒåé‡æ–°é€å®¡ï¼›L08 ä¿æŒæœªå¼€å§‹ã€‚
+
+## 2026-08-21 ¡¤ L07 ¡¤ REVIEW_HANDOFF_AFTER_FIX
+
+- ĞŞ¸´Ìá½»£º`f110614d96e85095640b2eb8b2414a7a5a0ca92e`£¨`fix(L07-review): preserve managed parser file types`£©¡£
+- ĞŞ¸´ÄÚÈİ£ºWorker ¸ù¾İ `original_name` Ïò OfficeParser ´«Èë `fileType`£¬±£ÁôÎŞÀ©Õ¹Ãû managed ¶ÔÏó²¼¾Ö¡£
+- ÑéÖ¤£º44 tests¡¢typecheck¡¢lint¡¢production build¡¢diff check È«²¿Í¨¹ı¡£
+- ÉóºË×´Ì¬£ºL07 ÒÑÖØĞÂÉèÎª `AWAITING_REVIEW`£¬µÈ´ı Sol ¸´Éó£»Î´¿ªÊ¼ L08¡£
