@@ -10,9 +10,12 @@ import { isGenerateDraftRequest, isGenerateDraftResult, type GenerateDraftReques
 import { AiGatewayError } from '../ai/ai-gateway'
 import { DraftService, DraftServiceError } from '../draft/draft-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
+import type { WorkspaceActivityGate } from '../workspace/activity-gate'
+import { WorkspaceActivityError } from '../workspace/activity-gate'
 
 export interface DraftIpcDependencies {
   readonly getDraftService: () => DraftService
+  readonly activityGate?: WorkspaceActivityGate
 }
 
 export const DRAFT_CHANNELS: readonly IpcChannel[] = Object.values(DRAFT_IPC_CHANNELS)
@@ -30,7 +33,14 @@ export function registerDraftIpc(
   logger: IpcLogger,
 ): () => void {
   for (const channel of DRAFT_CHANNELS) {
-    ipcMain.handle(channel, (_event, payload) => dispatchDraftIpc(channel, payload, dependencies, logger))
+    ipcMain.handle(channel, (_event, payload) =>
+      dependencies.activityGate === undefined
+        ? dispatchDraftIpc(channel, payload, dependencies, logger)
+        : dependencies.activityGate.run(() => dispatchDraftIpc(channel, payload, dependencies, logger)).catch((error: unknown) => {
+          if (error instanceof WorkspaceActivityError) return failure(IPC_ERROR_CODES.WORKSPACE_BUSY, error.message)
+          throw error
+        }),
+    )
   }
   return () => {
     for (const channel of DRAFT_CHANNELS) ipcMain.removeHandler(channel)

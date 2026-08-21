@@ -8,6 +8,7 @@ import { registerFileIpc } from './ipc/file-ipc'
 import { registerSearchIpc } from './ipc/search-ipc'
 import { registerAiIpc } from './ipc/ai-ipc'
 import { registerDraftIpc } from './ipc/draft-ipc'
+import { registerBackupIpc } from './ipc/backup-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
@@ -21,6 +22,9 @@ import { AiGateway } from './ai/ai-gateway'
 import { AiSettingsService } from './ai/ai-settings-service'
 import { electronSecureStorage } from './ai/secure-storage'
 import { DraftService } from './draft/draft-service'
+import { BackupRestoreService } from './backup/backup-service'
+import { BACKUP_DIRECTORY_NAME } from './backup/backup-service'
+import { WorkspaceActivityGate } from './workspace/activity-gate'
 import {
   initializeDefaultWorkspace,
   type WorkspaceHandle,
@@ -41,13 +45,16 @@ let unregisterFileIpc: (() => void) | null = null
 let unregisterSearchIpc: (() => void) | null = null
 let unregisterAiIpc: (() => void) | null = null
 let unregisterDraftIpc: (() => void) | null = null
+let unregisterBackupIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
+let backupRestoreService: BackupRestoreService | null = null
 let servicesClosed = false
 let shutdownStarted = false
 
 const logger = new StructuredLogger()
+const activityGate = new WorkspaceActivityGate()
 const removeMainErrorHandlers = installMainErrorHandlers(logger)
 
 function getWorkspaceInfo(): WorkspaceInfo {
@@ -137,8 +144,23 @@ function getDraftService(): DraftService {
   return draftService
 }
 
+function getBackupRestoreService(): BackupRestoreService {
+  if (workspaceHandle === null) getWorkspaceInfo()
+  if (workspaceHandle === null) throw new Error('Workspace was not initialized')
+  backupRestoreService ??= new BackupRestoreService(
+    workspaceHandle,
+    app.getAppPath(),
+    activityGate,
+    {
+      pauseIndexing: async () => { await documentIndexWorker?.pause() },
+      resumeIndexing: () => { documentIndexWorker?.resume() },
+    },
+  )
+  return backupRestoreService
+}
+
 function enqueueIndex(fileId: string): void {
-  if (servicesClosed || shutdownStarted) {
+  if (servicesClosed || shutdownStarted || activityGate.isPaused) {
     return
   }
   void getDocumentIndexWorker().enqueueIfNeeded(fileId)?.catch((error: unknown) => {
@@ -161,8 +183,10 @@ async function rebuildSearchIndex() {
 }
 
 function refreshManagedFilesInBackground(trigger: string): void {
-  void getManagedFiles()
-    .refreshAll()
+  if (activityGate.isPaused) {
+    return
+  }
+  void activityGate.run(() => getManagedFiles().refreshAll())
     .then((results) => {
       for (const result of results) {
         enqueueIndex(result.file.id)
@@ -237,11 +261,12 @@ void app.whenReady().then(() => {
     },
     logger,
   )
-  unregisterCoreIpc = registerCoreIpc(ipcMain, { getCoreData }, logger)
+  unregisterCoreIpc = registerCoreIpc(ipcMain, { getCoreData, activityGate }, logger)
   unregisterFileIpc = registerFileIpc(
     ipcMain,
     {
       getFileService: getManagedFiles,
+      activityGate,
       enqueueIndex,
       chooseSourcePath: async () => {
         const options: OpenDialogOptions = {
@@ -264,6 +289,7 @@ void app.whenReady().then(() => {
     {
       getSearchService,
       rebuildSearchIndex,
+      activityGate,
     },
     logger,
   )
@@ -272,12 +298,38 @@ void app.whenReady().then(() => {
     {
       getSettingsService: getAiSettings,
       getGateway: getAiGateway,
+      activityGate,
     },
     logger,
   )
   unregisterDraftIpc = registerDraftIpc(
     ipcMain,
-    { getDraftService },
+    { getDraftService, activityGate },
+    logger,
+  )
+  unregisterBackupIpc = registerBackupIpc(
+    ipcMain,
+    {
+      getService: getBackupRestoreService,
+      chooseBackupDestination: async () => {
+        const result = mainWindow !== null && !mainWindow.isDestroyed()
+          ? await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory', 'createDirectory'], title: '选择备份目录' })
+          : await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'], title: '选择备份目录' })
+        return result.canceled ? null : result.filePaths[0] === undefined ? null : join(result.filePaths[0], BACKUP_DIRECTORY_NAME)
+      },
+      chooseBackupSource: async () => {
+        const result = mainWindow !== null && !mainWindow.isDestroyed()
+          ? await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'], title: '选择备份目录' })
+          : await dialog.showOpenDialog({ properties: ['openDirectory'], title: '选择备份目录' })
+        return result.canceled ? null : result.filePaths[0] ?? null
+      },
+      chooseRestoreTarget: async () => {
+        const result = mainWindow !== null && !mainWindow.isDestroyed()
+          ? await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory', 'createDirectory'], title: '选择新的空工作区' })
+          : await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'], title: '选择新的空工作区' })
+        return result.canceled ? null : result.filePaths[0] ?? null
+      },
+    },
     logger,
   )
   mainWindow = createMainWindow()
@@ -312,6 +364,7 @@ app.on('before-quit', (event) => {
   unregisterSearchIpc?.()
   unregisterAiIpc?.()
   unregisterDraftIpc?.()
+  unregisterBackupIpc?.()
   coreDataService = null
   managedFileService = null
   aiGateway = null

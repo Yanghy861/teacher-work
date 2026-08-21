@@ -31,5 +31,5 @@
 | L08 安全 Key 与 AI Gateway | DONE | provider/model/endpoint 设置、safeStorage/会话 Key、OpenAI-compatible Gateway、错误/超时/取消、fake provider 测试完成；51 tests、typecheck、lint 通过 |
 | L09 Context 与三类草稿 | DONE | 选定文件/片段与字符/token 限制、讲义/例题/作业独立生成、来源与 prompt 元数据、普通可编辑 note、失败重试与安全 IPC 完成；57 tests、typecheck、lint 通过 |
 | L10 AI 备课阶段闸门 | DONE | fake provider 完整选资料→三类草稿→人工修改→保存验收；Key/失败/重试/上限/原资料隔离边界完成；22 files / 61 tests、typecheck、lint、production build 与 diff check 通过；Sol PASS，待创建 `checkpoint-L10-pass` |
-| L11 空闲态备份与恢复 | TODO | |
+| L11 空闲态备份与恢复 | DONE | Main 侧空闲闸门、SQLite backup API、managed 文件与元数据 manifest、staging 原子发布、新空目录恢复、SQLite/schema/路径/数量/大小校验、恢复后搜索索引重建与 Key 排除完成；23 files / 66 tests、typecheck、lint、diff check 通过 |
 | L12 Windows 交付总闸门 | TODO | |

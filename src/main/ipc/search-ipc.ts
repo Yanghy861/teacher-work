@@ -17,10 +17,13 @@ import {
 } from '../../shared/search-contracts'
 import { SearchService, SearchServiceError } from '../search/search-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
+import type { WorkspaceActivityGate } from '../workspace/activity-gate'
+import { WorkspaceActivityError } from '../workspace/activity-gate'
 
 export interface SearchIpcDependencies {
   readonly getSearchService: () => SearchService
   readonly rebuildSearchIndex: () => Promise<SearchRebuildResult>
+  readonly activityGate?: WorkspaceActivityGate
 }
 
 export const SEARCH_CHANNELS: readonly IpcChannel[] = Object.values(SEARCH_IPC_CHANNELS)
@@ -39,7 +42,12 @@ export function registerSearchIpc(
 ): () => void {
   for (const channel of SEARCH_CHANNELS) {
     ipcMain.handle(channel, (_event, payload) =>
-      dispatchSearchIpc(channel, payload, dependencies, logger),
+      dependencies.activityGate === undefined
+        ? dispatchSearchIpc(channel, payload, dependencies, logger)
+        : dependencies.activityGate.run(() => dispatchSearchIpc(channel, payload, dependencies, logger)).catch((error: unknown) => {
+          if (error instanceof WorkspaceActivityError) return failure(IPC_ERROR_CODES.WORKSPACE_BUSY, error.message)
+          throw error
+        }),
     )
   }
   return () => {

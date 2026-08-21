@@ -89,6 +89,7 @@ export class DocumentIndexWorker {
   private requestSequence = 0
   private pumping = false
   private closed = false
+  private paused = false
 
   constructor(
     private readonly workspaceDatabase: SqliteDatabase,
@@ -100,7 +101,7 @@ export class DocumentIndexWorker {
   }
 
   enqueue(fileId: string): Promise<IndexedFileResult> {
-    if (this.closed) {
+    if (this.closed || this.paused) {
       return Promise.reject(new Error('Document index worker is closed'))
     }
     const existing = this.pendingByFile.get(fileId)
@@ -190,13 +191,26 @@ export class DocumentIndexWorker {
     }
   }
 
+  async pause(): Promise<void> {
+    this.paused = true
+    while (this.pumping) {
+      await new Promise<void>((resolve) => setImmediate(resolve))
+    }
+  }
+
+  resume(): void {
+    if (this.closed) return
+    this.paused = false
+    void this.pump()
+  }
+
   private async pump(): Promise<void> {
-    if (this.pumping || this.closed) {
+    if (this.pumping || this.closed || this.paused) {
       return
     }
     this.pumping = true
     try {
-      while (!this.closed && this.queue.length > 0) {
+      while (!this.closed && !this.paused && this.queue.length > 0) {
         const task = this.queue.shift()!
         try {
           task.resolve(await this.processFile(task.fileId))

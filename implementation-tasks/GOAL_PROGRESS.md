@@ -375,3 +375,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 结论：无 P0–P3 阻塞 finding；Key 隔离、明确选材、字符/token 上限、三类草稿、人工修改保存、失败重试、原资料保护和白名单 IPC 均通过复核。
 - 验证：`npm test`（22 files / 61 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`git diff --check` 全部通过。
 - 审核状态：L10 `PASS`；待在审核提交上创建 `checkpoint-L10-pass`，之后才可开始 L11。
+
+## 2026-08-21 · L11 · DONE
+
+- 关键改动：新增 Main 侧 `WorkspaceActivityGate` 与 `BackupRestoreService`。备份期间暂停新业务写入、文件刷新和顺序索引任务，等待已有刷新完成；`workspace.db` 使用 SQLite backup API，复制登记的 managed 对象并生成版本化 `backup_manifest.json`，包含 workspaceId、schemaVersion、文件数量、总大小及每个 fileId/originalName/相对路径/大小/mtime/mode。
+- 原子性与排除：备份和恢复均先写 staging；备份完成校验后原子发布，恢复完成数据库打开、integrity/schema/身份、路径和限制校验并重建 `search.db` 后才发布。备份包不包含 `search.db`、cache、日志、API Key、safeStorage 密文、外部原始资料、依赖、构建产物或临时文件。
+- 恢复边界：只接受当前工作区之外的新空目录；拒绝 manifest 版本/格式错误、路径穿越、无效 fileId、文件数量/总大小超限、文件缺失/大小不一致、workspace.db 无法打开或 schema/身份不一致。失败清理 staging，不修改原工作区，不留下正式半成品。
+- IPC/UI：新增 `backup:create`、`backup:restore` 白名单通道与 Settings 页按钮；恢复完成后提示重新配置 Key。
+- 修改文件：`src/main/backup/backup-service.ts`、`src/main/workspace/activity-gate.ts`、`src/main/ipc/backup-ipc.ts`、`src/main/index.ts`、`src/main/parser/document-parser.ts`、五类 IPC 注册、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/renderer/settings-panel.tsx`、`tests/backup-restore.test.ts`、`docs/l11-backup-restore.md`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm test` ✅（23 files / 66 tests）、`npm run typecheck` ✅、`npm run lint` ✅、`git diff --check` ✅。专项测试覆盖备份→新目录恢复往返、课程/学生/课次/managed 文件/note 一致、备份失败原工作区不变、排除项、路径穿越、非空目标、文件数量/总大小限制、暂停闸门、恢复后搜索索引重建和失败不发布半成品。
+- 取舍 / Later：不实现增量、云端、加密、并发变化重试、复杂孤儿修复或恶意压缩包防护矩阵；备份采用目录格式，设置页选择父目录后发布固定 `teacher-workbench-backup` 子目录。
+- Git：当前只准备 L11 相关源码、测试、文档和状态文件；不修改 L10 PASS，不创建 `checkpoint-L12-pass`，不 push、不添加远程。

@@ -38,9 +38,12 @@ import {
 import { CoreDataError, CoreDataService } from '../data/core-data-service'
 import { NodeServiceError } from '../data/node-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
+import type { WorkspaceActivityGate } from '../workspace/activity-gate'
+import { WorkspaceActivityError } from '../workspace/activity-gate'
 
 export interface CoreIpcDependencies {
   readonly getCoreData: () => CoreDataService
+  readonly activityGate?: WorkspaceActivityGate
 }
 
 export const CORE_CHANNELS: readonly IpcChannel[] = Object.values(CORE_IPC_CHANNELS)
@@ -59,7 +62,12 @@ export function registerCoreIpc(
 ): () => void {
   for (const channel of CORE_CHANNELS) {
     ipcMain.handle(channel, (_event, payload) =>
-      dispatchCoreIpc(channel, payload, dependencies, logger),
+      dependencies.activityGate === undefined
+        ? dispatchCoreIpc(channel, payload, dependencies, logger)
+        : dependencies.activityGate.run(() => dispatchCoreIpc(channel, payload, dependencies, logger)).catch((error: unknown) => {
+          if (error instanceof WorkspaceActivityError) return failure(IPC_ERROR_CODES.WORKSPACE_BUSY, error.message)
+          throw error
+        }),
     )
   }
 

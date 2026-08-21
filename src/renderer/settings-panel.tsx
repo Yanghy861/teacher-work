@@ -18,6 +18,7 @@ export default function SettingsPanel(): React.JSX.Element {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [backupBusy, setBackupBusy] = useState(false)
 
   useEffect(() => {
     void window.teacherWorkbench.ai.getSettings().then((value) => {
@@ -84,6 +85,38 @@ export default function SettingsPanel(): React.JSX.Element {
     }
   }
 
+  async function createBackup(): Promise<void> {
+    setBackupBusy(true)
+    setMessage('正在创建备份…')
+    setError('')
+    try {
+      const result = await window.teacherWorkbench.backup.create()
+      if (result !== null) setMessage(`备份完成 · ${result.fileCount} 个文件`)
+      else setMessage('已取消备份。')
+    } catch (backupError) {
+      setError(toErrorMessage(backupError))
+      setMessage('')
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
+  async function restoreBackup(): Promise<void> {
+    setBackupBusy(true)
+    setMessage('正在恢复到新工作区…')
+    setError('')
+    try {
+      const result = await window.teacherWorkbench.backup.restore()
+      if (result !== null) setMessage(`恢复完成 · ${result.indexedFiles} 个文件已重新索引；请重新配置 Key。`)
+      else setMessage('已取消恢复。')
+    } catch (restoreError) {
+      setError(toErrorMessage(restoreError))
+      setMessage('')
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
   return (
     <section className="settings-panel" aria-label="AI 设置">
       <div className="workspace-card">
@@ -131,6 +164,18 @@ export default function SettingsPanel(): React.JSX.Element {
         {message && <p className="inline-notice" role="status">{message}</p>}
         {error && <p className="inline-error" role="alert">{error}</p>}
         <p className="settings-note">Key 不会回显，也不会写入普通设置、日志或备份；安全存储不可用时只保留在本次会话。</p>
+      </div>
+      <div className="workspace-card">
+        <div className="card-heading">
+          <div>
+            <p className="section-kicker">工作区</p>
+            <h2>备份与恢复</h2>
+          </div>
+        </div>
+        <div className="file-toolbar">
+          <button className="primary-button" type="button" onClick={() => void createBackup()} disabled={backupBusy || busy}>创建备份</button>
+          <button className="secondary-button" type="button" onClick={() => void restoreBackup()} disabled={backupBusy || busy}>恢复到新工作区</button>
+        </div>
       </div>
     </section>
   )

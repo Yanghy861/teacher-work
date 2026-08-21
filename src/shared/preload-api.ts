@@ -85,9 +85,11 @@ import {
   type ManagedFileContentChanged,
   type ManagedFileRecord,
 } from './file-contracts'
+import type { BackupSummary, RestoreSummary } from './ipc-contracts'
 
-export { AI_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
-export type { IpcChannel, WorkspaceInfo } from './ipc-contracts'
+export { AI_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
+export type { BackupSummary, IpcChannel, RestoreSummary, WorkspaceInfo } from './ipc-contracts'
+export { isBackupSummary, isRestoreSummary } from './ipc-contracts'
 export type {
   CoreOverview,
   CreateCourseRequest,
@@ -164,6 +166,10 @@ export interface TeacherWorkbenchApi {
   }
   drafts: {
     generate: (request: GenerateDraftRequest) => Promise<GenerateDraftResult>
+  }
+  backup: {
+    create: () => Promise<BackupSummary | null>
+    restore: () => Promise<RestoreSummary | null>
   }
 }
 

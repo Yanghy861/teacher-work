@@ -23,9 +23,12 @@ import {
 } from '../../shared/file-contracts'
 import { ManagedFileError, ManagedFileService } from '../files/managed-file-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
+import type { WorkspaceActivityGate } from '../workspace/activity-gate'
+import { WorkspaceActivityError } from '../workspace/activity-gate'
 
 export interface FileIpcDependencies {
   readonly getFileService: () => ManagedFileService
+  readonly activityGate?: WorkspaceActivityGate
   readonly enqueueIndex?: (fileId: string) => void
   readonly chooseSourcePath: () => Promise<string | null>
   readonly openPath: (path: string) => Promise<string>
@@ -49,7 +52,12 @@ export function registerFileIpc(
 ): () => void {
   for (const channel of FILE_CHANNELS) {
     ipcMain.handle(channel, (_event, payload) =>
-      dispatchFileIpc(channel, payload, dependencies, logger),
+      dependencies.activityGate === undefined
+        ? dispatchFileIpc(channel, payload, dependencies, logger)
+        : dependencies.activityGate.run(() => dispatchFileIpc(channel, payload, dependencies, logger)).catch((error: unknown) => {
+          if (error instanceof WorkspaceActivityError) return failure(IPC_ERROR_CODES.WORKSPACE_BUSY, error.message)
+          throw error
+        }),
     )
   }
 

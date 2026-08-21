@@ -8,6 +8,7 @@ import {
   SEARCH_IPC_CHANNELS,
   AI_IPC_CHANNELS,
   DRAFT_IPC_CHANNELS,
+  BACKUP_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContentChanged,
   isManagedFileOverview,
@@ -27,6 +28,8 @@ import {
   isAiSettings,
   isAiTextResult,
   isGenerateDraftResult,
+  isBackupSummary,
+  isRestoreSummary,
   parseIpcResponse,
   TeacherWorkbenchError,
   type CreateCourseRequest,
@@ -121,6 +124,12 @@ const api = Object.freeze({
   }),
   drafts: Object.freeze({
     generate: (request: GenerateDraftRequest) => invoke(DRAFT_IPC_CHANNELS.generate, request, isGenerateDraftResult),
+  }),
+  backup: Object.freeze({
+    create: () => invoke(BACKUP_IPC_CHANNELS.create, {}, (value): value is import('../shared/ipc-contracts').BackupSummary | null =>
+      value === null || isBackupSummary(value)),
+    restore: () => invoke(BACKUP_IPC_CHANNELS.restore, {}, (value): value is import('../shared/ipc-contracts').RestoreSummary | null =>
+      value === null || isRestoreSummary(value)),
   }),
 }) satisfies TeacherWorkbenchApi
 

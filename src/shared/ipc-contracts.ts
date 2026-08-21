@@ -47,6 +47,11 @@ export const DRAFT_IPC_CHANNELS = {
   generate: 'draft:generate',
 } as const
 
+export const BACKUP_IPC_CHANNELS = {
+  create: 'backup:create',
+  restore: 'backup:restore',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -58,6 +63,7 @@ export type IpcChannel =
   | (typeof SEARCH_IPC_CHANNELS)[keyof typeof SEARCH_IPC_CHANNELS]
   | (typeof AI_IPC_CHANNELS)[keyof typeof AI_IPC_CHANNELS]
   | (typeof DRAFT_IPC_CHANNELS)[keyof typeof DRAFT_IPC_CHANNELS]
+  | (typeof BACKUP_IPC_CHANNELS)[keyof typeof BACKUP_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -70,6 +76,8 @@ export const IPC_ERROR_CODES = {
   DRAFT_ERROR: 'DRAFT_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   INVALID_RESPONSE: 'INVALID_RESPONSE',
+  BACKUP_ERROR: 'BACKUP_ERROR',
+  WORKSPACE_BUSY: 'WORKSPACE_BUSY',
 } as const
 
 export type IpcErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES]
@@ -93,6 +101,30 @@ export type IpcResponse<T> = IpcSuccess<T> | IpcFailure
 
 export interface EmptyIpcRequest {
   readonly [key: string]: never
+}
+
+export interface BackupSummary {
+  readonly backupPath: string
+  readonly fileCount: number
+  readonly totalFileSize: number
+  readonly createdAt: string
+}
+
+export interface RestoreSummary {
+  readonly workspacePath: string
+  readonly fileCount: number
+  readonly indexedFiles: number
+  readonly failedFiles: number
+}
+
+export function isBackupSummary(value: unknown): value is BackupSummary {
+  return isRecord(value) && typeof value.backupPath === 'string' && typeof value.fileCount === 'number' &&
+    typeof value.totalFileSize === 'number' && typeof value.createdAt === 'string'
+}
+
+export function isRestoreSummary(value: unknown): value is RestoreSummary {
+  return isRecord(value) && typeof value.workspacePath === 'string' && typeof value.fileCount === 'number' &&
+    typeof value.indexedFiles === 'number' && typeof value.failedFiles === 'number'
 }
 
 export type GetAppVersionRequest = EmptyIpcRequest

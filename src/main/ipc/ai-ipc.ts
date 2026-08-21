@@ -22,10 +22,13 @@ import {
 import { AiGateway, AiGatewayError } from '../ai/ai-gateway'
 import { AiSettingsService } from '../ai/ai-settings-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
+import type { WorkspaceActivityGate } from '../workspace/activity-gate'
+import { WorkspaceActivityError } from '../workspace/activity-gate'
 
 export interface AiIpcDependencies {
   readonly getSettingsService: () => AiSettingsService
   readonly getGateway: () => AiGateway
+  readonly activityGate?: WorkspaceActivityGate
 }
 
 export const AI_CHANNELS: readonly IpcChannel[] = Object.values(AI_IPC_CHANNELS)
@@ -43,7 +46,14 @@ export function registerAiIpc(
   logger: IpcLogger,
 ): () => void {
   for (const channel of AI_CHANNELS) {
-    ipcMain.handle(channel, (_event, payload) => dispatchAiIpc(channel, payload, dependencies, logger))
+    ipcMain.handle(channel, (_event, payload) =>
+      dependencies.activityGate === undefined
+        ? dispatchAiIpc(channel, payload, dependencies, logger)
+        : dependencies.activityGate.run(() => dispatchAiIpc(channel, payload, dependencies, logger)).catch((error: unknown) => {
+          if (error instanceof WorkspaceActivityError) return failure(IPC_ERROR_CODES.WORKSPACE_BUSY, error.message)
+          throw error
+        }),
+    )
   }
   return () => {
     for (const channel of AI_CHANNELS) ipcMain.removeHandler(channel)
