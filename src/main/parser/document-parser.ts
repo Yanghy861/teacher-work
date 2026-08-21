@@ -356,13 +356,20 @@ function parserPosition(metadata, sourceType) {
   return { type: sourceType }
 }
 
-async function parseOffice(filePath) {
+function parserFileType(originalName) {
+  const extension = extname(originalName).toLowerCase().slice(1)
+  return ['docx', 'pptx', 'pdf', 'xlsx'].includes(extension) ? extension : null
+}
+
+async function parseOffice(filePath, originalName) {
   const { OfficeParser } = require('officeparser')
+  const fileType = parserFileType(originalName)
   const ast = await OfficeParser.parseOffice(filePath, {
     ocr: false,
     extractAttachments: false,
     includeRawContent: false,
     ignoreSlideMasters: true,
+    ...(fileType === null ? {} : { fileType }),
   })
   const textResult = await ast.to('text', {
     includeImages: false,
@@ -395,7 +402,7 @@ async function parseFile(filePath, originalName) {
     const text = readFileSync(filePath, 'utf8')
     return { text, chunks: textChunks(text) }
   }
-  return parseOffice(filePath)
+  return parseOffice(filePath, originalName)
 }
 
 parentPort.on('message', async (request) => {

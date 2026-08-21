@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { strToU8, zipSync } from 'fflate'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { DocumentIndexWorker } from '../src/main/parser/document-parser'
@@ -46,6 +47,114 @@ function createFixture(): {
     worker,
     closeSearch: () => searchDatabase.close(),
   }
+}
+
+function createZipFixture(entries: Record<string, string>): Buffer {
+  return Buffer.from(zipSync(Object.fromEntries(
+    Object.entries(entries).map(([name, content]) => [name, strToU8(content)]),
+  )))
+}
+
+function officeContentTypes(mainPart: string, contentType: string): string {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/${mainPart}" ContentType="${contentType}"/>
+</Types>`
+}
+
+function packageRelationships(target: string): string {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="${target}"/>
+</Relationships>`
+}
+
+function createDocxFixture(): Buffer {
+  return createZipFixture({
+    '[Content_Types].xml': officeContentTypes(
+      'word/document.xml',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml',
+    ),
+    '_rels/.rels': packageRelationships('word/document.xml'),
+    'word/document.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>DOCX managed smoke 有理数 x²</w:t></w:r></w:p><w:sectPr/></w:body>
+</w:document>`,
+  })
+}
+
+function createPptxFixture(): Buffer {
+  return createZipFixture({
+    '[Content_Types].xml': officeContentTypes(
+      'ppt/presentation.xml',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml',
+    ),
+    '_rels/.rels': packageRelationships('ppt/presentation.xml'),
+    'ppt/presentation.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
+</p:presentation>`,
+    'ppt/_rels/presentation.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+</Relationships>`,
+    'ppt/slides/slide1.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
+    <p:sp><p:nvSpPr><p:cNvPr id="2" name="Text"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/>
+      <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="zh-CN"/><a:t>PPTX managed smoke 有理数 x²</a:t></a:r></a:p></p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sld>`,
+  })
+}
+
+function createXlsxFixture(): Buffer {
+  return createZipFixture({
+    '[Content_Types].xml': officeContentTypes(
+      'xl/workbook.xml',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml',
+    ),
+    '_rels/.rels': packageRelationships('xl/workbook.xml'),
+    'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`,
+    'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`,
+    'xl/worksheets/sheet1.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>XLSX managed smoke 有理数 x²</t></is></c></row></sheetData>
+</worksheet>`,
+  })
+}
+
+function createPdfFixture(): Buffer {
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    '<< /Length 46 >>\nstream\nBT /F1 24 Tf 72 720 Td (PDF managed smoke) Tj ET\nendstream',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ]
+  let pdf = '%PDF-1.4\n'
+  const offsets = [0]
+  for (let index = 0; index < objects.length; index += 1) {
+    offsets.push(Buffer.byteLength(pdf, 'binary'))
+    pdf += `${index + 1} 0 obj\n${objects[index]}\nendobj\n`
+  }
+  const xrefOffset = Buffer.byteLength(pdf, 'binary')
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
+  for (const offset of offsets.slice(1)) {
+    pdf += `${String(offset).padStart(10, '0')} 00000 n \n`
+  }
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`
+  return Buffer.from(pdf, 'binary')
 }
 
 describe('L06 unified parser and sequential worker', () => {
@@ -134,6 +243,35 @@ describe('L06 unified parser and sequential worker', () => {
       expect(result.status).toBe('no_text')
       expect(result.chunkCount).toBe(0)
       expect(fixture.search.getIndexState(empty.id).status).toBe('no_text')
+    } finally {
+      await fixture.worker.close()
+      fixture.closeSearch()
+    }
+  })
+
+  it('passes original extensions for extensionless managed Office/PDF objects', async () => {
+    const fixture = createFixture()
+    try {
+      const sources = [
+        ['managed.docx', createDocxFixture()],
+        ['managed.pptx', createPptxFixture()],
+        ['managed.pdf', createPdfFixture()],
+        ['managed.xlsx', createXlsxFixture()],
+      ] as const
+      const imported = sources.map(([name, content]) => {
+        const sourcePath = join(fixture.root, name)
+        writeFileSync(sourcePath, content)
+        return fixture.files.importFile(sourcePath)
+      })
+
+      for (const record of imported) {
+        expect(fixture.files.getObjectContentPath(record.id)).toMatch(/[\\/]content$/u)
+      }
+      const results = await Promise.all(imported.map((record) => fixture.worker.enqueue(record.id)))
+      expect(results.map((result) => result.status)).toEqual(['indexed', 'indexed', 'indexed', 'indexed'])
+      expect(results.every((result) => result.chunkCount > 0)).toBe(true)
+      const hits = await fixture.search.search({ text: '有理数' })
+      expect(new Set(hits.map((hit) => hit.fileId))).toEqual(new Set([imported[0].id, imported[1].id, imported[3].id]))
     } finally {
       await fixture.worker.close()
       fixture.closeSearch()
