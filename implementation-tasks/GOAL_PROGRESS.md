@@ -295,3 +295,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 审核区间与候选：L05–L07；审核基线 `checkpoint-L04-pass`。任务提交后将写入候选 SHA、把 L07 设为 `AWAITING_REVIEW`，创建 `review(L07): request Sol review` 元数据提交并停止，不自行写 `PASS`。
 - 已知限制 / Later：实时 watcher、OCR、复杂查询语言、精确 Office 跳转、向量搜索和大规模强杀矩阵不属于 Lean V1；搜索结果打开只支持登记文件 ID，节点/记录结果显示来源但不伪造外部跳转。
 - 下一任务可依赖的接口：`window.teacherWorkbench.search.query/rebuild/getStatus`、`SearchPanel`、`SearchService.clearDerivedIndex/rebuildCoreSources/getIndexStatusSummary`、`SEARCH_IPC_CHANNELS`；L08 只能在 Sol 将 L07 标为 `PASS` 后开始。
+
+## 2026-08-21 · L07 · REVIEW_HANDOFF
+
+- 审核区间：L05–L07；审核基线：`checkpoint-L04-pass`。
+- 候选提交 SHA：`4866971f96f74d21bd65348f48b1a8f63e8b4193`（`lean(L07): search ui rebuild gate`）。
+- 送审证据：`docs/phase2-acceptance.md`；全局搜索页、中文/数学/短词/文件名结果、来源位置、索引状态、删除 search.db 后重建、搜索 IPC 白名单与任意路径 payload 拒绝均有自动化覆盖；`npm test`（17 files / 43 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`git diff --check` 通过。
+- 安全边界：Renderer 只使用类型化 Preload search/files API；搜索结果打开只接受登记 `fileId`；重建只操作派生 search.db，不覆盖 workspace.db 或 managed 原资料；未提交真实教学资料、Key、日志、数据库或构建产物。
+- 已知限制：本次未新增真实 Office 样本；T04/T08 外部真实样本与 Electron parser smoke 作为格式基线。实时 watcher、OCR、复杂查询语言、精确 Office 跳转和大规模强杀矩阵留在 Later。
+- 审核状态：`SOL_REVIEW_STATUS.md` 的 L07 已设为 `AWAITING_REVIEW`；Luna 不修改为 `PASS`，不创建 `checkpoint-L07-pass`。
+- 下一步：创建 `review(L07): request Sol review` 元数据提交后立即停止；只有独立 Sol 会话明确 `PASS` 后才可开始 L08。
