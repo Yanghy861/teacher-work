@@ -251,3 +251,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 安全边界：未提交真实教学资料、workspace、Key、日志或构建产物；继续保持 Renderer/Main/路径/原子写入边界；未启用 `--no-sandbox`，未关闭 `contextIsolation` 或 sandbox。
 - 审核状态：`SOL_REVIEW_STATUS.md` 已将 L04 标为 `AWAITING_REVIEW`；Luna 未写 `PASS`，未创建 `checkpoint-L04-pass`。
 - 下一步：创建 `review(L04): request Sol review` 元数据提交后立即停止，等待 Sol 审核；不得进入 L05。
+
+## 2026-08-21 · L04 · SOL_REVIEW_PASS
+
+- 审核区间：L01–L04；审核基线：`checkpoint-T08-pass` (`bb0d07a34a22c74b4e8b7600989466a73f33dc6b`)。
+- 候选提交：`b09467d110d9b6ea662e0eb111475e362f702548`；送审提交：`f43528f1082291c39d8e15348d1925d58062ac2a`。
+- 独立验证：`npm test`（13 files / 34 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`git diff --check` 均通过；代表性资料流程、路径/IPC/原子写入/副本隔离边界复核通过；既有 Windows Electron UI smoke 证据满足 L04 要求。
+- Findings：P0–P3 无；未发现资料损坏、路径逃逸、Renderer/Main 边界绕过或副本串写风险。
+- 审核结果：`SOL_REVIEW_STATUS.md` 的 L04 已改为 `PASS`，审核报告已写入；由于当前环境无法写入 `.git/index`，`review(L04): pass` 提交与 `checkpoint-L04-pass` 标签尚未创建。
+- 下一任务：Luna 可开始 L05；不得跳过后续 L07 审核闸门。
