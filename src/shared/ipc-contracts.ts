@@ -28,6 +28,12 @@ export const FILE_IPC_CHANNELS = {
   copyToStudent: 'files:copy-to-student',
 } as const
 
+export const SEARCH_IPC_CHANNELS = {
+  query: 'search:query',
+  rebuild: 'search:rebuild',
+  getStatus: 'search:get-status',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -36,6 +42,7 @@ export type IpcChannel =
   | (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
   | (typeof CORE_IPC_CHANNELS)[keyof typeof CORE_IPC_CHANNELS]
   | (typeof FILE_IPC_CHANNELS)[keyof typeof FILE_IPC_CHANNELS]
+  | (typeof SEARCH_IPC_CHANNELS)[keyof typeof SEARCH_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -43,6 +50,7 @@ export const IPC_ERROR_CODES = {
   WORKSPACE_UNAVAILABLE: 'WORKSPACE_UNAVAILABLE',
   CORE_DATA_ERROR: 'CORE_DATA_ERROR',
   MANAGED_FILE_ERROR: 'MANAGED_FILE_ERROR',
+  SEARCH_ERROR: 'SEARCH_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   INVALID_RESPONSE: 'INVALID_RESPONSE',
 } as const

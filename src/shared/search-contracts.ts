@@ -66,3 +66,112 @@ export interface SearchHit {
   readonly contentHash?: string | null
   readonly indexStatus?: SearchIndexStatus
 }
+
+export interface SearchIndexStatusSummary {
+  readonly total: number
+  readonly pending: number
+  readonly indexed: number
+  readonly noText: number
+  readonly parseFailed: number
+  readonly updatedAt: string
+}
+
+export interface SearchRebuildResult {
+  readonly queuedFiles: number
+  readonly indexedFiles: number
+  readonly failedFiles: number
+  readonly status: SearchIndexStatusSummary
+}
+
+export function isSearchQuery(value: unknown): value is SearchQuery {
+  return (
+    hasOnlyKeys(value, ['text'], ['scope', 'limit']) &&
+    isNonEmptyString(value.text) &&
+    (value.scope === undefined || isNonEmptyString(value.scope)) &&
+    (value.limit === undefined || isNonNegativeInteger(value.limit))
+  )
+}
+
+export function isSearchPosition(value: unknown): value is SearchPosition {
+  return (
+    isRecord(value) &&
+    typeof value.type === 'string' &&
+    value.type.trim().length > 0 &&
+    (value.value === undefined || typeof value.value === 'string' || typeof value.value === 'number')
+  )
+}
+
+export function isSearchHit(value: unknown): value is SearchHit {
+  return (
+    isRecord(value) &&
+    isSearchSourceType(value.sourceType) &&
+    isNonEmptyString(value.sourceId) &&
+    (value.fileId === undefined || isNonEmptyString(value.fileId)) &&
+    isNonEmptyString(value.title) &&
+    (value.path === undefined || typeof value.path === 'string') &&
+    typeof value.snippet === 'string' &&
+    (value.position === undefined || isSearchPosition(value.position)) &&
+    isSearchMatchSource(value.source) &&
+    (value.contentHash === undefined || value.contentHash === null || isNonEmptyString(value.contentHash)) &&
+    (value.indexStatus === undefined || isSearchIndexStatus(value.indexStatus))
+  )
+}
+
+export function isSearchIndexStatusSummary(value: unknown): value is SearchIndexStatusSummary {
+  return (
+    isRecord(value) &&
+    isNonNegativeInteger(value.total) &&
+    isNonNegativeInteger(value.pending) &&
+    isNonNegativeInteger(value.indexed) &&
+    isNonNegativeInteger(value.noText) &&
+    isNonNegativeInteger(value.parseFailed) &&
+    isNonEmptyString(value.updatedAt)
+  )
+}
+
+export function isSearchRebuildResult(value: unknown): value is SearchRebuildResult {
+  return (
+    isRecord(value) &&
+    isNonNegativeInteger(value.queuedFiles) &&
+    isNonNegativeInteger(value.indexedFiles) &&
+    isNonNegativeInteger(value.failedFiles) &&
+    isSearchIndexStatusSummary(value.status)
+  )
+}
+
+function isSearchSourceType(value: unknown): value is SearchSourceType {
+  return value === 'file' || value === 'node' || value === 'note'
+}
+
+function isSearchMatchSource(value: unknown): value is SearchMatchSource {
+  return value === 'body-fts' || value === 'short-word' || value === 'exact-title' || value === 'exact-filename'
+}
+
+function isSearchIndexStatus(value: unknown): value is SearchIndexStatus {
+  return value === 'pending' || value === 'indexed' || value === 'no_text' || value === 'parse_failed'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+function hasOnlyKeys(
+  value: unknown,
+  requiredKeys: readonly string[],
+  optionalKeys: readonly string[],
+): value is Record<string, unknown> {
+  if (!isRecord(value)) {
+    return false
+  }
+  const keys = Object.keys(value)
+  const allowed = new Set([...requiredKeys, ...optionalKeys])
+  return requiredKeys.every((key) => keys.includes(key)) && keys.every((key) => allowed.has(key))
+}

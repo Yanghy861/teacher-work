@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { registerAppIpc } from './ipc/app-ipc'
 import { registerCoreIpc } from './ipc/core-ipc'
 import { registerFileIpc } from './ipc/file-ipc'
+import { registerSearchIpc } from './ipc/search-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
@@ -31,6 +32,7 @@ let documentIndexWorker: DocumentIndexWorker | null = null
 let unregisterAppIpc: (() => void) | null = null
 let unregisterCoreIpc: (() => void) | null = null
 let unregisterFileIpc: (() => void) | null = null
+let unregisterSearchIpc: (() => void) | null = null
 let servicesClosed = false
 let shutdownStarted = false
 
@@ -108,6 +110,20 @@ function enqueueIndex(fileId: string): void {
   void getDocumentIndexWorker().enqueueIfNeeded(fileId)?.catch((error: unknown) => {
     logger.error('document_index.file_failed', error, { fileId })
   })
+}
+
+async function rebuildSearchIndex() {
+  const service = getSearchService()
+  service.clearDerivedIndex()
+  service.rebuildCoreSources()
+  const results = await getDocumentIndexWorker().rebuildPending()
+  const failedFiles = results.filter((result) => result.status === 'parse_failed').length
+  return {
+    queuedFiles: results.length,
+    indexedFiles: results.filter((result) => result.status === 'indexed').length,
+    failedFiles,
+    status: service.getIndexStatusSummary(),
+  }
 }
 
 function refreshManagedFilesInBackground(trigger: string): void {
@@ -209,6 +225,14 @@ void app.whenReady().then(() => {
     },
     logger,
   )
+  unregisterSearchIpc = registerSearchIpc(
+    ipcMain,
+    {
+      getSearchService,
+      rebuildSearchIndex,
+    },
+    logger,
+  )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
   void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
@@ -238,6 +262,7 @@ app.on('before-quit', (event) => {
   unregisterAppIpc?.()
   unregisterCoreIpc?.()
   unregisterFileIpc?.()
+  unregisterSearchIpc?.()
   coreDataService = null
   managedFileService = null
   void (async () => {

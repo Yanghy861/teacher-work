@@ -284,3 +284,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git 任务提交：待 staged diff 审查后创建 `lean(L06): unified parser worker` 本地提交；不 push。
 - 已知限制 / Later：未建立 Worker Pool、持久任务队列、精确取消/续传或 OCR；最终 packaged Electron PDF.js worker 资源一致性与 Windows 交付留给 L12。`officeparser` 已从 devDependencies 移入 runtime dependencies，版本仍精确锁定 7.5.1，PDF.js override 保持 6.2.108。
 - 下一任务可依赖的接口：`DocumentIndexWorker.enqueue/enqueueIfNeeded/rebuildPending/close`、统一 `ParsedDocument`/`IndexedFileResult` 契约、Main 启动/焦点/导入后的索引触发；L07 可实现搜索 UI、删除 search.db 重建和阶段 2 验收闸门。
+
+## 2026-08-21 · L07 · DONE
+
+- 关键改动：新增全局搜索页 `SearchPanel`，显示文件/节点/记录、受控路径、片段、位置、来源类型和四类索引状态；新增 `search:query`、`search:get-status`、`search:rebuild` 白名单 IPC 与 Preload runtime guards。重建会清空派生 `search.db`、重建节点/note，并通过 L06 顺序 Worker 按当前 Hash 重做文件索引；结果打开仍只接受登记 `fileId`。
+- 修改文件：`src/shared/search-contracts.ts`、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/main/search/search-service.ts`、`src/main/ipc/search-ipc.ts`、`src/main/index.ts`、`src/renderer/App.tsx`、`src/renderer/search-panel.tsx`、`src/renderer/styles.css`、`tests/search-ipc.test.ts`、`tests/phase2-acceptance.test.ts`、`docs/phase2-acceptance.md`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm test` ✅（17 files / 43 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。覆盖任意路径 payload 拒绝、搜索/状态/重建 IPC、中文/数学/短词/文件名、课程范围、索引状态、删除派生库后文件/节点/note 恢复。
+- 人工/真实环境验证：L07 使用隔离 workspace 和脱敏 fixture；既有 T04/T08 外部真实样本与 Electron parser smoke 作为多格式真实基线。本次未复制或提交真实教学资料；当前 checkout 无可安全提交真实样本。
+- Git 任务提交：待 staged diff 审查后创建 `lean(L07): search ui rebuild gate` 本地提交；不 push。
+- 审核区间与候选：L05–L07；审核基线 `checkpoint-L04-pass`。任务提交后将写入候选 SHA、把 L07 设为 `AWAITING_REVIEW`，创建 `review(L07): request Sol review` 元数据提交并停止，不自行写 `PASS`。
+- 已知限制 / Later：实时 watcher、OCR、复杂查询语言、精确 Office 跳转、向量搜索和大规模强杀矩阵不属于 Lean V1；搜索结果打开只支持登记文件 ID，节点/记录结果显示来源但不伪造外部跳转。
+- 下一任务可依赖的接口：`window.teacherWorkbench.search.query/rebuild/getStatus`、`SearchPanel`、`SearchService.clearDerivedIndex/rebuildCoreSources/getIndexStatusSummary`、`SEARCH_IPC_CHANNELS`；L08 只能在 Sol 将 L07 标为 `PASS` 后开始。

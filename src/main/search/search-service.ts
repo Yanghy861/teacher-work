@@ -11,6 +11,7 @@ import type {
   SearchPosition,
   SearchQuery,
   SearchSourceType,
+  SearchIndexStatusSummary,
 } from '../../shared/search-contracts'
 import {
   isShortSearchText,
@@ -226,6 +227,56 @@ export class SearchService {
   getIndexState(fileId: string): { readonly indexedHash: string | null; readonly status: SearchIndexStatus } {
     const row = this.requireFile(fileId)
     return { indexedHash: row.indexed_hash, status: row.index_status }
+  }
+
+  getIndexStatusSummary(): SearchIndexStatusSummary {
+    const counts = this.workspaceDatabase
+      .prepare(
+        `SELECT index_status AS status, COUNT(*) AS count
+           FROM files
+          WHERE deleted_at IS NULL
+          GROUP BY index_status`,
+      )
+      .all() as Array<{ status: SearchIndexStatus; count: number }>
+    const byStatus = new Map(counts.map((row) => [row.status, row.count]))
+    return {
+      total: counts.reduce((sum, row) => sum + row.count, 0),
+      pending: byStatus.get('pending') ?? 0,
+      indexed: byStatus.get('indexed') ?? 0,
+      noText: byStatus.get('no_text') ?? 0,
+      parseFailed: byStatus.get('parse_failed') ?? 0,
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  clearDerivedIndex(): void {
+    this.withSearchTransaction(() => {
+      this.searchDatabase.exec(`
+        DELETE FROM search_chunks_fts;
+        DELETE FROM search_chunks;
+        DELETE FROM search_document_scopes;
+        DELETE FROM search_documents;
+      `)
+    })
+    this.workspaceDatabase.exec(
+      `UPDATE files SET indexed_hash = NULL, index_status = 'pending' WHERE deleted_at IS NULL`,
+    )
+  }
+
+  rebuildCoreSources(): void {
+    const nodes = this.workspaceDatabase
+      .prepare('SELECT id FROM nodes WHERE deleted_at IS NULL ORDER BY created_at, id')
+      .pluck()
+      .all() as string[]
+    for (const id of nodes) {
+      this.indexNode({ id, title: '' })
+    }
+    const notes = this.workspaceDatabase
+      .prepare('SELECT id, body_md FROM notes WHERE deleted_at IS NULL ORDER BY created_at, id')
+      .all() as Array<{ id: string; body_md: string }>
+    for (const note of notes) {
+      this.indexNote({ id: note.id, bodyMd: note.body_md })
+    }
   }
 
   async search(query: SearchQuery): Promise<SearchHit[]> {

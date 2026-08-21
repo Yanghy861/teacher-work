@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react'
 import type { TeacherWorkbenchError } from '../shared/ipc-contracts'
 import CourseDashboard from './course-dashboard'
 import ManagedFilesPanel from './managed-files-panel'
+import SearchPanel from './search-panel'
 
-const navigationItems = ['我的课程', '素材库', '学生', '设置'] as const
+const navigationItems = ['我的课程', '搜索', '素材库', '学生', '设置'] as const
 
 export default function App(): React.JSX.Element {
   const [activeItem, setActiveItem] = useState<(typeof navigationItems)[number]>('我的课程')
@@ -57,7 +58,9 @@ export default function App(): React.JSX.Element {
           </div>
           <div className="status-pill">{workspaceStatus}</div>
         </header>
-        {activeItem === '我的课程' ? (
+        {activeItem === '搜索' ? (
+          <SearchPanel />
+        ) : activeItem === '我的课程' ? (
           <CourseDashboard />
         ) : activeItem === '素材库' ? (
           <ManagedFilesPanel />

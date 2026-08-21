@@ -5,6 +5,7 @@ import {
   FILE_IPC_EVENTS,
   FILE_IPC_CHANNELS,
   IPC_CHANNELS,
+  SEARCH_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContentChanged,
   isManagedFileOverview,
@@ -16,6 +17,9 @@ import {
   isNoteRecord,
   isStudentRecord,
   isWorkspaceInfo,
+  isSearchHit,
+  isSearchIndexStatusSummary,
+  isSearchRebuildResult,
   parseIpcResponse,
   TeacherWorkbenchError,
   type CreateCourseRequest,
@@ -33,6 +37,8 @@ import {
   type RenameNodeRequest,
   type IpcChannel,
   type TeacherWorkbenchApi,
+  type SearchQuery,
+  type SearchHit,
 } from '../shared/preload-api'
 
 async function invoke<T>(
@@ -85,6 +91,13 @@ const api = Object.freeze({
       ipcRenderer.on(FILE_IPC_EVENTS.contentChanged, handler)
       return () => ipcRenderer.removeListener(FILE_IPC_EVENTS.contentChanged, handler)
     },
+  }),
+  search: Object.freeze({
+    query: (request: SearchQuery) => invoke(SEARCH_IPC_CHANNELS.query, request, (value): value is readonly SearchHit[] =>
+      Array.isArray(value) && value.every(isSearchHit),
+    ),
+    rebuild: () => invoke(SEARCH_IPC_CHANNELS.rebuild, {}, isSearchRebuildResult),
+    getStatus: () => invoke(SEARCH_IPC_CHANNELS.getStatus, {}, isSearchIndexStatusSummary),
   }),
 }) satisfies TeacherWorkbenchApi
 

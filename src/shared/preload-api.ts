@@ -5,6 +5,16 @@ import {
   TeacherWorkbenchError,
 } from './ipc-contracts'
 import {
+  isSearchHit,
+  isSearchIndexStatusSummary,
+  isSearchRebuildResult,
+  isSearchQuery,
+  type SearchIndexStatusSummary,
+  type SearchQuery,
+  type SearchRebuildResult,
+  type SearchHit,
+} from './search-contracts'
+import {
   isCoreOverview,
   isCreateCourseRequest,
   isCreateLessonRequest,
@@ -51,7 +61,7 @@ import {
   type ManagedFileRecord,
 } from './file-contracts'
 
-export { CORE_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS } from './ipc-contracts'
+export { CORE_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
 export type { IpcChannel, WorkspaceInfo } from './ipc-contracts'
 export type {
   CoreOverview,
@@ -78,6 +88,7 @@ export type {
   ManagedFileRecord,
   ManagedFileRefreshResult,
 } from './file-contracts'
+export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
 
 export interface TeacherWorkbenchApi {
   app: {
@@ -110,6 +121,11 @@ export interface TeacherWorkbenchApi {
     copyToStudent: (request: CopyFileToStudentRequest) => Promise<ManagedFileRecord>
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void) => () => void
   }
+  search: {
+    query: (request: SearchQuery) => Promise<readonly SearchHit[]>
+    rebuild: () => Promise<SearchRebuildResult>
+    getStatus: () => Promise<SearchIndexStatusSummary>
+  }
 }
 
 export {
@@ -139,4 +155,8 @@ export {
   isNullableManagedFileRecord,
   parseIpcResponse,
   TeacherWorkbenchError,
+  isSearchHit,
+  isSearchIndexStatusSummary,
+  isSearchRebuildResult,
+  isSearchQuery,
 }
