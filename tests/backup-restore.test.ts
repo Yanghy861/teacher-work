@@ -70,7 +70,7 @@ describe('L11 backup and restore', () => {
     expect(scanText(backup)).not.toContain('derived-index')
     expect(scanText(backup)).not.toContain('cache')
     expect(scanText(backup)).not.toContain('L11_SAFE_STORAGE_CIPHERTEXT')
-    expect(readdirSync(backup)).toEqual(expect.arrayContaining(['workspace.db', 'backup_manifest.json', 'files']))
+    expect(readdirSync(backup).sort()).toEqual(['backup_manifest.json', 'files', 'workspace.db'])
 
     const result = await service.restoreBackup(backup, restored)
     expect(result.workspacePath).toBe(restored)
@@ -185,4 +185,35 @@ describe('L11 backup and restore', () => {
     await expect(service.restoreBackup(backup, target)).rejects.toMatchObject({ code: 'RESTORE_VALIDATION_FAILED' })
     expect(() => readdirSync(target)).toThrow()
   })
+
+  it('rejects a backup database whose identity disagrees with the manifest before migration', async () => {
+    const value = fixture()
+    const backup = join(value.root, 'backup')
+    const target = join(value.root, 'identity-mismatch')
+    const service = new BackupRestoreService(value.workspace, join(value.root, 'install'), new WorkspaceActivityGate())
+    await service.createBackup(backup)
+    const manifestPath = join(backup, 'backup_manifest.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { schemaVersion: number }
+    manifest.schemaVersion = 999
+    writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8')
+
+    await expect(service.restoreBackup(backup, target)).rejects.toMatchObject({ code: 'RESTORE_VALIDATION_FAILED' })
+    expect(() => readdirSync(target)).toThrow()
+  })
+
+  it('rejects a manifest that disagrees with managed file metadata', async () => {
+    const value = fixture()
+    const backup = join(value.root, 'backup')
+    const target = join(value.root, 'metadata-mismatch')
+    const service = new BackupRestoreService(value.workspace, join(value.root, 'install'), new WorkspaceActivityGate())
+    await service.createBackup(backup)
+    const manifestPath = join(backup, 'backup_manifest.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { files: Array<{ originalName: string }> }
+    manifest.files[0]!.originalName = 'tampered.txt'
+    writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8')
+
+    await expect(service.restoreBackup(backup, target)).rejects.toMatchObject({ code: 'RESTORE_VALIDATION_FAILED' })
+    expect(() => readdirSync(target)).toThrow()
+  })
+
 })

@@ -378,11 +378,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 
 ## 2026-08-21 · L11 · DONE
 
-- 关键改动：新增 Main 侧 `WorkspaceActivityGate` 与 `BackupRestoreService`。备份期间暂停新业务写入、文件刷新和顺序索引任务，等待已有刷新完成；`workspace.db` 使用 SQLite backup API，复制登记的 managed 对象并生成版本化 `backup_manifest.json`，包含 workspaceId、schemaVersion、文件数量、总大小及每个 fileId/originalName/相对路径/大小/mtime/mode。
-- 原子性与排除：备份和恢复均先写 staging；备份完成校验后原子发布，恢复完成数据库打开、integrity/schema/身份、路径和限制校验并重建 `search.db` 后才发布。备份包不包含 `search.db`、cache、日志、API Key、safeStorage 密文、外部原始资料、依赖、构建产物或临时文件。
-- 恢复边界：只接受当前工作区之外的新空目录；拒绝 manifest 版本/格式错误、路径穿越、无效 fileId、文件数量/总大小超限、文件缺失/大小不一致、workspace.db 无法打开或 schema/身份不一致。失败清理 staging，不修改原工作区，不留下正式半成品。
-- IPC/UI：新增 `backup:create`、`backup:restore` 白名单通道与 Settings 页按钮；恢复完成后提示重新配置 Key。
-- 修改文件：`src/main/backup/backup-service.ts`、`src/main/workspace/activity-gate.ts`、`src/main/ipc/backup-ipc.ts`、`src/main/index.ts`、`src/main/parser/document-parser.ts`、五类 IPC 注册、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/renderer/settings-panel.tsx`、`tests/backup-restore.test.ts`、`docs/l11-backup-restore.md`、本文件与 `STATUS.md`。
-- 验证命令与结果：`npm test` ✅（23 files / 66 tests）、`npm run typecheck` ✅、`npm run lint` ✅、`git diff --check` ✅。专项测试覆盖备份→新目录恢复往返、课程/学生/课次/managed 文件/note 一致、备份失败原工作区不变、排除项、路径穿越、非空目标、文件数量/总大小限制、暂停闸门、恢复后搜索索引重建和失败不发布半成品。
+- 关键改动：新增 Main 侧外部编辑器确认、`WorkspaceActivityGate` 与 `BackupRestoreService`。确认后备份期间暂停新业务写入、文件刷新和顺序索引任务，等待已有刷新完成；`workspace.db` 使用 SQLite backup API，复制登记的 managed 对象并生成版本化 `backup_manifest.json`，包含 workspaceId、schemaVersion、文件数量、总大小及每个 fileId/originalName/相对路径/大小/mtime/mode。
+- 原子性与排除：备份和恢复均先写 staging；备份完成数据库完整性、身份、managed 元数据和文件大小校验后原子发布，并清理 `workspace.db` 的 `-wal`/`-shm`/`-journal` 派生侧文件；恢复完成数据库打开、integrity/schema/身份、路径和限制校验并重建 `search.db` 后才发布。备份包不包含 `search.db`、cache、日志、API Key、safeStorage 密文、外部原始资料、依赖、构建产物或临时文件。
+- 恢复边界：只接受当前工作区之外的新空目录；在迁移前后均校验 manifest 与 workspace.db 的身份、schema、文件数量、originalName、大小和路径，拒绝版本/格式错误、路径穿越、无效 fileId、文件数量/总大小超限、文件缺失/大小不一致、workspace.db 无法打开或 schema/身份不一致。失败清理 staging，不修改原工作区，不留下正式半成品；暂停窗口产生的刷新和索引触发会在恢复后补入队列。
+- IPC/UI：新增 `backup:create`、`backup:restore` 白名单通道、外部编辑器确认与 Settings 页按钮；确认取消、额外路径字段和备份失败均有自动化覆盖；恢复完成后提示重新配置 Key。
+- 修改文件：`src/main/backup/backup-service.ts`、`src/main/workspace/activity-gate.ts`、`src/main/ipc/backup-ipc.ts`、`src/main/index.ts`、`src/main/parser/document-parser.ts`、五类 IPC 注册、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/renderer/settings-panel.tsx`、`tests/backup-restore.test.ts`、`tests/backup-ipc.test.ts`、`docs/l11-backup-restore.md`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm test` ✅（24 files / 70 tests）、`npm run typecheck` ✅、`npm run lint` ✅、`git diff --check` ✅。专项测试覆盖备份→新目录恢复往返、课程/学生/课次/managed 文件/note 一致、备份失败原工作区不变、排除项、路径穿越、非空目标、文件数量/总大小限制、暂停闸门、外部编辑器确认、manifest/数据库元数据一致性、恢复后搜索索引重建和失败不发布半成品。
 - 取舍 / Later：不实现增量、云端、加密、并发变化重试、复杂孤儿修复或恶意压缩包防护矩阵；备份采用目录格式，设置页选择父目录后发布固定 `teacher-workbench-backup` 子目录。
 - Git：当前只准备 L11 相关源码、测试、文档和状态文件；不修改 L10 PASS，不创建 `checkpoint-L12-pass`，不 push、不添加远程。

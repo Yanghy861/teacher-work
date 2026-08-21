@@ -19,6 +19,7 @@ export interface BackupIpcDependencies {
   readonly chooseBackupDestination: () => Promise<string | null>
   readonly chooseBackupSource: () => Promise<string | null>
   readonly chooseRestoreTarget: () => Promise<string | null>
+  readonly confirmBackup?: () => Promise<boolean>
 }
 
 export const BACKUP_CHANNELS: readonly IpcChannel[] = Object.values(BACKUP_IPC_CHANNELS)
@@ -50,6 +51,9 @@ export async function dispatchBackupIpc(
       return failure(IPC_ERROR_CODES.INVALID_PAYLOAD, '请求参数无效。')
     }
     if (channel === BACKUP_IPC_CHANNELS.create) {
+      if (dependencies.confirmBackup !== undefined && !(await dependencies.confirmBackup())) {
+        return success(null)
+      }
       const destination = await dependencies.chooseBackupDestination()
       if (destination === null) return success(null)
       const result = await dependencies.getService().createBackup(destination)

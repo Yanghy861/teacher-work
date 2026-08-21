@@ -50,6 +50,8 @@ let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
 let backupRestoreService: BackupRestoreService | null = null
+const deferredIndexIds = new Set<string>()
+const deferredRefreshTriggers = new Set<string>()
 let servicesClosed = false
 let shutdownStarted = false
 
@@ -153,14 +155,28 @@ function getBackupRestoreService(): BackupRestoreService {
     activityGate,
     {
       pauseIndexing: async () => { await documentIndexWorker?.pause() },
-      resumeIndexing: () => { documentIndexWorker?.resume() },
+      resumeIndexing: () => {
+        documentIndexWorker?.resume()
+        const deferred = [...deferredIndexIds]
+        deferredIndexIds.clear()
+        deferred.forEach(enqueueIndex)
+        queueMicrotask(() => {
+          const refreshes = [...deferredRefreshTriggers]
+          deferredRefreshTriggers.clear()
+          refreshes.forEach(refreshManagedFilesInBackground)
+        })
+      },
     },
   )
   return backupRestoreService
 }
 
 function enqueueIndex(fileId: string): void {
-  if (servicesClosed || shutdownStarted || activityGate.isPaused) {
+  if (servicesClosed || shutdownStarted) {
+    return
+  }
+  if (activityGate.isPaused) {
+    deferredIndexIds.add(fileId)
     return
   }
   void getDocumentIndexWorker().enqueueIfNeeded(fileId)?.catch((error: unknown) => {
@@ -184,6 +200,7 @@ async function rebuildSearchIndex() {
 
 function refreshManagedFilesInBackground(trigger: string): void {
   if (activityGate.isPaused) {
+    deferredRefreshTriggers.add(trigger)
     return
   }
   void activityGate.run(() => getManagedFiles().refreshAll())
@@ -311,6 +328,28 @@ void app.whenReady().then(() => {
     ipcMain,
     {
       getService: getBackupRestoreService,
+      confirmBackup: async () => {
+        const result = mainWindow !== null && !mainWindow.isDestroyed()
+          ? await dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            title: '创建工作区备份',
+            message: '请先保存并关闭正在编辑工作区资料的外部程序。',
+            detail: '备份期间工作台会暂停写入、刷新和搜索索引任务。',
+            buttons: ['继续备份', '取消'],
+            defaultId: 0,
+            cancelId: 1,
+          })
+          : await dialog.showMessageBox({
+            type: 'warning',
+            title: '创建工作区备份',
+            message: '请先保存并关闭正在编辑工作区资料的外部程序。',
+            detail: '备份期间工作台会暂停写入、刷新和搜索索引任务。',
+            buttons: ['继续备份', '取消'],
+            defaultId: 0,
+            cancelId: 1,
+          })
+        return result.response === 0
+      },
       chooseBackupDestination: async () => {
         const result = mainWindow !== null && !mainWindow.isDestroyed()
           ? await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory', 'createDirectory'], title: '选择备份目录' })
