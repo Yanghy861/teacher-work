@@ -397,3 +397,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 命令结果：`npm test`（24 files / 70 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run package:portable`、`git diff --check` 全部通过。完整记录见 `docs/v1-acceptance.md`。
 - 已知限制 / Later：无签名 portable 目录、安装器/卸载器、自动更新、真实 provider、OCR、实时 watcher、向量搜索、流式 AI、持久化 workflow、增量/云端/加密备份和大规模压力矩阵仍留在 Later。
 - Git：先创建 `lean(L12): windows final gate` 候选提交；随后按协议写入候选 SHA、把 L12 设为 `AWAITING_REVIEW` 并创建 `review(L12): request Sol review`；不写 PASS、不创建 `checkpoint-L12-pass`、不 push。
+
+## 2026-08-21 · L12 · REVIEW_HANDOFF
+
+- 审核区间：L11–L12；审核基线：`checkpoint-L10-pass`。
+- L12 候选提交 SHA：`1f09eb556cfb4242b61980b7ed2709976d454421`（`lean(L12): windows final gate`）。
+- 送审证据：`docs/v1-acceptance.md`；unpacked Windows portable 目录、首次启动/工作区创建/正常退出/再次打开、四条 smoke、Renderer 边界和包内容审计均有记录。
+- 门禁结果：`npm test`（24 files / 70 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run package:portable`、`git diff --check` 全部通过；四条专项 smoke 合计 4 files / 13 tests 通过。
+- 审核状态：`SOL_REVIEW_STATUS.md` 的 L12 已设为 `AWAITING_REVIEW`；Luna 不写 `PASS`，不创建 `checkpoint-L12-pass`。
+- 下一步：创建 `review(L12): request Sol review` 元数据提交后停止，等待独立 Sol 复审。
