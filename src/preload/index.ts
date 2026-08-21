@@ -7,6 +7,7 @@ import {
   IPC_CHANNELS,
   SEARCH_IPC_CHANNELS,
   AI_IPC_CHANNELS,
+  DRAFT_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContentChanged,
   isManagedFileOverview,
@@ -25,11 +26,13 @@ import {
   isAiConnectionTestResult,
   isAiSettings,
   isAiTextResult,
+  isGenerateDraftResult,
   parseIpcResponse,
   TeacherWorkbenchError,
   type CreateCourseRequest,
   type CreateLessonRequest,
   type CreateNoteRequest,
+  type UpdateNoteRequest,
   type CreatePeriodRequest,
   type CreateStudentRequest,
   type CopyFileToLessonRequest,
@@ -47,6 +50,7 @@ import {
   type AiRequestIdRequest,
   type AiTextRequest,
   type UpdateAiSettingsRequest,
+  type GenerateDraftRequest,
 } from '../shared/preload-api'
 
 async function invoke<T>(
@@ -75,6 +79,7 @@ const api = Object.freeze({
     createLesson: (request: CreateLessonRequest) => invoke(CORE_IPC_CHANNELS.createLesson, request, isNodeRecord),
     createStudent: (request: CreateStudentRequest) => invoke(CORE_IPC_CHANNELS.createStudent, request, isStudentRecord),
     createNote: (request: CreateNoteRequest) => invoke(CORE_IPC_CHANNELS.createNote, request, isNoteRecord),
+    updateNote: (request: UpdateNoteRequest) => invoke(CORE_IPC_CHANNELS.updateNote, request, isNoteRecord),
     renameNode: (request: RenameNodeRequest) => invoke(CORE_IPC_CHANNELS.renameNode, request, isNodeRecord),
     moveNode: (request: MoveNodeRequest) => invoke(CORE_IPC_CHANNELS.moveNode, request, isNodeRecord),
     reorderNode: (request: ReorderNodeRequest) => invoke(CORE_IPC_CHANNELS.reorderNode, request, isNodeRecord),
@@ -113,6 +118,9 @@ const api = Object.freeze({
     testConnection: (request: AiRequestIdRequest) => invoke(AI_IPC_CHANNELS.testConnection, request, isAiConnectionTestResult),
     requestText: (request: AiTextRequest) => invoke(AI_IPC_CHANNELS.requestText, request, isAiTextResult),
     cancel: (request: AiRequestIdRequest) => invoke(AI_IPC_CHANNELS.cancel, request, isAiCancelResult),
+  }),
+  drafts: Object.freeze({
+    generate: (request: GenerateDraftRequest) => invoke(DRAFT_IPC_CHANNELS.generate, request, isGenerateDraftResult),
   }),
 }) satisfies TeacherWorkbenchApi
 

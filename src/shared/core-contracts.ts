@@ -1,3 +1,5 @@
+import { isDraftKind, isDraftNoteMetadata, type DraftKind, type DraftNoteMetadata } from './draft-contracts'
+
 export type NodeKind = 'course' | 'period' | 'lesson'
 
 export type CourseMode = 'class' | 'one_to_one'
@@ -37,6 +39,8 @@ export interface NoteRecord {
   readonly createdAt: string
   readonly updatedAt: string
   readonly deletedAt: string | null
+  readonly noteKind?: 'manual' | DraftKind
+  readonly aiMetadata?: DraftNoteMetadata
 }
 
 export interface CoreOverview {
@@ -70,6 +74,11 @@ export interface CreateNoteRequest {
   readonly studentId: string
   readonly bodyMd: string
   readonly lessonId?: string
+}
+
+export interface UpdateNoteRequest {
+  readonly noteId: string
+  readonly bodyMd: string
 }
 
 export interface RenameNodeRequest {
@@ -136,7 +145,9 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
     typeof value.bodyMd === 'string' &&
     isNonEmptyString(value.createdAt) &&
     isNonEmptyString(value.updatedAt) &&
-    (value.deletedAt === null || isNonEmptyString(value.deletedAt))
+    (value.deletedAt === null || isNonEmptyString(value.deletedAt)) &&
+    (value.noteKind === undefined || value.noteKind === 'manual' || isDraftKind(value.noteKind)) &&
+    (value.aiMetadata === undefined || isDraftNoteMetadata(value.aiMetadata))
   )
 }
 
@@ -193,6 +204,15 @@ export function isCreateNoteRequest(value: unknown): value is CreateNoteRequest 
     typeof value.bodyMd === 'string' &&
     value.bodyMd.trim().length > 0 &&
     (value.lessonId === undefined || isNonEmptyString(value.lessonId))
+  )
+}
+
+export function isUpdateNoteRequest(value: unknown): value is UpdateNoteRequest {
+  return (
+    hasOnlyKeys(value, ['noteId', 'bodyMd']) &&
+    isNonEmptyString(value.noteId) &&
+    typeof value.bodyMd === 'string' &&
+    value.bodyMd.trim().length > 0
   )
 }
 

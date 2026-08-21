@@ -10,6 +10,7 @@ export const CORE_IPC_CHANNELS = {
   createLesson: 'core:create-lesson',
   createStudent: 'core:create-student',
   createNote: 'core:create-note',
+  updateNote: 'core:update-note',
   renameNode: 'core:rename-node',
   moveNode: 'core:move-node',
   reorderNode: 'core:reorder-node',
@@ -42,6 +43,10 @@ export const AI_IPC_CHANNELS = {
   cancel: 'ai:cancel',
 } as const
 
+export const DRAFT_IPC_CHANNELS = {
+  generate: 'draft:generate',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -52,6 +57,7 @@ export type IpcChannel =
   | (typeof FILE_IPC_CHANNELS)[keyof typeof FILE_IPC_CHANNELS]
   | (typeof SEARCH_IPC_CHANNELS)[keyof typeof SEARCH_IPC_CHANNELS]
   | (typeof AI_IPC_CHANNELS)[keyof typeof AI_IPC_CHANNELS]
+  | (typeof DRAFT_IPC_CHANNELS)[keyof typeof DRAFT_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -61,6 +67,7 @@ export const IPC_ERROR_CODES = {
   MANAGED_FILE_ERROR: 'MANAGED_FILE_ERROR',
   SEARCH_ERROR: 'SEARCH_ERROR',
   AI_ERROR: 'AI_ERROR',
+  DRAFT_ERROR: 'DRAFT_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   INVALID_RESPONSE: 'INVALID_RESPONSE',
 } as const

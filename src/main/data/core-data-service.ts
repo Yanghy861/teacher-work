@@ -6,6 +6,7 @@ import type {
   NoteRecord,
   StudentRecord,
 } from '../../shared/core-contracts'
+import { isDraftNoteMetadata, type DraftKind, type DraftNoteMetadata } from '../../shared/draft-contracts'
 import type { SqliteDatabase } from '../db/migrations'
 import { NodeService } from './node-service'
 
@@ -59,6 +60,8 @@ interface NoteRow {
   readonly created_at: string
   readonly updated_at: string
   readonly deleted_at: string | null
+  readonly note_kind: 'manual' | DraftKind
+  readonly ai_metadata_json: string | null
 }
 
 export class CoreDataService {
@@ -143,7 +146,12 @@ export class CoreDataService {
     }
   }
 
-  createNote(studentId: string, bodyMd: string, lessonId?: string): NoteRecord {
+  createNote(
+    studentId: string,
+    bodyMd: string,
+    lessonId?: string,
+    metadata?: { readonly noteKind?: 'manual' | DraftKind; readonly aiMetadata?: DraftNoteMetadata },
+  ): NoteRecord {
     if (typeof bodyMd !== 'string' || bodyMd.trim().length === 0) {
       throw new CoreDataError('INVALID_NOTE', '记录内容不能为空。')
     }
@@ -157,11 +165,33 @@ export class CoreDataService {
       this.database
         .prepare(
           `INSERT INTO notes
-             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at)
-           VALUES (?, ?, ?, ?, ?, ?, NULL)`,
+             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at, note_kind, ai_metadata_json)
+           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
         )
-        .run(id, studentId, lessonId ?? null, bodyMd.trim(), now, now)
+        .run(
+          id,
+          studentId,
+          lessonId ?? null,
+          bodyMd.trim(),
+          now,
+          now,
+          metadata?.noteKind ?? 'manual',
+          metadata?.aiMetadata === undefined ? null : JSON.stringify(metadata.aiMetadata),
+        )
       return this.requireNote(id)
+    })
+  }
+
+  updateNote(noteId: string, bodyMd: string): NoteRecord {
+    if (typeof bodyMd !== 'string' || bodyMd.trim().length === 0) {
+      throw new CoreDataError('INVALID_NOTE', '记录内容不能为空。')
+    }
+    return this.transaction(() => {
+      const existing = this.requireNote(noteId)
+      this.database
+        .prepare('UPDATE notes SET body_md = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
+        .run(bodyMd.trim(), this.now(), existing.id)
+      return this.requireNote(noteId)
     })
   }
 
@@ -209,7 +239,8 @@ export class CoreDataService {
   private listNotes(studentId?: string): NoteRecord[] {
     const rows = this.database
       .prepare(
-        `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at
+        `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+                note_kind, ai_metadata_json
            FROM notes
           WHERE deleted_at IS NULL
             AND (? IS NULL OR student_id = ?)
@@ -300,7 +331,8 @@ export class CoreDataService {
   private requireNote(noteId: string): NoteRecord {
     const row = this.database
       .prepare(
-        `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at
+        `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+                note_kind, ai_metadata_json
            FROM notes
           WHERE id = ?`,
       )
@@ -342,6 +374,15 @@ function mapLink(row: LinkRow): CourseStudentLink {
 }
 
 function mapNote(row: NoteRow): NoteRecord {
+  let aiMetadata: DraftNoteMetadata | undefined
+  if (row.ai_metadata_json !== null) {
+    try {
+      const parsed: unknown = JSON.parse(row.ai_metadata_json)
+      if (isDraftNoteMetadata(parsed)) aiMetadata = parsed
+    } catch {
+      // Optional metadata must not make the editable note unavailable.
+    }
+  }
   return {
     id: row.id,
     studentId: row.student_id,
@@ -350,6 +391,8 @@ function mapNote(row: NoteRow): NoteRecord {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
+    ...(row.note_kind === 'manual' ? {} : { noteKind: row.note_kind }),
+    ...(aiMetadata === undefined ? {} : { aiMetadata }),
   }
 }
 

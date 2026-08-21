@@ -21,6 +21,13 @@ import {
   type UpdateAiSettingsRequest,
 } from './ai-contracts'
 import {
+  isGenerateDraftRequest,
+  isGenerateDraftResult,
+  type GenerateDraftRequest,
+  type GenerateDraftResult,
+  isDraftNoteMetadata,
+} from './draft-contracts'
+import {
   isSearchHit,
   isSearchIndexStatusSummary,
   isSearchRebuildResult,
@@ -44,6 +51,7 @@ import {
   isReorderNodeRequest,
   isRenameNodeRequest,
   isStudentRecord,
+  isUpdateNoteRequest,
   type CoreOverview,
   type CreateCourseRequest,
   type CreateLessonRequest,
@@ -57,6 +65,7 @@ import {
   type ReorderNodeRequest,
   type RenameNodeRequest,
   type StudentRecord,
+  type UpdateNoteRequest,
 } from './core-contracts'
 import {
   isCopyFileToLessonRequest,
@@ -77,7 +86,7 @@ import {
   type ManagedFileRecord,
 } from './file-contracts'
 
-export { AI_IPC_CHANNELS, CORE_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
+export { AI_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
 export type { IpcChannel, WorkspaceInfo } from './ipc-contracts'
 export type {
   CoreOverview,
@@ -93,6 +102,7 @@ export type {
   ReorderNodeRequest,
   RenameNodeRequest,
   StudentRecord,
+  UpdateNoteRequest,
 } from './core-contracts'
 export type {
   CopyFileToLessonRequest,
@@ -106,6 +116,7 @@ export type {
 } from './file-contracts'
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
 export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
+export type { DraftNoteMetadata, DraftSourceSelection, GenerateDraftRequest, GenerateDraftResult } from './draft-contracts'
 
 export interface TeacherWorkbenchApi {
   app: {
@@ -121,6 +132,7 @@ export interface TeacherWorkbenchApi {
     createLesson: (request: CreateLessonRequest) => Promise<NodeRecord>
     createStudent: (request: CreateStudentRequest) => Promise<StudentRecord>
     createNote: (request: CreateNoteRequest) => Promise<NoteRecord>
+    updateNote: (request: UpdateNoteRequest) => Promise<NoteRecord>
     renameNode: (request: RenameNodeRequest) => Promise<NodeRecord>
     moveNode: (request: MoveNodeRequest) => Promise<NodeRecord>
     reorderNode: (request: ReorderNodeRequest) => Promise<NodeRecord>
@@ -149,6 +161,9 @@ export interface TeacherWorkbenchApi {
     testConnection: (request: AiRequestIdRequest) => Promise<AiConnectionTestResult>
     requestText: (request: AiTextRequest) => Promise<AiTextResult>
     cancel: (request: AiRequestIdRequest) => Promise<AiCancelResult>
+  }
+  drafts: {
+    generate: (request: GenerateDraftRequest) => Promise<GenerateDraftResult>
   }
 }
 
@@ -190,4 +205,8 @@ export {
   isAiTextResult,
   isAiRequestIdRequest,
   isUpdateAiSettingsRequest,
+  isUpdateNoteRequest,
+  isDraftNoteMetadata,
+  isGenerateDraftRequest,
+  isGenerateDraftResult,
 }

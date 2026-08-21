@@ -159,6 +159,17 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 7,
+    name: 'add_note_draft_metadata',
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE notes ADD COLUMN note_kind TEXT NOT NULL DEFAULT 'manual'
+          CHECK (note_kind IN ('manual', 'lecture', 'example', 'homework'));
+        ALTER TABLE notes ADD COLUMN ai_metadata_json TEXT;
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

@@ -5,8 +5,9 @@ import CourseDashboard from './course-dashboard'
 import ManagedFilesPanel from './managed-files-panel'
 import SearchPanel from './search-panel'
 import SettingsPanel from './settings-panel'
+import DraftPanel from './draft-panel'
 
-const navigationItems = ['我的课程', '搜索', '素材库', '学生', '设置'] as const
+const navigationItems = ['我的课程', '搜索', '素材库', '学生', '备课', '设置'] as const
 
 export default function App(): React.JSX.Element {
   const [activeItem, setActiveItem] = useState<(typeof navigationItems)[number]>('我的课程')
@@ -69,6 +70,8 @@ export default function App(): React.JSX.Element {
           <ManagedFilesPanel heading="学生资料" />
         ) : activeItem === '设置' ? (
           <SettingsPanel />
+        ) : activeItem === '备课' ? (
+          <DraftPanel />
         ) : (
           <section className="placeholder-card" aria-live="polite">
             <div className="placeholder-icon" aria-hidden="true">✦</div>

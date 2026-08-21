@@ -337,3 +337,15 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 安全边界：Renderer 仅通过类型化 Preload 使用 AI IPC；Key 不明文落盘、不进入 workspace.db、日志、错误响应、备份或仓库；AI Gateway 只发送用户明确调用的请求；无 Key 时课程与搜索能力不受影响。
 - 已知限制 / Later：当前仅支持一个 OpenAI-compatible provider；未实现 L09 草稿生成、真实付费 smoke、持久化 AI workflow、流式输出和多 provider 管理。
 - 下一任务可依赖的接口：`window.teacherWorkbench.ai.getSettings/updateSettings/testConnection/requestText/cancel`、`AiSettingsService`、`AiGateway`、`AI_IPC_CHANNELS`；L10 仍需等待独立审核流程，不由本次自动改为 PASS。
+
+## 2026-08-21 · L09 · DONE
+
+- 关键改动：新增 `DraftService` 与 `draft:generate` 白名单 IPC；老师可勾选明确的 managed file，或为单个选中文件提交明确文本片段。Main 侧验证 file ID 仍为活动托管文件，只读取/发送选中的上下文，并按字符上限截断、按 token 上限传给 L08 Gateway。
+- 三类草稿：讲义、例题、作业是三个独立操作，使用版本化 prompt；每次 Gateway 完整返回后立即写入普通 `notes`，保存 `file_id + position + charsSent`、provider、model、prompt version、预算和输入字符数。
+- 可编辑与安全：notes schema v7 增加 `note_kind`、`ai_metadata_json`；新增普通 note 更新 IPC/UI，生成结果可直接编辑保存。生成只插入新 note，不覆盖 managed 原资料；失败/取消/空响应不写 note，重试沿用同一流程，已有 note 保留。
+- 修改文件：`src/shared/draft-contracts.ts`、`src/shared/core-contracts.ts`、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/main/db/migrations.ts`、`src/main/data/core-data-service.ts`、`src/main/search/search-service.ts`、`src/main/draft/draft-service.ts`、`src/main/ipc/draft-ipc.ts`、`src/main/ipc/core-ipc.ts`、`src/main/index.ts`、`src/preload/index.ts`、`src/renderer/draft-panel.tsx`、`src/renderer/App.tsx`、`src/renderer/styles.css`、`tests/draft-service.test.ts`、`tests/draft-ipc.test.ts`、`tests/workspace-foundation.test.ts`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm test` ✅（21 files / 57 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`git diff --check` ✅。测试覆盖文件上下文与片段上下文、未选资料不发送、字符截断、token 预算校验、来源位置元数据、生成失败/空响应重试、已有 note 保留、note 编辑保存、原托管文件不变和 IPC 路径字段拒绝。
+- 人工/真实环境验证：未接入真实 API Key 或付费 API；仍使用 L08 fake provider/测试 doubles。未开始 L10，不修改任何审核状态或通过标签。
+- Git 任务提交：待用户在外部 PowerShell 按路径清单创建 `lean(L09): context and draft generation` 本地提交；本窗口未执行 `git add/commit/tag/push`。
+- 已知限制 / Later：上下文去重、相关度排序、content_hash manifest、流式输出、持久化 AI workflow 和搜索页跨页面拖拽选取不在 L09 Lean 范围；当前提供素材列表勾选与明确片段输入。
+- 下一任务可依赖的接口：`window.teacherWorkbench.drafts.generate`、`DraftService`、`DRAFT_IPC_CHANNELS`、notes 的 `noteKind/aiMetadata`；L10 仍由独立阶段闸门处理。

@@ -21,6 +21,11 @@ import {
 
 export type { SearchChunkInput, SearchFileInput, SearchHit, SearchIndexStatus, SearchNodeInput, SearchNoteInput, SearchPosition, SearchQuery, SearchSourceType }
 
+export interface SearchFileContext {
+  readonly fileId: string
+  readonly chunks: readonly SearchChunkInput[]
+}
+
 export type SearchServiceErrorCode =
   | 'INVALID_QUERY'
   | 'INVALID_SOURCE'
@@ -135,6 +140,39 @@ export class SearchService {
           WHERE id = ?`,
       )
       .run(contentHash, status, input.id)
+  }
+
+  getFileContext(fileId: string): SearchFileContext {
+    this.requireFile(fileId)
+    const documentId = makeDocumentId('file', fileId)
+    const rows = this.searchDatabase
+      .prepare(
+        `SELECT ordinal, position_type, position_value, position_value_type, original_text
+           FROM search_chunks
+          WHERE document_id = ?
+          ORDER BY ordinal, chunk_id`,
+      )
+      .all(documentId) as Array<{
+        ordinal: number
+        position_type: string | null
+        position_value: string | null
+        position_value_type: 'string' | 'number' | null
+        original_text: string
+      }>
+    return {
+      fileId,
+      chunks: rows.map((row) => ({
+        text: row.original_text,
+        ordinal: row.ordinal,
+        ...(row.position_type === null
+          ? {}
+          : { position: toSearchPosition(row.position_type, row.position_value, row.position_value_type) }),
+      })),
+    }
+  }
+
+  assertFileAvailable(fileId: string): void {
+    this.requireFile(fileId)
   }
 
   indexNode(input: SearchNodeInput): void {

@@ -17,6 +17,7 @@ import type {
   NodeIdRequest,
   ReorderNodeRequest,
   RenameNodeRequest,
+  UpdateNoteRequest,
 } from '../../shared/core-contracts'
 import {
   isCoreOverview,
@@ -32,6 +33,7 @@ import {
   isReorderNodeRequest,
   isRenameNodeRequest,
   isStudentRecord,
+  isUpdateNoteRequest,
 } from '../../shared/core-contracts'
 import { CoreDataError, CoreDataService } from '../data/core-data-service'
 import { NodeServiceError } from '../data/node-service'
@@ -128,6 +130,15 @@ export async function dispatchCoreIpc(
             (payload as CreateNoteRequest).studentId,
             (payload as CreateNoteRequest).bodyMd,
             (payload as CreateNoteRequest).lessonId,
+          ),
+          isNoteRecord,
+        )
+      case CORE_IPC_CHANNELS.updateNote:
+        assertRequest(payload, isUpdateNoteRequest)
+        return ensureResponse(
+          coreData.updateNote(
+            (payload as UpdateNoteRequest).noteId,
+            (payload as UpdateNoteRequest).bodyMd,
           ),
           isNoteRecord,
         )

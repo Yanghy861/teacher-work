@@ -104,4 +104,39 @@ describe('L01 typed core IPC', () => {
       database.close()
     }
   })
+
+  it('updates an existing note without dropping its AI metadata', async () => {
+    const { database, dependencies } = createDependencies()
+    try {
+      const logger = new TestLogger()
+      const core = dependencies.getCoreData()
+      const course = core.nodes.createCourse('IPC 草稿课程', 'one_to_one')
+      const period = core.nodes.createPeriod(course.id, '阶段')
+      const lesson = core.nodes.createLesson(period.id, '课次')
+      const student = core.createStudentForCourse(course.id, '学生')
+      const note = core.createNote(student.id, '原始草稿', lesson.id, {
+        noteKind: 'lecture',
+        aiMetadata: {
+          kind: 'lecture',
+          promptVersion: 'l09-v1',
+          provider: 'openai-compatible',
+          model: 'fake-model',
+          sources: [{ fileId: 'file-1', charsSent: 4 }],
+          inputChars: 4,
+          maxChars: 100,
+          maxTokens: 100,
+        },
+      })
+      const response = await dispatchCoreIpc(
+        CORE_IPC_CHANNELS.updateNote,
+        { noteId: note.id, bodyMd: '编辑后的草稿' },
+        dependencies,
+        logger,
+      )
+      expect(response).toMatchObject({ ok: true, data: { id: note.id, bodyMd: '编辑后的草稿', noteKind: 'lecture' } })
+      expect(response.ok && response.data).toMatchObject({ aiMetadata: { promptVersion: 'l09-v1' } })
+    } finally {
+      database.close()
+    }
+  })
 })

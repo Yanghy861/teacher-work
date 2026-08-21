@@ -7,6 +7,7 @@ import { registerCoreIpc } from './ipc/core-ipc'
 import { registerFileIpc } from './ipc/file-ipc'
 import { registerSearchIpc } from './ipc/search-ipc'
 import { registerAiIpc } from './ipc/ai-ipc'
+import { registerDraftIpc } from './ipc/draft-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
@@ -19,6 +20,7 @@ import { windowWebPreferences } from './window-security'
 import { AiGateway } from './ai/ai-gateway'
 import { AiSettingsService } from './ai/ai-settings-service'
 import { electronSecureStorage } from './ai/secure-storage'
+import { DraftService } from './draft/draft-service'
 import {
   initializeDefaultWorkspace,
   type WorkspaceHandle,
@@ -38,8 +40,10 @@ let unregisterCoreIpc: (() => void) | null = null
 let unregisterFileIpc: (() => void) | null = null
 let unregisterSearchIpc: (() => void) | null = null
 let unregisterAiIpc: (() => void) | null = null
+let unregisterDraftIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
+let draftService: DraftService | null = null
 let servicesClosed = false
 let shutdownStarted = false
 
@@ -126,6 +130,11 @@ function getAiSettings(): AiSettingsService {
 function getAiGateway(): AiGateway {
   aiGateway ??= new AiGateway(getAiSettings(), { logger })
   return aiGateway
+}
+
+function getDraftService(): DraftService {
+  draftService ??= new DraftService(getCoreData(), getSearchService(), getAiGateway(), getAiSettings())
+  return draftService
 }
 
 function enqueueIndex(fileId: string): void {
@@ -266,6 +275,11 @@ void app.whenReady().then(() => {
     },
     logger,
   )
+  unregisterDraftIpc = registerDraftIpc(
+    ipcMain,
+    { getDraftService },
+    logger,
+  )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
   void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
@@ -297,10 +311,12 @@ app.on('before-quit', (event) => {
   unregisterFileIpc?.()
   unregisterSearchIpc?.()
   unregisterAiIpc?.()
+  unregisterDraftIpc?.()
   coreDataService = null
   managedFileService = null
   aiGateway = null
   aiSettingsService = null
+  draftService = null
   void (async () => {
     await documentIndexWorker?.close()
     documentIndexWorker = null
