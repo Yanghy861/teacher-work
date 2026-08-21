@@ -349,3 +349,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git 任务提交：待用户在外部 PowerShell 按路径清单创建 `lean(L09): context and draft generation` 本地提交；本窗口未执行 `git add/commit/tag/push`。
 - 已知限制 / Later：上下文去重、相关度排序、content_hash manifest、流式输出、持久化 AI workflow 和搜索页跨页面拖拽选取不在 L09 Lean 范围；当前提供素材列表勾选与明确片段输入。
 - 下一任务可依赖的接口：`window.teacherWorkbench.drafts.generate`、`DraftService`、`DRAFT_IPC_CHANNELS`、notes 的 `noteKind/aiMetadata`；L10 仍由独立阶段闸门处理。
+
+## 2026-08-21 · L10 · DONE
+
+- 关键改动：新增 `tests/phase3-acceptance.test.ts`，用本地 fake provider 串起选择 managed 资料、独立生成讲义/例题/作业、通过 note IPC 人工修改保存的完整 happy path；补齐未选择资料不发送、字符/token 上限、未选上下文隔离、网络失败/空响应/取消后已有 note 保留与重试、原 managed 文件不覆盖，以及 Key 不进入日志、数据库、IPC 返回/错误和 workspace 备份目录的阶段证据。
+- 修改文件：`tests/phase3-acceptance.test.ts`、`docs/phase3-acceptance.md`、`implementation-tasks/STATUS.md`、`implementation-tasks/SOL_REVIEW_STATUS.md`、本文件。
+- 验证命令与结果：`npm test`（22 files / 61 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`git diff --check` 均通过；阶段验收文档已形成。
+- 人工/真实环境验证：未接入真实 API Key 或付费 provider；使用隔离临时 workspace、脱敏文本和 fake fetch，未触碰真实教学资料。验收测试调用现有 SQLite backup API 生成临时备份并扫描 `workspace/backups`，完整 backup/restore 留给 L11。
+- 审核区间与交接：L08–L10；审核基线为 `checkpoint-L07-pass`。`SOL_REVIEW_STATUS.md` 已设为 `AWAITING_REVIEW`；当前窗口不执行 Git 写操作，候选 SHA 与 `review(L10): request Sol review` 元数据提交由外部 PowerShell 命令完成；Luna 未写 `PASS`，未创建 `checkpoint-L10-pass`。
+- 已知限制 / Later：真实 provider smoke、持久化 AI workflow、流式输出、精确续跑、content hash manifest 和跨页面拖拽选取不在 L10 Lean 验收范围。
