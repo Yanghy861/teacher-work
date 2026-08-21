@@ -17,7 +17,7 @@
 
 ## 命令结果
 
-- `npm test`：17 files / 43 tests ✅
+- `npm test`：17 files / 44 tests ✅
 - `npm run typecheck` ✅
 - `npm run lint` ✅
 - `npm run build` ✅

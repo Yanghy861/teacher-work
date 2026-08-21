@@ -316,9 +316,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 最小修复方向：从 `original_name` 提取扩展名传入 Parser，并补充无扩展名 managed 对象的多格式 smoke；修复后只重审 L05–L07 区间。
 - 下一步：Luna 创建 `fix(L07-review): ...`，完成复验后重新送审；L08 保持未开始。
 
-## 2026-08-21 �� L07 �� REVIEW_HANDOFF_AFTER_FIX
+## 2026-08-21 · L07 · SOL_REVIEW_PASS
 
-- �޸��ύ��`f110614d96e85095640b2eb8b2414a7a5a0ca92e`��`fix(L07-review): preserve managed parser file types`����
-- �޸����ݣ�Worker ���� `original_name` �� OfficeParser ���� `fileType`����������չ�� managed ���󲼾֡�
-- ��֤��44 tests��typecheck��lint��production build��diff check ȫ��ͨ����
-- ���״̬��L07 ��������Ϊ `AWAITING_REVIEW`���ȴ� Sol ����δ��ʼ L08��
+- 审核区间：L05–L07；审核基线：`checkpoint-L04-pass`（`6a9fc7c45cf75f054aef3b860e25d83e90a34e8f`）。
+- 初始候选：`486697145855a5a66827f47d84323ff71ed6a2d5`；修复提交：`f110614d96e85095640b2eb8b2414a7a5a0ca92e`。
+- 独立验证：44 tests、typecheck、lint、production build、diff check 全部通过；仓库外匿名 PPTX/DOCX/PDF/XLSX 真实 smoke 全部完成解析/索引，`有理数` 与 `函数` 查询均有命中。
+- Findings：P0–P3 无；初审发现的无扩展名 managed Parser 类型问题已关闭。
+- 审核结果：L07 状态为 `PASS`；将创建 `review(L07): pass` 与 `checkpoint-L07-pass`。
+- 下一任务：Luna 可开始 L08；不得跳过 L10 审核闸门。

@@ -14,6 +14,6 @@ Luna 只能把 `PENDING`/`CHANGES_REQUIRED` 改为 `AWAITING_REVIEW` 并填写�
 | T03 | T01–T03 | PASS | bfad00596e2b8ce5e0958829169d0141f99528e9 | checkpoint-T03-pass | `docs/reviews/T03-sol-review.md` 第二次复审通过 |
 | T08 | T04–T08 + Lean 范围裁决 | PASS | fe44b795830bdbcf96f17cc53a86402c1f9f0cd3 | checkpoint-T08-pass | `docs/reviews/T08-sol-review.md` 独立复审通过；上一轮三个 P1、一个 P2 均关闭，Lean 硬安全边界保留 |
 | L04 | L01–L04 | PASS | b09467d110d9b6ea662e0eb111475e362f702548 | checkpoint-L04-pass | `docs/reviews/L04-sol-review.md` 独立审核通过；`review(L04): pass` 已提交 |
-| L07 | L05–L07 | AWAITING_REVIEW | f110614d96e85095640b2eb8b2414a7a5a0ca92e | | L07 修复已完成，等待 Sol 复审 |
+| L07 | L05–L07 | PASS | f110614d96e85095640b2eb8b2414a7a5a0ca92e | checkpoint-L07-pass | `docs/reviews/L07-sol-review.md` 独立复审通过；初审 P1 已关闭 |
 | L10 | L08–L10 | PENDING | | | AI 备课阶段 |
 | L12 | L11–L12 | PENDING | | | 备份、Windows 交付与最终验收 |
