@@ -274,3 +274,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git 任务提交：待 staged diff 审查后创建 `lean(L05): search core` 本地提交；不 push。
 - 已知限制 / Later：TXT/MD/PDF/DOCX/PPTX/XLSX 解析与顺序 Worker 留给 L06；`search.db` 与 `workspace.db` 不做跨库原子事务；OCR、向量搜索、复杂 tokenizer、持久化索引队列和搜索 UI 留给后续里程碑。
 - 下一任务可依赖的接口：`openSearchDatabase`、`SearchService.indexFile/indexNode/indexNote/replaceFileChunks/search/getIndexState`、`SearchNormalizer`、schema v5 的文件索引状态字段；L06 可接入统一 Parser 与顺序 Worker，L07 再完成搜索 UI/重建阶段闸门。
+
+## 2026-08-21 · L06 · DONE
+
+- 关键改动：新增 `DocumentIndexWorker`，在一个 `worker_threads.Worker` 中顺序执行 managed 文件 Hash、TXT/MD 解析和 `officeparser@7.5.1` 的 PDF/DOCX/PPTX/XLSX 解析；Main 仅编排登记 ID、接收纯数据、短事务更新文件 Hash/状态并调用 L05 SearchService。启动扫描未索引/Hash 不一致文件，导入和刷新后自动排队；同 Hash 的 indexed/no_text/parse_failed 不重复自动重试，显式 enqueue 可整文件重做。
+- 修改文件：`src/main/parser/document-parser.ts`、`src/main/index.ts`、`src/main/ipc/file-ipc.ts`、`tests/document-parser.test.ts`、`package.json`、`package-lock.json`、`docs/l06-unified-parser-worker.md`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm test` ✅（15 files / 41 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。覆盖 TXT/MD、no_text、损坏 DOCX 不阻塞后续文件、Hash/line position、启动重扫、状态写回、Main/Worker 退出顺序和同 Hash 失败不重复排队。
+- 人工/真实环境验证：L06 使用隔离临时 workspace、脱敏文本和损坏 Office fixture；未复制或提交真实教学资料。T04/T08 已有 40 份真实样本与 Electron parser smoke 证据继续作为真实格式基线；当前 checkout 无可提交真实样本，因此未伪造新的 Office 真实 smoke。
+- Git 任务提交：待 staged diff 审查后创建 `lean(L06): unified parser worker` 本地提交；不 push。
+- 已知限制 / Later：未建立 Worker Pool、持久任务队列、精确取消/续传或 OCR；最终 packaged Electron PDF.js worker 资源一致性与 Windows 交付留给 L12。`officeparser` 已从 devDependencies 移入 runtime dependencies，版本仍精确锁定 7.5.1，PDF.js override 保持 6.2.108。
+- 下一任务可依赖的接口：`DocumentIndexWorker.enqueue/enqueueIfNeeded/rebuildPending/close`、统一 `ParsedDocument`/`IndexedFileResult` 契约、Main 启动/焦点/导入后的索引触发；L07 可实现搜索 UI、删除 search.db 重建和阶段 2 验收闸门。

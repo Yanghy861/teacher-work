@@ -26,6 +26,7 @@ import type { IpcLogger, IpcMainPort } from './app-ipc'
 
 export interface FileIpcDependencies {
   readonly getFileService: () => ManagedFileService
+  readonly enqueueIndex?: (fileId: string) => void
   readonly chooseSourcePath: () => Promise<string | null>
   readonly openPath: (path: string) => Promise<string>
   readonly showInFolder: (path: string) => void
@@ -81,6 +82,9 @@ export async function dispatchFileIpc(
         assertRequest(payload, isEmptyIpcRequest)
         const sourcePath = await dependencies.chooseSourcePath()
         const imported = sourcePath === null ? null : fileService.importFile(sourcePath)
+        if (imported !== null) {
+          dependencies.enqueueIndex?.(imported.id)
+        }
         return ensureResponse(imported, isNullableManagedFileRecord)
       }
       case FILE_IPC_CHANNELS.openFile: {
@@ -177,6 +181,7 @@ function notifyContentChanges(
   dependencies: FileIpcDependencies,
 ): void {
   for (const result of results) {
+    dependencies.enqueueIndex?.(result.file.id)
     if (result.contentChanged) {
       dependencies.notifyContentChanged({
         fileId: result.file.id,

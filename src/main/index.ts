@@ -7,6 +7,9 @@ import { registerCoreIpc } from './ipc/core-ipc'
 import { registerFileIpc } from './ipc/file-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
+import { openSearchDatabase, type SearchDatabase } from './search/search-database'
+import { SearchService } from './search/search-service'
+import { DocumentIndexWorker } from './parser/document-parser'
 import { installMainErrorHandlers } from './logging/main-error-handlers'
 import { StructuredLogger } from './logging/structured-logger'
 import { applyWindowsCompatibility } from './windows-compat'
@@ -22,10 +25,14 @@ let mainWindow: BrowserWindow | null = null
 let workspaceHandle: WorkspaceHandle | null = null
 let coreDataService: CoreDataService | null = null
 let managedFileService: ManagedFileService | null = null
+let searchDatabase: SearchDatabase | null = null
+let searchService: SearchService | null = null
+let documentIndexWorker: DocumentIndexWorker | null = null
 let unregisterAppIpc: (() => void) | null = null
 let unregisterCoreIpc: (() => void) | null = null
 let unregisterFileIpc: (() => void) | null = null
 let servicesClosed = false
+let shutdownStarted = false
 
 const logger = new StructuredLogger()
 const removeMainErrorHandlers = installMainErrorHandlers(logger)
@@ -63,10 +70,53 @@ function getManagedFiles(): ManagedFileService {
   return managedFileService
 }
 
+function getSearchService(): SearchService {
+  if (workspaceHandle === null) {
+    getWorkspaceInfo()
+  }
+  if (workspaceHandle === null) {
+    throw new Error('Workspace was not initialized')
+  }
+  searchDatabase ??= openSearchDatabase(workspaceHandle.paths)
+  searchService ??= new SearchService(
+    workspaceHandle.database.raw,
+    searchDatabase.raw,
+    workspaceHandle.paths,
+  )
+  return searchService
+}
+
+function getDocumentIndexWorker(): DocumentIndexWorker {
+  if (workspaceHandle === null) {
+    getWorkspaceInfo()
+  }
+  if (workspaceHandle === null) {
+    throw new Error('Workspace was not initialized')
+  }
+  documentIndexWorker ??= new DocumentIndexWorker(
+    workspaceHandle.database.raw,
+    getSearchService(),
+    workspaceHandle.paths,
+  )
+  return documentIndexWorker
+}
+
+function enqueueIndex(fileId: string): void {
+  if (servicesClosed || shutdownStarted) {
+    return
+  }
+  void getDocumentIndexWorker().enqueueIfNeeded(fileId)?.catch((error: unknown) => {
+    logger.error('document_index.file_failed', error, { fileId })
+  })
+}
+
 function refreshManagedFilesInBackground(trigger: string): void {
   void getManagedFiles()
     .refreshAll()
     .then((results) => {
+      for (const result of results) {
+        enqueueIndex(result.file.id)
+      }
       for (const result of results) {
         if (result.contentChanged) {
           emitContentChanged({
@@ -142,6 +192,7 @@ void app.whenReady().then(() => {
     ipcMain,
     {
       getFileService: getManagedFiles,
+      enqueueIndex,
       chooseSourcePath: async () => {
         const options: OpenDialogOptions = {
           properties: ['openFile'],
@@ -160,6 +211,9 @@ void app.whenReady().then(() => {
   )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
+  void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
+    logger.error('document_index.rebuild_failed', error, { trigger: 'workspace_startup' })
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -170,18 +224,35 @@ void app.whenReady().then(() => {
   logger.error('main.ready_failed', error)
 })
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
   if (servicesClosed) {
     return
   }
+  if (shutdownStarted) {
+    event.preventDefault()
+    return
+  }
+  shutdownStarted = true
+  event.preventDefault()
   servicesClosed = true
   unregisterAppIpc?.()
   unregisterCoreIpc?.()
   unregisterFileIpc?.()
   coreDataService = null
   managedFileService = null
-  workspaceHandle?.close()
-  removeMainErrorHandlers()
+  void (async () => {
+    await documentIndexWorker?.close()
+    documentIndexWorker = null
+    searchService = null
+    searchDatabase?.close()
+    searchDatabase = null
+    workspaceHandle?.close()
+    removeMainErrorHandlers()
+    app.exit(0)
+  })().catch((error: unknown) => {
+    logger.error('main.shutdown_failed', error)
+    app.exit(1)
+  })
 })
 
 app.on('window-all-closed', () => {
