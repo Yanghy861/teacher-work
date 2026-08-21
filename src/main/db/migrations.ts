@@ -130,6 +130,19 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 5,
+    name: 'add_managed_file_index_state',
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE files ADD COLUMN indexed_hash TEXT;
+        ALTER TABLE files ADD COLUMN index_status TEXT NOT NULL DEFAULT 'pending'
+          CHECK (index_status IN ('pending', 'indexed', 'no_text', 'parse_failed'));
+        CREATE INDEX IF NOT EXISTS idx_files_index_status
+          ON files (index_status, deleted_at, id);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

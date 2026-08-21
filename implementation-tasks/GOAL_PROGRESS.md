@@ -260,3 +260,17 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Findings：P0–P3 无；未发现资料损坏、路径逃逸、Renderer/Main 边界绕过或副本串写风险。
 - 审核结果：`SOL_REVIEW_STATUS.md` 的 L04 已改为 `PASS`，审核报告已写入；由于当前环境无法写入 `.git/index`，`review(L04): pass` 提交与 `checkpoint-L04-pass` 标签尚未创建。
 - 下一任务：Luna 可开始 L05；不得跳过后续 L07 审核闸门。
+
+## 2026-08-21 · L04 · GIT_HANDOFF_COMPLETE
+
+- 独立审核后的本地交接已完成：`f231b49`（`review(L04): pass`）与 `checkpoint-L04-pass` 已创建；工作区在进入 L05 前干净。
+
+## 2026-08-21 · L05 · DONE
+
+- 关键改动：schema v5 为 managed files 增加 `indexed_hash` 与 `pending/indexed/no_text/parse_failed` 状态；新增可删除重建的 `search/search.db`、文档/范围/chunk 表和 SQLite FTS5 trigram；实现版本化 `SearchNormalizer`、两字及以下 `LIKE` fallback、文件名/节点标题独立匹配，以及文件、节点、note、正文 chunk 的统一 `SearchService`。
+- 修改文件：`src/main/db/migrations.ts`、`src/main/search/search-database.ts`、`src/main/search/search-normalizer.ts`、`src/main/search/search-service.ts`、`src/shared/search-contracts.ts`、`tests/search-core.test.ts`、`tests/workspace-foundation.test.ts`、`docs/l05-search-core.md`、本文件与 `STATUS.md`。
+- 验证命令与结果：`npm test` ✅（14 files / 37 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。回归覆盖中文/英文/数字/数学查询、特殊字符、短词 fallback、文件名/标题、原文 snippet/position、课程范围、同 Hash 幂等、Hash 替换、parse_failed 和删除后 pending 状态。
+- 人工/真实环境验证：使用隔离临时 workspace、SQLite 和脱敏文本 fixture；未读取或提交真实教学资料、运行工作区、日志、Key 或构建产物。L05 不接入解析器、Worker 或 Renderer 搜索 UI。
+- Git 任务提交：待 staged diff 审查后创建 `lean(L05): search core` 本地提交；不 push。
+- 已知限制 / Later：TXT/MD/PDF/DOCX/PPTX/XLSX 解析与顺序 Worker 留给 L06；`search.db` 与 `workspace.db` 不做跨库原子事务；OCR、向量搜索、复杂 tokenizer、持久化索引队列和搜索 UI 留给后续里程碑。
+- 下一任务可依赖的接口：`openSearchDatabase`、`SearchService.indexFile/indexNode/indexNote/replaceFileChunks/search/getIndexState`、`SearchNormalizer`、schema v5 的文件索引状态字段；L06 可接入统一 Parser 与顺序 Worker，L07 再完成搜索 UI/重建阶段闸门。
