@@ -41,5 +41,5 @@
 | V11-01 外部资料浏览 | DONE | 单 external root、安全 lazy 资料树、折叠/恢复、打开/定位与手动刷新已完成；18 项相关测试、typecheck、lint、开发窗口空状态走查通过 |
 | V11-02 课次备课入口与本次资料 | DONE | 从课程课次进入备课、学生可选上下文、外部/素材独立副本与本次资料默认选择完成；49 项相关测试、typecheck、lint 和隔离 Electron 双入口 UI 走查通过 |
 | V11-03 Skill、本次要求与固定 Prompt | DONE | schema v10 Skill 软删除 CRUD、两套可编辑预置模板、可选 Skill/本次要求、固定三类分区 Prompt 与历史快照完成；38 项相关测试、typecheck、lint 和隔离 Electron UI 走查通过 |
-| V11-04 草稿箱、预览编辑与保存 | DONE | schema v11 draft/saved 同行生命周期、全局草稿箱、课次结果列表、同区预览编辑、保留旧稿的重新生成与软删除完成；41 项相关测试、typecheck、lint 和隔离 Electron UI 走查通过 |
+| V11-04 草稿箱、预览编辑与保存 | DONE | schema v11 draft/saved 同行生命周期、全局草稿箱、课次结果列表、同区预览编辑、保留旧稿的重新生成与软删除完成；全局导航固定、右侧内容独立滚动；41 项相关测试、typecheck、lint 和隔离 Electron UI 走查通过 |
 | V11-05 V1.1 回归与 Windows 交付 | TODO | 完整流程、V1 代表性回归、portable Windows 最终验收 |

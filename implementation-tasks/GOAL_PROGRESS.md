@@ -463,3 +463,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 验证：相关测试 `11 files / 41 tests`、`npm run typecheck`、`npm run lint`、`git diff --check` 通过，覆盖无损迁移、退出重开、同行保存、草稿箱过滤、课次范围、同一结果 ID、重新生成保留旧稿/已保存成果、Skill 历史快照、软删除边界、严格 IPC、原资料保护和 Renderer 边界。
 - 隔离 Electron UI：确认 schema v11、2 份草稿进入全局草稿箱而已保存成果不进入；当前课次显示 3 份结果；Preview/Editor 始终只有 1 个正文区域；保存修改恢复最新预览；保存到课次后状态变为“已保存”且草稿箱数量从 2 降为 1。临时数据仅含脱敏假内容；因本轮工具权限配额无法自动清理 `%LOCALAPPDATA%\\Temp\\teacher-workbench-v11-04-ui-appdata`，不在仓库或正式工作区内。
 - Git：准备创建本地 `v1.1(V11-04): draft inbox and inline editing` 里程碑提交；不 push、不添加远程、不创建 V1.1 最终通过标签。
+
+## 2026-08-22 · V11-04 滚动布局修复 · DONE
+
+- 修复：窗口根节点固定为单屏，最左侧全局导航保持满高且不再跟随页面内容滚动；右侧内容区改为独立纵向滚动，小窗口下导航仅在自身确实溢出时内部滚动。
+- 验证：`tests/renderer-boundary.test.ts` 2 项测试、`npm run typecheck`、`npm run lint` 和 `git diff --check` 通过；在用户当前 Electron 开发窗口中向下滚动右侧长资料树，右侧内容正常移动，品牌、全部导航项和底部版本号位置保持不变，随后恢复到顶部。
+- Git：准备创建本地 `fix(V11-04): keep sidebar fixed while scrolling` 修复提交；不 push。
