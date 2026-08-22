@@ -30,6 +30,7 @@ export interface FileIpcDependencies {
   readonly getFileService: () => ManagedFileService
   readonly activityGate?: WorkspaceActivityGate
   readonly enqueueIndex?: (fileId: string) => void
+  readonly removeFromIndex?: (fileId: string) => void
   readonly chooseSourcePath: () => Promise<string | null>
   readonly openPath: (path: string) => Promise<string>
   readonly showInFolder: (path: string) => void
@@ -124,6 +125,13 @@ export async function dispatchFileIpc(
           fileService.restoreFile((payload as FileIdRequest).fileId),
           isManagedFileRecord,
         )
+      case FILE_IPC_CHANNELS.permanentlyDeleteFile: {
+        assertRequest(payload, isFileIdRequest)
+        const fileId = (payload as FileIdRequest).fileId
+        fileService.permanentlyDeleteFile(fileId)
+        dependencies.removeFromIndex?.(fileId)
+        return ensureResponse({ accepted: true }, isFileActionResult)
+      }
       case FILE_IPC_CHANNELS.copyToLesson: {
         assertRequest(payload, isCopyFileToLessonRequest)
         const copied = fileService.copyToLesson(

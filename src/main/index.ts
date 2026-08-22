@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, type OpenDialogOptions } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell, type OpenDialogOptions } from 'electron'
 import { release } from 'node:os'
 import { join } from 'node:path'
 
@@ -267,17 +267,12 @@ function createMainWindow(): BrowserWindow {
     height: 820,
     minWidth: 960,
     minHeight: 640,
-    show: false,
+    autoHideMenuBar: true,
+    show: true,
     webPreferences: {
       ...windowWebPreferences,
       preload: join(__dirname, '../preload/index.js'),
     },
-  })
-
-  window.webContents.once('did-finish-load', () => {
-    if (!window.isDestroyed()) {
-      window.show()
-    }
   })
 
   window.once('closed', () => {
@@ -302,6 +297,7 @@ function createMainWindow(): BrowserWindow {
 applyWindowsCompatibility(app.commandLine, process.platform, release())
 
 void app.whenReady().then(() => {
+  Menu.setApplicationMenu(null)
   unregisterAppIpc = registerAppIpc(
     ipcMain,
     {
@@ -317,6 +313,7 @@ void app.whenReady().then(() => {
       getFileService: getManagedFiles,
       activityGate,
       enqueueIndex,
+      removeFromIndex: (fileId) => getSearchService().removeFileFromIndex(fileId),
       chooseSourcePath: async () => {
         const options: OpenDialogOptions = {
           properties: ['openFile'],

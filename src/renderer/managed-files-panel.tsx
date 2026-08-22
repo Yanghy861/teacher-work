@@ -231,9 +231,29 @@ function FileList({
             {deletedFiles.map((file) => (
               <li className="file-row is-deleted" key={file.id}>
                 <FileSummary file={file} />
-                <button className="link-button" type="button" onClick={() => void onAction(() => window.teacherWorkbench.files.restoreFile({ fileId: file.id }), '资料已恢复。')} disabled={busy}>
-                  恢复
-                </button>
+                <div className="file-actions">
+                  <button className="link-button" type="button" onClick={() => void onAction(() => window.teacherWorkbench.files.restoreFile({ fileId: file.id }), '资料已恢复。')} disabled={busy}>
+                    恢复
+                  </button>
+                  <button
+                    className="danger-button"
+                    type="button"
+                    onClick={() => {
+                      const confirmed = window.confirm(
+                        `确定彻底删除“${file.originalName}”吗？\n\n这会删除工作台中的资料副本和关联，无法恢复；外部原文件不会受到影响。`,
+                      )
+                      if (confirmed) {
+                        void onAction(
+                          () => window.teacherWorkbench.files.permanentlyDeleteFile({ fileId: file.id }),
+                          '资料已彻底删除。',
+                        )
+                      }
+                    }}
+                    disabled={busy}
+                  >
+                    彻底删除
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

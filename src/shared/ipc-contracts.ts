@@ -25,6 +25,7 @@ export const FILE_IPC_CHANNELS = {
   showFileInFolder: 'files:show-in-folder',
   softDeleteFile: 'files:soft-delete',
   restoreFile: 'files:restore',
+  permanentlyDeleteFile: 'files:permanent-delete',
   copyToLesson: 'files:copy-to-lesson',
   copyToStudent: 'files:copy-to-student',
 } as const

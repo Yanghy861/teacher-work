@@ -186,6 +186,7 @@ export interface TeacherWorkbenchApi {
     showFileInFolder: (request: FileIdRequest) => Promise<FileActionResult>
     softDeleteFile: (request: FileIdRequest) => Promise<ManagedFileRecord>
     restoreFile: (request: FileIdRequest) => Promise<ManagedFileRecord>
+    permanentlyDeleteFile: (request: FileIdRequest) => Promise<FileActionResult>
     copyToLesson: (request: CopyFileToLessonRequest) => Promise<ManagedFileRecord>
     copyToStudent: (request: CopyFileToStudentRequest) => Promise<ManagedFileRecord>
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void) => () => void

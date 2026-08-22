@@ -35,86 +35,65 @@ button {
 
 .sidebar {
   display: flex;
-  width: 248px;
+  width: 104px;
   height: 100%;
-  flex: 0 0 248px;
+  flex: 0 0 104px;
   flex-direction: column;
   overflow-y: auto;
-  padding: 28px 18px 20px;
-  color: #dce7ff;
-  background: #172554;
-}
-
-.brand-mark {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 12px 34px;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.brand-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #67e8f9;
-  box-shadow: 0 0 0 5px rgb(103 232 249 / 12%);
+  border-right: 1px solid #e2e8f0;
+  padding: 12px 8px;
+  color: #475569;
+  background: #fff;
 }
 
 nav {
   display: grid;
-  gap: 8px;
+  gap: 3px;
 }
 
 .nav-item {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
   border: 0;
-  border-radius: 10px;
-  padding: 12px 14px;
-  color: #bfdbfe;
+  border-radius: 8px;
+  padding: 8px 4px;
+  color: #475569;
   background: transparent;
   cursor: pointer;
-  text-align: left;
+  font-size: 13px;
+  text-align: center;
   transition: background 160ms ease, color 160ms ease;
 }
 
-.nav-item:hover,
-.nav-item.is-active {
-  color: #fff;
-  background: rgb(96 165 250 / 20%);
+.nav-item:hover {
+  color: #1e40af;
+  background: #f1f5f9;
 }
 
-.sidebar-version {
-  margin: auto 12px 0;
-  color: #93c5fd;
-  font-size: 12px;
+.nav-item.is-active {
+  color: #2563eb;
+  background: #eaf2ff;
+}
+
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
 }
 
 .content-area {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-width: 0;
   height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 46px 64px;
-}
-
-.content-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  max-width: 960px;
-  margin: 0 auto 38px;
-}
-
-.eyebrow {
-  margin: 0 0 8px;
-  color: #6366f1;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding: 10px 12px 12px;
 }
 
 h1,
@@ -126,16 +105,19 @@ p {
 h1 {
   margin-bottom: 0;
   color: #111827;
-  font-size: 34px;
+  font-size: 23px;
+  line-height: 1.25;
 }
 
-.status-pill {
-  border: 1px solid #bbf7d0;
+.workspace-error-badge {
+  align-self: flex-start;
+  margin-bottom: 10px;
+  border: 1px solid #fecaca;
   border-radius: 999px;
-  padding: 8px 13px;
-  color: #15803d;
-  background: #f0fdf4;
-  font-size: 13px;
+  padding: 5px 9px;
+  color: #b91c1c;
+  background: #fff7f7;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -197,24 +179,24 @@ h1 {
 
 .course-dashboard {
   display: grid;
-  gap: 20px;
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  gap: 12px;
+  margin: 0;
 }
 
 .workspace-card {
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 24px;
+  border-radius: 12px;
+  padding: 18px;
   background: #fff;
-  box-shadow: 0 10px 30px rgb(30 41 59 / 5%);
+  box-shadow: 0 5px 18px rgb(30 41 59 / 5%);
 }
 
 .introduction-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 14px;
 }
 
 .section-kicker {
@@ -242,8 +224,8 @@ h1 {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .count-label,
@@ -419,7 +401,7 @@ button:disabled {
 .two-column-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 12px;
 }
 
 .select-field {
@@ -572,16 +554,16 @@ button:disabled {
 
 .search-panel {
   display: grid;
-  gap: 20px;
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  gap: 12px;
+  margin: 0;
 }
 
 .search-hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 14px;
 }
 
 .search-form {
@@ -691,9 +673,9 @@ button:disabled {
 
 .settings-panel {
   display: grid;
-  gap: 20px;
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  gap: 12px;
+  margin: 0;
 }
 
 .key-status {
@@ -708,7 +690,7 @@ button:disabled {
 .key-status-empty { color: #64748b; background: #f1f5f9; }
 .settings-note { margin: 18px 0 0 !important; color: #64748b !important; font-size: 12px; }
 
-.draft-panel { display: grid; gap: 20px; max-width: 960px; margin: 0 auto; }
+.draft-panel { display: grid; width: 100%; gap: 12px; margin: 0; }
 .draft-file-list, .draft-note-list { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; }
 .draft-file-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #e2e8f0; border-radius: 9px; padding: 10px 12px; background: #f8fafc; }
 .draft-file-option label { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -742,8 +724,8 @@ button:disabled {
 
 .lesson-prep-panel {
   display: grid;
-  max-width: 1120px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   gap: 14px;
 }
 
@@ -841,8 +823,8 @@ button:disabled {
 
 .material-picker-panel {
   display: grid;
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   gap: 14px;
 }
 
@@ -939,8 +921,8 @@ button:disabled {
 
 .draft-inbox-panel {
   display: grid;
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   gap: 14px;
 }
 
@@ -1153,17 +1135,21 @@ button:disabled {
 }
 
 .external-library-panel {
-  display: grid;
-  max-width: 1120px;
-  margin: 0 auto;
-  gap: 14px;
+  display: flex;
+  width: 100%;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+  gap: 10px;
 }
 
 .external-library-layout {
   display: grid;
+  flex: 1;
   min-height: 590px;
-  grid-template-columns: minmax(240px, 290px) minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: minmax(250px, 286px) minmax(0, 1fr);
+  gap: 10px;
 }
 
 .external-library-layout.is-tree-collapsed {
@@ -1175,13 +1161,15 @@ button:disabled {
   min-width: 0;
   overflow: hidden;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
-  box-shadow: 0 10px 30px rgb(30 41 59 / 5%);
+  box-shadow: 0 5px 18px rgb(30 41 59 / 5%);
 }
 
 .external-tree-panel {
-  padding: 18px 10px;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 8px;
 }
 
 .external-panel-heading,
@@ -1194,14 +1182,14 @@ button:disabled {
 
 .external-panel-heading {
   justify-content: space-between;
-  padding: 0 8px 12px;
+  padding: 0 6px 10px;
 }
 
 .external-panel-heading h2,
 .external-entry-title h2 {
   margin: 0;
   color: #172554;
-  font-size: 19px;
+  font-size: 18px;
 }
 
 .icon-button {
@@ -1224,16 +1212,22 @@ button:disabled {
 
 .external-tree-toolbar {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   border-top: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
-  padding: 9px 10px;
+  padding: 7px 8px;
 }
 
 .external-tree-list {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.external-tree-panel > .external-tree-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .external-tree-row {
@@ -1244,9 +1238,9 @@ button:disabled {
   gap: 5px;
   border: 0;
   border-radius: 8px;
-  padding-top: 8px;
-  padding-right: 9px;
-  padding-bottom: 8px;
+  padding-top: 6px;
+  padding-right: 8px;
+  padding-bottom: 6px;
   color: #334155;
   background: transparent;
   cursor: pointer;
@@ -1291,14 +1285,15 @@ button:disabled {
 }
 
 .external-content-panel {
-  padding: 20px;
+  overflow-y: auto;
+  padding: 16px;
 }
 
 .external-content-toolbar {
-  min-height: 38px;
+  min-height: 32px;
   justify-content: space-between;
   border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 16px;
+  padding-bottom: 10px;
 }
 
 .external-content-placeholder,
@@ -1324,12 +1319,12 @@ button:disabled {
 }
 
 .external-entry-details {
-  padding: 18px 4px 0;
+  padding: 14px 2px 0;
 }
 
 .external-breadcrumb {
   overflow: hidden;
-  margin-bottom: 20px !important;
+  margin-bottom: 14px !important;
   color: #64748b !important;
   font-size: 12px;
   text-overflow: ellipsis;
@@ -1337,7 +1332,7 @@ button:disabled {
 }
 
 .external-entry-title {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .external-entry-large-icon {
@@ -1357,7 +1352,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin: 0 0 24px;
+  margin: 0 0 18px;
 }
 
 .external-metadata div {
@@ -1385,7 +1380,7 @@ button:disabled {
 }
 
 .external-entry-actions {
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 
 .external-preview-note {
@@ -1420,7 +1415,7 @@ button:disabled {
 
 @media (max-width: 1100px) {
   .content-area {
-    padding: 32px 34px;
+    padding: 14px;
   }
 
   .two-column-grid {

@@ -217,4 +217,30 @@ describe('L02 managed file IPC', () => {
       expect.objectContaining({ fileId: indexedIds[0], targetType: 'lesson', targetId: lesson.id }),
     ])
   })
+
+  it('permanently deletes only a soft-deleted file and removes its derived index', async () => {
+    const { service, sourcePath, dependencies } = createDependencies()
+    const record = service.importFile(sourcePath)
+    service.softDeleteFile(record.id)
+    const removedFromIndex: string[] = []
+
+    const invalid = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.permanentlyDeleteFile,
+      { fileId: record.id, path: sourcePath },
+      { ...dependencies, removeFromIndex: (fileId) => removedFromIndex.push(fileId) },
+      new TestLogger(),
+    )
+    expect(invalid).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+
+    const response = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.permanentlyDeleteFile,
+      { fileId: record.id },
+      { ...dependencies, removeFromIndex: (fileId) => removedFromIndex.push(fileId) },
+      new TestLogger(),
+    )
+
+    expect(response).toEqual({ ok: true, data: { accepted: true } })
+    expect(removedFromIndex).toEqual([record.id])
+    expect(service.getOverview()).toEqual({ files: [], links: [] })
+  })
 })

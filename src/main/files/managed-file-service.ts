@@ -1,4 +1,4 @@
-import { createReadStream, accessSync, constants, copyFileSync, lstatSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs'
+import { createReadStream, accessSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs'
 import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 
@@ -16,12 +16,14 @@ export type ManagedFileErrorCode =
   | 'FILE_ID_INVALID'
   | 'FILE_NOT_FOUND'
   | 'FILE_DELETED'
+  | 'FILE_NOT_DELETED'
   | 'FILE_OBJECT_MISSING'
   | 'FILE_COPY_FAILED'
   | 'FILE_REGISTRATION_FAILED'
   | 'FILE_OPEN_FAILED'
   | 'FILE_TARGET_INVALID'
   | 'FILE_TARGET_DELETED'
+  | 'FILE_PERMANENT_DELETE_FAILED'
 
 export class ManagedFileError extends Error {
   readonly code: ManagedFileErrorCode
@@ -155,6 +157,44 @@ export class ManagedFileService {
         .run(updatedAt, fileId)
       return this.requireFile(fileId)
     })
+  }
+
+  permanentlyDeleteFile(fileId: string): void {
+    const file = this.requireFile(fileId, true)
+    if (file.deletedAt === null) {
+      throw new ManagedFileError('FILE_NOT_DELETED', '请先移除资料，再进行彻底删除。')
+    }
+
+    const object = resolveManagedObjectPath(this.paths, file.id)
+    if (existsSync(object.objectDirectory)) {
+      try {
+        this.removePath(object.objectDirectory)
+      } catch {
+        throw new ManagedFileError(
+          'FILE_PERMANENT_DELETE_FAILED',
+          '无法彻底删除资料，文件可能正被其他程序占用。',
+        )
+      }
+    }
+
+    try {
+      this.transaction(() => {
+        const result = this.database
+          .prepare('DELETE FROM files WHERE id = ? AND deleted_at IS NOT NULL')
+          .run(file.id)
+        if (result.changes !== 1) {
+          throw new ManagedFileError('FILE_NOT_FOUND', '登记的文件不存在。')
+        }
+      })
+    } catch (error) {
+      if (error instanceof ManagedFileError) {
+        throw error
+      }
+      throw new ManagedFileError(
+        'FILE_PERMANENT_DELETE_FAILED',
+        '资料文件已清理，但删除工作台记录失败，请重试。',
+      )
+    }
   }
 
   copyToLesson(fileId: string, lessonId: string): ManagedFileRecord {

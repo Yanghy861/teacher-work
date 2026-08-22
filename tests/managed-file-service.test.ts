@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdtempSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -132,6 +132,26 @@ describe('L02 managed file service', () => {
     const restored = fixture.files.restoreFile(record.id)
     expect(restored.deletedAt).toBeNull()
     expect(fixture.files.openFile(record.id)).toBe(contentPath)
+  })
+
+  it('permanently deletes only an already removed managed copy', () => {
+    const fixture = createFixture()
+    const record = fixture.files.importFile(createSource(fixture))
+    const objectDirectory = join(fixture.workspace.paths.objectsDirectory, record.id)
+
+    expect(() => fixture.files.permanentlyDeleteFile(record.id)).toThrowError(
+      expect.objectContaining({ code: 'FILE_NOT_DELETED' }),
+    )
+    expect(existsSync(objectDirectory)).toBe(true)
+
+    fixture.files.softDeleteFile(record.id)
+    fixture.files.permanentlyDeleteFile(record.id)
+
+    expect(existsSync(objectDirectory)).toBe(false)
+    expect(fixture.files.getOverview()).toEqual({ files: [], links: [] })
+    expect(() => fixture.files.restoreFile(record.id)).toThrowError(
+      expect.objectContaining({ code: 'FILE_NOT_FOUND' }),
+    )
   })
 
   it('reconciles external edits asynchronously and avoids repeat hashing when metadata is unchanged', async () => {

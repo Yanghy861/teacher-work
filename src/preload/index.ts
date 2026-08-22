@@ -110,6 +110,7 @@ const api = Object.freeze({
     showFileInFolder: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.showFileInFolder, request, isFileActionResult),
     softDeleteFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.softDeleteFile, request, isManagedFileRecord),
     restoreFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.restoreFile, request, isManagedFileRecord),
+    permanentlyDeleteFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.permanentlyDeleteFile, request, isFileActionResult),
     copyToLesson: (request: CopyFileToLessonRequest) => invoke(FILE_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
     copyToStudent: (request: CopyFileToStudentRequest) => invoke(FILE_IPC_CHANNELS.copyToStudent, request, isManagedFileRecord),
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void): (() => void) => {

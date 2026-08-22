@@ -10,34 +10,40 @@ import ExternalLibraryPanel from './external-library-panel'
 import MaterialPickerPanel from './material-picker-panel'
 import type { LessonPrepContext } from './lesson-prep-context'
 
-const navigationItems = ['我的课程', '搜索', '外部资料', '素材库', '学生', '备课', '设置'] as const
+const navigationItems = [
+  { label: '我的课程', icon: 'courses' },
+  { label: '搜索', icon: 'search' },
+  { label: '外部资料', icon: 'external' },
+  { label: '素材库', icon: 'materials' },
+  { label: '学生', icon: 'students' },
+  { label: '备课', icon: 'prep' },
+  { label: '设置', icon: 'settings' },
+] as const
+
+type NavigationItem = (typeof navigationItems)[number]
+type NavigationLabel = NavigationItem['label']
+type NavigationIconName = NavigationItem['icon']
 
 export default function App(): React.JSX.Element {
-  const [activeItem, setActiveItem] = useState<(typeof navigationItems)[number]>('我的课程')
-  const [appVersion, setAppVersion] = useState('读取中…')
-  const [workspaceStatus, setWorkspaceStatus] = useState('工作区读取中…')
+  const [activeItem, setActiveItem] = useState<NavigationLabel>('我的课程')
+  const [workspaceError, setWorkspaceError] = useState('')
   const [prepContext, setPrepContext] = useState<LessonPrepContext | null>(null)
   const [prepDraftId, setPrepDraftId] = useState<string | null>(null)
   const [externalPickerOpen, setExternalPickerOpen] = useState(false)
   const [materialPickerOpen, setMaterialPickerOpen] = useState(false)
 
   useEffect(() => {
-    void Promise.all([
-      window.teacherWorkbench.app.getVersion(),
-      window.teacherWorkbench.workspace.getInfo(),
-    ])
-      .then(([version, workspace]) => {
-        setAppVersion(version)
-        setWorkspaceStatus(`工作区已连接 · schema v${workspace.schemaVersion}`)
+    void window.teacherWorkbench.workspace.getInfo()
+      .then(() => {
+        setWorkspaceError('')
       })
       .catch((error: unknown) => {
-        setAppVersion('开发模式')
         const code = isTeacherWorkbenchError(error) ? error.code : 'INTERNAL_ERROR'
-        setWorkspaceStatus(`工作区不可用 · ${code}`)
+        setWorkspaceError(`工作区不可用 · ${code}`)
       })
   }, [])
 
-  function navigate(item: (typeof navigationItems)[number]): void {
+  function navigate(item: NavigationLabel): void {
     setExternalPickerOpen(false)
     setMaterialPickerOpen(false)
     if (item === '备课') {
@@ -72,33 +78,25 @@ export default function App(): React.JSX.Element {
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="主导航">
-        <div className="brand-mark">
-          <span className="brand-dot" aria-hidden="true" />
-          <span>教师工作台</span>
-        </div>
         <nav>
           {navigationItems.map((item) => (
             <button
-              className={`nav-item${activeItem === item ? ' is-active' : ''}`}
-              key={item}
+              className={`nav-item${activeItem === item.label ? ' is-active' : ''}`}
+              key={item.label}
               type="button"
-              aria-current={activeItem === item ? 'page' : undefined}
-              onClick={() => navigate(item)}
+              aria-current={activeItem === item.label ? 'page' : undefined}
+              onClick={() => navigate(item.label)}
             >
-              {item}
+              <NavigationIcon name={item.icon} />
+              <span>{item.label}</span>
             </button>
           ))}
         </nav>
-        <p className="sidebar-version">Electron {appVersion}</p>
       </aside>
       <main className="content-area">
-        <header className="content-header">
-          <div>
-            <p className="eyebrow">教师工作台 V1.1</p>
-            <h1>{activeItem}</h1>
-          </div>
-          <div className="status-pill">{workspaceStatus}</div>
-        </header>
+        {workspaceError !== '' && (
+          <div className="workspace-error-badge" role="alert">{workspaceError}</div>
+        )}
         {activeItem === '搜索' ? (
           <SearchPanel />
         ) : activeItem === '我的课程' ? (
@@ -153,4 +151,34 @@ export default function App(): React.JSX.Element {
 
 function isTeacherWorkbenchError(error: unknown): error is TeacherWorkbenchError {
   return error instanceof Error && 'code' in error && typeof error.code === 'string'
+}
+
+function NavigationIcon({ name }: { readonly name: NavigationIconName }): React.JSX.Element {
+  const commonProps = {
+    className: 'nav-icon',
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+
+  switch (name) {
+    case 'courses':
+      return <svg {...commonProps}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z" /><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22V5.5Z" /></svg>
+    case 'search':
+      return <svg {...commonProps}><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 4 4" /></svg>
+    case 'external':
+      return <svg {...commonProps}><path d="M3.5 7.5h6l2-2h9v13h-17v-11Z" /><path d="M3.5 9.5h17" /></svg>
+    case 'materials':
+      return <svg {...commonProps}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
+    case 'students':
+      return <svg {...commonProps}><circle cx="9" cy="8" r="3" /><path d="M3.5 19c.5-3.5 2.3-5.5 5.5-5.5s5 2 5.5 5.5" /><path d="M15.5 5.5a3 3 0 0 1 0 5.5M16 13.5c2.6.4 4 2.2 4.5 5" /></svg>
+    case 'prep':
+      return <svg {...commonProps}><path d="M5 3.5h11l3 3V20.5H5v-17Z" /><path d="M15.5 3.5v4h3.5M8 12h8M8 16h5" /><path d="m7.5 8 1 1 2-2" /></svg>
+    case 'settings':
+      return <svg {...commonProps}><circle cx="12" cy="12" r="3" /><path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.7-1.7l.9-1.9-2.1-2.1-1.9.9a7 7 0 0 0-1.7-.7L10.5 2h-3l-.7 2a7 7 0 0 0-1.7.7l-1.9-.9-2.1 2.1L2 7.8a7 7 0 0 0-.7 1.7L0 10.5v3l2 .7a7 7 0 0 0 .7 1.7l-.9 1.9 2.1 2.1 1.9-.9a7 7 0 0 0 1.7.7l1 2.3h3l.7-2a7 7 0 0 0 1.7-.7l1.9.9 2.1-2.1-.9-1.9a7 7 0 0 0 .7-1.7l2.3-1Z" transform="translate(2 -1) scale(.83)" /></svg>
+  }
 }

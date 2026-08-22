@@ -43,3 +43,4 @@
 | V11-03 Skill、本次要求与固定 Prompt | DONE | schema v10 Skill 软删除 CRUD、两套可编辑预置模板、可选 Skill/本次要求、固定三类分区 Prompt 与历史快照完成；38 项相关测试、typecheck、lint 和隔离 Electron UI 走查通过 |
 | V11-04 草稿箱、预览编辑与保存 | DONE | schema v11 draft/saved 同行生命周期、全局草稿箱、课次结果列表、同区预览编辑、保留旧稿的重新生成与软删除完成；全局导航固定、右侧内容独立滚动；41 项相关测试、typecheck、lint 和隔离 Electron UI 走查通过 |
 | V11-05 V1.1 回归与 Windows 交付 | DONE | 自动主流程、96 项全量测试、typecheck、lint、production build、portable 打包、安全审计和隔离 Windows 启动/本地 fake AI smoke 已通过；最终通过标签等待产品负责人完成测试后确认 |
+| V1.1 测试后小修复 | DONE | Bug 1–5 已完成：隐藏 Windows 默认菜单、工作区自适应撑满、整体紧凑化、白色图标导航、已移除资料二次确认后彻底删除；开发版 Main/Preload 重启要求已记录于 `docs/v1.1-post-test-fixes.md` |
