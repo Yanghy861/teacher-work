@@ -186,6 +186,41 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 9,
+    name: 'allow_lesson_drafts_without_student',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE notes_v11_02 (
+          id TEXT PRIMARY KEY NOT NULL,
+          student_id TEXT REFERENCES students(id) ON DELETE SET NULL,
+          lesson_id TEXT REFERENCES nodes(id) ON DELETE SET NULL,
+          body_md TEXT NOT NULL CHECK (length(trim(body_md)) > 0),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT,
+          note_kind TEXT NOT NULL DEFAULT 'manual'
+            CHECK (note_kind IN ('manual', 'lecture', 'example', 'homework')),
+          ai_metadata_json TEXT
+        );
+
+        INSERT INTO notes_v11_02
+          (id, student_id, lesson_id, body_md, created_at, updated_at,
+           deleted_at, note_kind, ai_metadata_json)
+        SELECT id, student_id, lesson_id, body_md, created_at, updated_at,
+               deleted_at, note_kind, ai_metadata_json
+          FROM notes;
+
+        DROP TABLE notes;
+        ALTER TABLE notes_v11_02 RENAME TO notes;
+
+        CREATE INDEX idx_notes_student_created
+          ON notes (student_id, created_at, id);
+        CREATE INDEX idx_notes_lesson_created
+          ON notes (lesson_id, created_at, id);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

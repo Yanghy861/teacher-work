@@ -390,7 +390,9 @@ void app.whenReady().then(() => {
     ipcMain,
     {
       getService: getExternalLibraryService,
+      getManagedFileService: getManagedFiles,
       activityGate,
+      enqueueIndex,
       chooseRootPath: async () => {
         const options: OpenDialogOptions = {
           properties: ['openDirectory'],

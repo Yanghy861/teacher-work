@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { ManagedFileService } from '../src/main/files/managed-file-service'
+import { CoreDataService } from '../src/main/data/core-data-service'
 import {
   dispatchFileIpc,
   FILE_CHANNELS,
@@ -192,5 +193,28 @@ describe('L02 managed file IPC', () => {
       ok: false,
       error: { code: IPC_ERROR_CODES.MANAGED_FILE_ERROR },
     })
+  })
+
+  it('queues a new lesson copy for indexing', async () => {
+    const { workspace, service, sourcePath, dependencies } = createDependencies()
+    const core = new CoreDataService(workspace.database.raw)
+    const course = core.nodes.createCourse('课程', 'class')
+    const period = core.nodes.createPeriod(course.id, '阶段')
+    const lesson = core.nodes.createLesson(period.id, '课次')
+    const source = service.importFile(sourcePath)
+    const indexedIds: string[] = []
+
+    const response = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.copyToLesson,
+      { fileId: source.id, lessonId: lesson.id },
+      { ...dependencies, enqueueIndex: (fileId) => indexedIds.push(fileId) },
+      new TestLogger(),
+    )
+
+    expect(response).toMatchObject({ ok: true, data: { originFileId: source.id } })
+    expect(indexedIds).toHaveLength(1)
+    expect(service.getOverview().links).toEqual([
+      expect.objectContaining({ fileId: indexedIds[0], targetType: 'lesson', targetId: lesson.id }),
+    ])
   })
 })

@@ -41,8 +41,8 @@ export interface DraftNoteMetadata {
 export interface GenerateDraftRequest {
   readonly requestId: string
   readonly kind: DraftKind
-  readonly studentId: string
-  readonly lessonId?: string
+  readonly lessonId: string
+  readonly studentId?: string
   readonly sources: readonly DraftSourceSelection[]
   readonly maxChars: number
   readonly maxTokens: number
@@ -72,11 +72,11 @@ export function isDraftSourceSelection(value: unknown): value is DraftSourceSele
 export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRequest {
   return (
     isRecord(value) &&
-    hasOnlyKeys(value, ['requestId', 'kind', 'studentId', 'sources', 'maxChars', 'maxTokens'], ['lessonId']) &&
+    hasOnlyKeys(value, ['requestId', 'kind', 'lessonId', 'sources', 'maxChars', 'maxTokens'], ['studentId']) &&
     isNonEmptyString(value.requestId, 128) &&
     isDraftKind(value.kind) &&
-    isNonEmptyString(value.studentId, 128) &&
-    (value.lessonId === undefined || isNonEmptyString(value.lessonId, 128)) &&
+    isNonEmptyString(value.lessonId, 128) &&
+    (value.studentId === undefined || isNonEmptyString(value.studentId, 128)) &&
     Array.isArray(value.sources) &&
     value.sources.length > 0 &&
     value.sources.length <= 100 &&

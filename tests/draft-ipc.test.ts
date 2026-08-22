@@ -20,7 +20,7 @@ class TestLogger implements IpcLogger {
 const validRequest = {
   requestId: 'draft-ipc',
   kind: 'lecture' as const,
-  studentId: 'student-1',
+  lessonId: 'lesson-1',
   sources: [{ fileId: 'file-1', text: 'selected text', position: { type: 'line', value: 1 } }],
   maxChars: 100,
   maxTokens: 100,
@@ -53,6 +53,14 @@ describe('draft IPC boundary', () => {
     await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.generate, validRequest, dependencies, logger)).resolves.toMatchObject({ ok: true, data: { noteId: 'note-1' } })
     await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.generate, { ...validRequest, path: 'C:\\secret' }, dependencies, logger)).resolves.toEqual({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD, message: '请求参数无效。' } })
     await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.generate, { ...validRequest, maxChars: 100_001 }, dependencies, logger)).resolves.toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+    const missingLesson = {
+      requestId: validRequest.requestId,
+      kind: validRequest.kind,
+      sources: validRequest.sources,
+      maxChars: validRequest.maxChars,
+      maxTokens: validRequest.maxTokens,
+    }
+    await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.generate, missingLesson, dependencies, logger)).resolves.toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
     unregister()
     expect(ipcMain.handlers.size).toBe(0)
   })

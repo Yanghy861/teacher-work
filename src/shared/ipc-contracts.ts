@@ -58,6 +58,8 @@ export const EXTERNAL_LIBRARY_IPC_CHANNELS = {
   listChildren: 'external-library:list-children',
   openFile: 'external-library:open-file',
   showInFolder: 'external-library:show-in-folder',
+  copyToLibrary: 'external-library:copy-to-library',
+  copyToLesson: 'external-library:copy-to-lesson',
 } as const
 
 export const FILE_IPC_EVENTS = {

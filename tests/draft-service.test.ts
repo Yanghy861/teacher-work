@@ -75,6 +75,28 @@ function fixture(): {
 }
 
 describe('L09 context builder and draft generation', () => {
+  it('generates a lesson-bound class draft without requiring a student', async () => {
+    const { core, draft, fileId } = fixture()
+    const course = core.nodes.createCourse('班课', 'class')
+    const period = core.nodes.createPeriod(course.id, '阶段')
+    const lesson = core.nodes.createLesson(period.id, '无学生课次')
+
+    const result = await draft.generate({
+      requestId: 'class-without-student',
+      kind: 'lecture',
+      lessonId: lesson.id,
+      sources: [{ fileId, text: '班课明确资料' }],
+      maxChars: 100,
+      maxTokens: 100,
+    })
+
+    expect(core.getOverview().notes.find((note) => note.id === result.noteId)).toMatchObject({
+      studentId: null,
+      lessonId: lesson.id,
+      noteKind: 'lecture',
+    })
+  })
+
   it('builds context from a selected indexed file without including another file', async () => {
     const { core, search, fileId, otherFileId, studentId, lessonId } = fixture()
     let prompt = ''

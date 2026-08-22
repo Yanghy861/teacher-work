@@ -33,7 +33,7 @@ export interface CourseStudentLink {
 
 export interface NoteRecord {
   readonly id: string
-  readonly studentId: string
+  readonly studentId: string | null
   readonly lessonId: string | null
   readonly bodyMd: string
   readonly createdAt: string
@@ -140,7 +140,7 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
   return (
     isRecord(value) &&
     isNonEmptyString(value.id) &&
-    isNonEmptyString(value.studentId) &&
+    (value.studentId === null || isNonEmptyString(value.studentId)) &&
     (value.lessonId === null || isNonEmptyString(value.lessonId)) &&
     typeof value.bodyMd === 'string' &&
     isNonEmptyString(value.createdAt) &&

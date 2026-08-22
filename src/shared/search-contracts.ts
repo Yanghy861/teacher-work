@@ -43,7 +43,7 @@ export interface SearchNoteInput {
   readonly title?: string
   readonly bodyMd: string
   readonly lessonId?: string | null
-  readonly studentId?: string
+  readonly studentId?: string | null
   readonly deletedAt?: string | null
 }
 

@@ -89,11 +89,13 @@ import type { BackupSummary, RestoreSummary } from './ipc-contracts'
 import {
   isExternalActionResult,
   isExternalDirectoryListing,
+  isExternalLessonCopyRequest,
   isExternalPathRequest,
   isExternalRootSummary,
   isNullableExternalRootSummary,
   type ExternalActionResult,
   type ExternalDirectoryListing,
+  type ExternalLessonCopyRequest,
   type ExternalPathRequest,
   type ExternalRootSummary,
 } from './external-library-contracts'
@@ -133,6 +135,7 @@ export type { DraftNoteMetadata, DraftSourceSelection, GenerateDraftRequest, Gen
 export type {
   ExternalActionResult,
   ExternalDirectoryListing,
+  ExternalLessonCopyRequest,
   ExternalEntry,
   ExternalPathRequest,
   ExternalRootSummary,
@@ -191,6 +194,8 @@ export interface TeacherWorkbenchApi {
     listChildren: (request: ExternalPathRequest) => Promise<ExternalDirectoryListing>
     openFile: (request: ExternalPathRequest) => Promise<ExternalActionResult>
     showInFolder: (request: ExternalPathRequest) => Promise<ExternalActionResult>
+    copyToLibrary: (request: ExternalPathRequest) => Promise<ManagedFileRecord>
+    copyToLesson: (request: ExternalLessonCopyRequest) => Promise<ManagedFileRecord>
   }
   backup: {
     create: () => Promise<BackupSummary | null>
@@ -242,6 +247,7 @@ export {
   isGenerateDraftResult,
   isExternalActionResult,
   isExternalDirectoryListing,
+  isExternalLessonCopyRequest,
   isExternalPathRequest,
   isExternalRootSummary,
   isNullableExternalRootSummary,

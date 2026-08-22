@@ -124,15 +124,15 @@ export async function dispatchFileIpc(
           fileService.restoreFile((payload as FileIdRequest).fileId),
           isManagedFileRecord,
         )
-      case FILE_IPC_CHANNELS.copyToLesson:
+      case FILE_IPC_CHANNELS.copyToLesson: {
         assertRequest(payload, isCopyFileToLessonRequest)
-        return ensureResponse(
-          fileService.copyToLesson(
-            (payload as CopyFileToLessonRequest).fileId,
-            (payload as CopyFileToLessonRequest).lessonId,
-          ),
-          isManagedFileRecord,
+        const copied = fileService.copyToLesson(
+          (payload as CopyFileToLessonRequest).fileId,
+          (payload as CopyFileToLessonRequest).lessonId,
         )
+        dependencies.enqueueIndex?.(copied.id)
+        return ensureResponse(copied, isManagedFileRecord)
+      }
       case FILE_IPC_CHANNELS.copyToStudent:
         assertRequest(payload, isCopyFileToStudentRequest)
         return ensureResponse(

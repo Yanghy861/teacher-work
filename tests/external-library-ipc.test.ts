@@ -1,10 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { ExternalLibraryService } from '../src/main/external/external-library-service'
+import { ManagedFileService } from '../src/main/files/managed-file-service'
+import { CoreDataService } from '../src/main/data/core-data-service'
 import {
   dispatchExternalLibraryIpc,
   EXTERNAL_LIBRARY_CHANNELS,
@@ -64,6 +66,8 @@ afterEach(() => {
 function createDependencies(): {
   readonly libraryRoot: string
   readonly service: ExternalLibraryService
+  readonly managedFiles: ManagedFileService
+  readonly lessonId: string
   readonly dependencies: ExternalLibraryIpcDependencies
 } {
   const root = mkdtempSync(join(tmpdir(), 'teacher-workbench-v11-ipc-'))
@@ -76,13 +80,19 @@ function createDependencies(): {
   const service = new ExternalLibraryService(workspace.database.raw, {
     idFactory: () => 'external-root-ipc',
   })
+  const managedFiles = new ManagedFileService(workspace.database.raw, workspace.paths)
+  const core = new CoreDataService(workspace.database.raw)
+  const course = core.nodes.createCourse('IPC 课程', 'class')
+  const period = core.nodes.createPeriod(course.id, '阶段')
+  const lesson = core.nodes.createLesson(period.id, '课次')
   const dependencies: ExternalLibraryIpcDependencies = {
     getService: () => service,
+    getManagedFileService: () => managedFiles,
     chooseRootPath: async () => libraryRoot,
     openPath: async () => '',
     showInFolder: () => undefined,
   }
-  return { libraryRoot, service, dependencies }
+  return { libraryRoot, service, managedFiles, lessonId: lesson.id, dependencies }
 }
 
 describe('V11-01 external library IPC', () => {
@@ -160,8 +170,55 @@ describe('V11-01 external library IPC', () => {
     expect(response).toEqual({ ok: true, data: null })
   })
 
+  it('copies an external file independently to the material library or current lesson', async () => {
+    const { libraryRoot, managedFiles, lessonId, dependencies } = createDependencies()
+    const logger = new TestLogger()
+    const indexedIds: string[] = []
+    const copyingDependencies: ExternalLibraryIpcDependencies = {
+      ...dependencies,
+      enqueueIndex: (fileId) => indexedIds.push(fileId),
+    }
+    await dispatchExternalLibraryIpc(
+      EXTERNAL_LIBRARY_IPC_CHANNELS.chooseRoot,
+      {},
+      copyingDependencies,
+      logger,
+    )
+    const sourceRequest = { rootId: 'external-root-ipc', relativePath: '讲义.md' }
+
+    const libraryCopy = await dispatchExternalLibraryIpc(
+      EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLibrary,
+      sourceRequest,
+      copyingDependencies,
+      logger,
+    )
+    const lessonCopy = await dispatchExternalLibraryIpc(
+      EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLesson,
+      { ...sourceRequest, lessonId },
+      copyingDependencies,
+      logger,
+    )
+
+    expect(libraryCopy).toMatchObject({ ok: true, data: { originalName: '讲义.md' } })
+    expect(lessonCopy).toMatchObject({ ok: true, data: { originalName: '讲义.md' } })
+    expect(JSON.stringify([libraryCopy, lessonCopy])).not.toContain(libraryRoot)
+    const overview = managedFiles.getOverview()
+    expect(overview.files).toHaveLength(2)
+    expect(overview.links).toEqual([
+      expect.objectContaining({ targetType: 'lesson', targetId: lessonId }),
+    ])
+    expect(indexedIds).toHaveLength(2)
+
+    const linkedFileId = overview.links[0].fileId
+    const libraryFile = overview.files.find((file) => file.id !== linkedFileId)
+    expect(libraryFile).toBeDefined()
+    writeFileSync(managedFiles.getObjectContentPath(linkedFileId), '课次副本已修改', 'utf8')
+    expect(readFileSync(join(libraryRoot, '讲义.md'), 'utf8')).toBe('# 讲义')
+    expect(readFileSync(managedFiles.getObjectContentPath(libraryFile!.id), 'utf8')).toBe('# 讲义')
+  })
+
   it('rejects absolute paths, traversal, extra fields, and unknown channels', async () => {
-    const { dependencies } = createDependencies()
+    const { dependencies, lessonId, managedFiles } = createDependencies()
     const logger = new TestLogger()
     let openCalls = 0
     const guardedDependencies: ExternalLibraryIpcDependencies = {
@@ -195,6 +252,18 @@ describe('V11-01 external library IPC', () => {
       })
     }
     expect(openCalls).toBe(0)
+
+    const invalidCopy = await dispatchExternalLibraryIpc(
+      EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLesson,
+      { rootId: 'external-root-ipc', relativePath: 'C:\\秘密.txt', lessonId },
+      guardedDependencies,
+      logger,
+    )
+    expect(invalidCopy).toMatchObject({
+      ok: false,
+      error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD },
+    })
+    expect(managedFiles.getOverview()).toEqual({ files: [], links: [] })
 
     expect(await dispatchExternalLibraryIpc(
       'external-library:unknown',

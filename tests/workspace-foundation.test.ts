@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { CoreDataService } from '../src/main/data/core-data-service'
 import {
   getAppliedMigrationVersions,
   type SqliteDatabase,
@@ -45,13 +46,13 @@ describe('workspace paths and SQLite foundation', () => {
     expect(first.paths.searchDirectory).toBe(join(root, 'search'))
     expect(first.paths.cacheDirectory).toBe(join(root, 'cache'))
     expect(first.paths.backupsDirectory).toBe(join(root, 'backups'))
-    expect(first.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 8 })
-    expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(first.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 9 })
+    expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
     first.close()
 
     const second = initializeWorkspace(root, installDirectory, { idFactory: () => 'should-not-replace-id' })
-    expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 8 })
-    expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 9 })
+    expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
     expect(readWorkspaceIdentity(second.database.raw)).toEqual(second.identity)
     second.close()
   })
@@ -61,7 +62,7 @@ describe('workspace paths and SQLite foundation', () => {
     const root = join(temporaryRoot, 'workspace')
     const installDirectory = join(temporaryRoot, 'install')
     const failingMigration = {
-      version: 9,
+      version: 10,
       name: 'failing_test_migration',
       up: (database: SqliteDatabase) => {
         database.exec('CREATE TABLE should_rollback (value TEXT NOT NULL)')
@@ -76,13 +77,57 @@ describe('workspace paths and SQLite foundation', () => {
     ).toThrow('simulated migration failure')
 
     const reopened = initializeWorkspace(root, installDirectory)
-    expect(reopened.identity.schemaVersion).toBe(8)
-    expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(reopened.identity.schemaVersion).toBe(9)
+    expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
     const rolledBackTable = reopened.database.raw
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'should_rollback'")
       .get()
     expect(rolledBackTable).toBeUndefined()
     reopened.close()
+  })
+
+  it('preserves V1 notes while allowing a lesson draft without a student', () => {
+    const temporaryRoot = createTemporaryDirectory()
+    const root = join(temporaryRoot, 'workspace')
+    const installDirectory = join(temporaryRoot, 'install')
+    const beforeV11 = initializeWorkspace(root, installDirectory, {
+      migrations: workspaceMigrations.slice(0, 8),
+    })
+    const beforeCore = new CoreDataService(beforeV11.database.raw)
+    const course = beforeCore.nodes.createCourse('旧一对一课程', 'one_to_one')
+    const period = beforeCore.nodes.createPeriod(course.id, '旧阶段')
+    const lesson = beforeCore.nodes.createLesson(period.id, '旧课次')
+    const student = beforeCore.createStudentForCourse(course.id, '旧学生')
+    const oldNote = beforeCore.createNote(student.id, '迁移前记录', lesson.id)
+    beforeV11.close()
+
+    const migrated = initializeWorkspace(root, installDirectory)
+    const migratedCore = new CoreDataService(migrated.database.raw)
+    expect(migrated.identity.schemaVersion).toBe(9)
+    expect(migratedCore.getOverview().notes).toContainEqual(oldNote)
+
+    const classCourse = migratedCore.nodes.createCourse('无学生班课', 'class')
+    const classPeriod = migratedCore.nodes.createPeriod(classCourse.id, '班课阶段')
+    const classLesson = migratedCore.nodes.createLesson(classPeriod.id, '班课课次')
+    const classDraft = migratedCore.createLessonDraft(
+      classLesson.id,
+      '班课讲义草稿',
+      {
+        noteKind: 'lecture',
+        aiMetadata: {
+          kind: 'lecture',
+          promptVersion: 'l09-v1',
+          provider: 'openai-compatible',
+          model: 'fake-model',
+          sources: [{ fileId: 'source-file', charsSent: 4 }],
+          inputChars: 4,
+          maxChars: 100,
+          maxTokens: 100,
+        },
+      },
+    )
+    expect(classDraft).toMatchObject({ studentId: null, lessonId: classLesson.id })
+    migrated.close()
   })
 
   it('keeps workspace data outside a replaceable application build directory', () => {

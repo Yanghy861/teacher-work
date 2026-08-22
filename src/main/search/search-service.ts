@@ -62,7 +62,7 @@ interface NodeRow {
 
 interface NoteRow {
   readonly id: string
-  readonly student_id: string
+  readonly student_id: string | null
   readonly lesson_id: string | null
   readonly body_md: string
   readonly deleted_at: string | null
@@ -640,6 +640,9 @@ export class SearchService {
     if (note.lesson_id !== null) {
       return this.resolveNodePath(note.lesson_id)
     }
+    if (note.student_id === null) {
+      return null
+    }
     const courseId = this.workspaceDatabase
       .prepare(
         `SELECT cs.course_id
@@ -662,6 +665,9 @@ export class SearchService {
     }
     if (note.lesson_id !== null) {
       return this.resolveNodeScopes(note.lesson_id)
+    }
+    if (note.student_id === null) {
+      return []
     }
     const courseIds = this.workspaceDatabase
       .prepare('SELECT course_id FROM course_students WHERE student_id = ?')

@@ -91,6 +91,19 @@ export class ManagedFileService {
     return this.copyAndRegister(source, originalName, mimeType, null)
   }
 
+  importToLesson(sourcePath: string, lessonId: string): ManagedFileRecord {
+    this.requireActiveLesson(lessonId)
+    const source = validateSourceFile(sourcePath)
+    const originalName = basename(source)
+    return this.copyAndRegister(
+      source,
+      originalName,
+      mimeTypeForName(originalName),
+      null,
+      { targetType: 'lesson', targetId: lessonId },
+    )
+  }
+
   getOverview(options: { readonly includeDeleted?: boolean } = {}): ManagedFileOverview {
     const overviewOptions = { includeDeleted: options.includeDeleted ?? true }
     return {

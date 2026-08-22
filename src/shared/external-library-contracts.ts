@@ -31,6 +31,10 @@ export interface ExternalPathRequest {
   readonly relativePath: string
 }
 
+export interface ExternalLessonCopyRequest extends ExternalPathRequest {
+  readonly lessonId: string
+}
+
 export interface ExternalActionResult {
   readonly accepted: true
 }
@@ -94,6 +98,18 @@ export function isExternalPathRequest(value: unknown): value is ExternalPathRequ
     hasOnlyKeys(value, ['rootId', 'relativePath']) &&
     isNonEmptyString(value.rootId, 128) &&
     isSafeRelativePath(value.relativePath, true)
+  )
+}
+
+export function isExternalLessonCopyRequest(
+  value: unknown,
+): value is ExternalLessonCopyRequest {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ['rootId', 'relativePath', 'lessonId']) &&
+    isNonEmptyString(value.rootId, 128) &&
+    isSafeRelativePath(value.relativePath, true) &&
+    isNonEmptyString(value.lessonId, 128)
   )
 }
 

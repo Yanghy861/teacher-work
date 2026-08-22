@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { CoreDataService } from '../src/main/data/core-data-service'
 import { runMigrations } from '../src/main/db/migrations'
+import { isCoreOverview, isCourseStudentLink } from '../src/shared/core-contracts'
 
 function createService(): { database: Database.Database; service: CoreDataService } {
   const database = new Database(':memory:')
@@ -100,6 +101,38 @@ describe('L01 core data tree', () => {
         .filter((node) => node.parentId === course.id)
       expect(periods.map((period) => period.title)).toEqual(['第二阶段', '已重命名阶段'])
       expect(periods.map((period) => period.sortOrder)).toEqual([0, 1])
+    } finally {
+      database.close()
+    }
+  })
+
+  it('accepts lesson drafts without students without weakening course-student links', () => {
+    const { database, service } = createService()
+    try {
+      const course = service.nodes.createCourse('班课', 'class')
+      const period = service.nodes.createPeriod(course.id, '阶段')
+      const lesson = service.nodes.createLesson(period.id, '无学生课次')
+      const note = service.createLessonDraft(lesson.id, '# 班课讲义', {
+        noteKind: 'lecture',
+        aiMetadata: {
+          kind: 'lecture',
+          promptVersion: 'l09-v1',
+          provider: 'openai-compatible',
+          model: 'fake-model',
+          sources: [],
+          inputChars: 0,
+          maxChars: 100,
+          maxTokens: 100,
+        },
+      })
+
+      expect(note.studentId).toBeNull()
+      expect(isCoreOverview(service.getOverview())).toBe(true)
+      expect(isCourseStudentLink({
+        courseId: course.id,
+        studentId: null,
+        createdAt: '2026-08-20T00:00:00.000Z',
+      })).toBe(false)
     } finally {
       database.close()
     }

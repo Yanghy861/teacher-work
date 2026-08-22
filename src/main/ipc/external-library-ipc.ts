@@ -1,15 +1,18 @@
 import type {
   ExternalActionResult,
   ExternalDirectoryListing,
+  ExternalLessonCopyRequest,
   ExternalPathRequest,
   ExternalRootSummary,
 } from '../../shared/external-library-contracts'
 import {
   isExternalActionResult,
   isExternalDirectoryListing,
+  isExternalLessonCopyRequest,
   isExternalPathRequest,
   isNullableExternalRootSummary,
 } from '../../shared/external-library-contracts'
+import { isManagedFileRecord, type ManagedFileRecord } from '../../shared/file-contracts'
 import {
   EXTERNAL_LIBRARY_IPC_CHANNELS,
   failure,
@@ -23,15 +26,18 @@ import {
   ExternalLibraryError,
   ExternalLibraryService,
 } from '../external/external-library-service'
+import { ManagedFileError, ManagedFileService } from '../files/managed-file-service'
 import type { WorkspaceActivityGate } from '../workspace/activity-gate'
 import { WorkspaceActivityError } from '../workspace/activity-gate'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
 
 export interface ExternalLibraryIpcDependencies {
   readonly getService: () => ExternalLibraryService
+  readonly getManagedFileService: () => ManagedFileService
   readonly chooseRootPath: () => Promise<string | null>
   readonly openPath: (path: string) => Promise<string>
   readonly showInFolder: (path: string) => void
+  readonly enqueueIndex?: (fileId: string) => void
   readonly activityGate?: WorkspaceActivityGate
 }
 
@@ -122,6 +128,25 @@ export async function dispatchExternalLibraryIpc(
         dependencies.showInFolder(service.getFilePath(request.rootId, request.relativePath))
         return ensureResponse<ExternalActionResult>({ accepted: true }, isExternalActionResult)
       }
+      case EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLibrary: {
+        assertRequest(payload, isExternalPathRequest)
+        const request = payload as ExternalPathRequest
+        const sourcePath = service.getFilePath(request.rootId, request.relativePath)
+        const imported = dependencies.getManagedFileService().importFile(sourcePath)
+        dependencies.enqueueIndex?.(imported.id)
+        return ensureResponse<ManagedFileRecord>(imported, isManagedFileRecord)
+      }
+      case EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLesson: {
+        assertRequest(payload, isExternalLessonCopyRequest)
+        const request = payload as ExternalLessonCopyRequest
+        const sourcePath = service.getFilePath(request.rootId, request.relativePath)
+        const imported = dependencies.getManagedFileService().importToLesson(
+          sourcePath,
+          request.lessonId,
+        )
+        dependencies.enqueueIndex?.(imported.id)
+        return ensureResponse<ManagedFileRecord>(imported, isManagedFileRecord)
+      }
     }
     throw new Error('Unhandled external library IPC channel')
   } catch (error) {
@@ -157,6 +182,9 @@ function mapExternalLibraryIpcError(error: unknown): IpcResponse<never> {
   }
   if (error instanceof ExternalLibraryError) {
     return failure(IPC_ERROR_CODES.EXTERNAL_LIBRARY_ERROR, error.message)
+  }
+  if (error instanceof ManagedFileError) {
+    return failure(IPC_ERROR_CODES.MANAGED_FILE_ERROR, error.message)
   }
   return failure(IPC_ERROR_CODES.INTERNAL_ERROR, '无法完成外部资料操作，请稍后重试。')
 }

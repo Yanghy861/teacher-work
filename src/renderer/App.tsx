@@ -7,6 +7,8 @@ import SearchPanel from './search-panel'
 import SettingsPanel from './settings-panel'
 import DraftPanel from './draft-panel'
 import ExternalLibraryPanel from './external-library-panel'
+import MaterialPickerPanel from './material-picker-panel'
+import type { LessonPrepContext } from './lesson-prep-context'
 
 const navigationItems = ['我的课程', '搜索', '外部资料', '素材库', '学生', '备课', '设置'] as const
 
@@ -14,6 +16,9 @@ export default function App(): React.JSX.Element {
   const [activeItem, setActiveItem] = useState<(typeof navigationItems)[number]>('我的课程')
   const [appVersion, setAppVersion] = useState('读取中…')
   const [workspaceStatus, setWorkspaceStatus] = useState('工作区读取中…')
+  const [prepContext, setPrepContext] = useState<LessonPrepContext | null>(null)
+  const [externalPickerOpen, setExternalPickerOpen] = useState(false)
+  const [materialPickerOpen, setMaterialPickerOpen] = useState(false)
 
   useEffect(() => {
     void Promise.all([
@@ -31,6 +36,25 @@ export default function App(): React.JSX.Element {
       })
   }, [])
 
+  function navigate(item: (typeof navigationItems)[number]): void {
+    setExternalPickerOpen(false)
+    setMaterialPickerOpen(false)
+    setActiveItem(item)
+  }
+
+  function startPrep(context: LessonPrepContext): void {
+    setPrepContext(context)
+    setExternalPickerOpen(false)
+    setMaterialPickerOpen(false)
+    setActiveItem('备课')
+  }
+
+  function returnToPrep(): void {
+    setExternalPickerOpen(false)
+    setMaterialPickerOpen(false)
+    setActiveItem('备课')
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="主导航">
@@ -45,7 +69,7 @@ export default function App(): React.JSX.Element {
               key={item}
               type="button"
               aria-current={activeItem === item ? 'page' : undefined}
-              onClick={() => setActiveItem(item)}
+              onClick={() => navigate(item)}
             >
               {item}
             </button>
@@ -64,17 +88,39 @@ export default function App(): React.JSX.Element {
         {activeItem === '搜索' ? (
           <SearchPanel />
         ) : activeItem === '我的课程' ? (
-          <CourseDashboard />
+          <CourseDashboard onStartPrep={startPrep} />
         ) : activeItem === '素材库' ? (
-          <ManagedFilesPanel />
+          materialPickerOpen && prepContext !== null ? (
+            <MaterialPickerPanel
+              context={prepContext}
+              onAdded={returnToPrep}
+              onCancel={returnToPrep}
+            />
+          ) : (
+            <ManagedFilesPanel />
+          )
         ) : activeItem === '外部资料' ? (
-          <ExternalLibraryPanel />
+          <ExternalLibraryPanel
+            prepContext={externalPickerOpen ? prepContext : null}
+            onAddedToLesson={returnToPrep}
+          />
         ) : activeItem === '学生' ? (
           <ManagedFilesPanel heading="学生资料" />
         ) : activeItem === '设置' ? (
           <SettingsPanel />
         ) : activeItem === '备课' ? (
-          <DraftPanel />
+          <DraftPanel
+            context={prepContext}
+            onBackToCourses={() => navigate('我的课程')}
+            onBrowseExternal={() => {
+              setExternalPickerOpen(true)
+              setActiveItem('外部资料')
+            }}
+            onBrowseMaterials={() => {
+              setMaterialPickerOpen(true)
+              setActiveItem('素材库')
+            }}
+          />
         ) : (
           <section className="placeholder-card" aria-live="polite">
             <div className="placeholder-icon" aria-hidden="true">✦</div>

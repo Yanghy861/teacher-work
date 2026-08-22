@@ -69,11 +69,11 @@ export class DraftService {
     }
 
     try {
-      const note = this.coreData.createNote(
-        request.studentId,
-        result.text,
+      const note = this.coreData.createLessonDraft(
         request.lessonId,
+        result.text,
         { noteKind: request.kind, aiMetadata: metadata },
+        request.studentId,
       )
       return {
         noteId: note.id,

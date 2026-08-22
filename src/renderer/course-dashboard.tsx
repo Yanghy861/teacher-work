@@ -6,8 +6,13 @@ import type {
   NodeRecord,
 } from '../shared/core-contracts'
 import ManagedFilesPanel from './managed-files-panel'
+import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
 
-export default function CourseDashboard(): React.JSX.Element {
+export default function CourseDashboard({
+  onStartPrep,
+}: {
+  readonly onStartPrep: (context: LessonPrepContext) => void
+}): React.JSX.Element {
   const [overview, setOverview] = useState<CoreOverview | null>(null)
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [selectedPeriodId, setSelectedPeriodId] = useState('')
@@ -52,6 +57,7 @@ export default function CourseDashboard(): React.JSX.Element {
     [overview, selectedCourseId],
   )
   const selectedStudent = students.find((student) => student.id === selectedStudentId)
+  const selectedLesson = lessons.find((lesson) => lesson.id === selectedLessonId)
   const selectedStudentNotes = overview?.notes.filter(
     (note) => note.studentId === selectedStudentId,
   ) ?? []
@@ -199,7 +205,7 @@ export default function CourseDashboard(): React.JSX.Element {
         <div>
           <p className="section-kicker">核心数据</p>
           <h2>课程树</h2>
-          <p>先建立课程，再按阶段和课次整理学生记录。资料文件将在后续里程碑接入。</p>
+          <p>选择具体课次后可直接开始备课，页面会自动带入课程、课次和可用学生信息。</p>
         </div>
         <button className="secondary-button" type="button" onClick={() => void reload()} disabled={busy}>
           刷新
@@ -320,6 +326,17 @@ export default function CourseDashboard(): React.JSX.Element {
               {lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
             </select>
           </label>
+          <button
+            className="primary-button start-prep-button"
+            type="button"
+            disabled={busy || selectedCourse === undefined || selectedLesson === undefined}
+            onClick={() => {
+              if (selectedCourse === undefined || selectedLesson === undefined) return
+              onStartPrep(createLessonPrepContext(selectedCourse, selectedLesson, students))
+            }}
+          >
+            开始备课
+          </button>
         </section>
 
         <section className="workspace-card">

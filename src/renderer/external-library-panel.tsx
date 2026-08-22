@@ -4,10 +4,18 @@ import type {
   ExternalEntry,
   ExternalRootSummary,
 } from '../shared/external-library-contracts'
+import type { ManagedFileRecord } from '../shared/file-contracts'
+import type { LessonPrepContext } from './lesson-prep-context'
 
 type EntryMap = Record<string, readonly ExternalEntry[]>
 
-export default function ExternalLibraryPanel(): React.JSX.Element {
+export default function ExternalLibraryPanel({
+  prepContext = null,
+  onAddedToLesson,
+}: {
+  readonly prepContext?: LessonPrepContext | null
+  readonly onAddedToLesson?: (file: ManagedFileRecord) => void
+}): React.JSX.Element {
   const [root, setRoot] = useState<ExternalRootSummary | null>(null)
   const [entriesByFolder, setEntriesByFolder] = useState<EntryMap>({})
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
@@ -158,13 +166,15 @@ export default function ExternalLibraryPanel(): React.JSX.Element {
   async function runFileAction(
     action: () => Promise<unknown>,
     successMessage: string,
+    afterSuccess?: (result: unknown) => void,
   ): Promise<void> {
     setBusy(true)
     setError('')
     setNotice('')
     try {
-      await action()
+      const result = await action()
       setNotice(successMessage)
+      afterSuccess?.(result)
     } catch (actionError) {
       setError(toErrorMessage(actionError))
     } finally {
@@ -257,7 +267,11 @@ export default function ExternalLibraryPanel(): React.JSX.Element {
                 打开资料树
               </button>
             )}
-            <span className="selection-label">外部资料只读</span>
+            <span className="selection-label">
+              {prepContext === null
+                ? '外部资料只读'
+                : `用于：${prepContext.lessonTitle}`}
+            </span>
           </div>
           {selectedEntry === null ? (
             <div className="external-content-placeholder">
@@ -283,6 +297,24 @@ export default function ExternalLibraryPanel(): React.JSX.Element {
                 }),
                 '已在资源管理器中定位。',
               )}
+              copyLabel={prepContext === null ? '复制到素材库' : '用于本次备课'}
+              onCopy={() => prepContext === null
+                ? runFileAction(
+                  () => window.teacherWorkbench.externalLibrary.copyToLibrary({
+                    rootId: selectedEntry.rootId,
+                    relativePath: selectedEntry.relativePath,
+                  }),
+                  '已复制到素材库，外部原文件保持不变。',
+                )
+                : runFileAction(
+                  () => window.teacherWorkbench.externalLibrary.copyToLesson({
+                    rootId: selectedEntry.rootId,
+                    relativePath: selectedEntry.relativePath,
+                    lessonId: prepContext.lessonId,
+                  }),
+                  `已加入「${prepContext.lessonTitle}」。`,
+                  (result) => onAddedToLesson?.(result as ManagedFileRecord),
+                )}
             />
           )}
         </article>
@@ -363,11 +395,15 @@ function ExternalEntryDetails({
   busy,
   onOpen,
   onShowInFolder,
+  copyLabel,
+  onCopy,
 }: {
   readonly entry: ExternalEntry
   readonly busy: boolean
   readonly onOpen: () => Promise<void>
   readonly onShowInFolder: () => Promise<void>
+  readonly copyLabel: string
+  readonly onCopy: () => Promise<void>
 }): React.JSX.Element {
   const isFile = entry.kind === 'file'
   return (
@@ -390,7 +426,10 @@ function ExternalEntryDetails({
       {isFile ? (
         <>
           <div className="file-toolbar external-entry-actions">
-            <button className="primary-button" type="button" onClick={() => void onOpen()} disabled={busy}>
+            <button className="primary-button" type="button" onClick={() => void onCopy()} disabled={busy}>
+              {copyLabel}
+            </button>
+            <button className="secondary-button" type="button" onClick={() => void onOpen()} disabled={busy}>
               打开文件
             </button>
             <button className="secondary-button" type="button" onClick={() => void onShowInFolder()} disabled={busy}>

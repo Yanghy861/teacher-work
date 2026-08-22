@@ -89,13 +89,16 @@ describe('L02 managed file service', () => {
     const copyA = fixture.files.copyToLesson(source.id, lessonA.id)
     const copyB = fixture.files.copyToLesson(source.id, lessonB.id)
     const studentCopy = fixture.files.copyToStudent(source.id, student.id)
+    const externalLessonCopy = fixture.files.importToLesson(sourcePath, lessonA.id)
 
     expect(copyA.id).not.toBe(source.id)
     expect(copyB.id).not.toBe(source.id)
     expect(studentCopy.id).not.toBe(source.id)
+    expect(externalLessonCopy.id).not.toBe(source.id)
     expect(copyA.originFileId).toBe(source.id)
     expect(copyB.originFileId).toBe(source.id)
     expect(studentCopy.originFileId).toBe(source.id)
+    expect(externalLessonCopy.originFileId).toBeNull()
 
     writeFileSync(fixture.files.getObjectContentPath(copyA.id), 'lesson A changed', 'utf8')
 
@@ -103,10 +106,12 @@ describe('L02 managed file service', () => {
     expect(readFileSync(fixture.files.getObjectContentPath(source.id), 'utf8')).toBe('original material')
     expect(readFileSync(fixture.files.getObjectContentPath(copyB.id), 'utf8')).toBe('original material')
     expect(readFileSync(fixture.files.getObjectContentPath(studentCopy.id), 'utf8')).toBe('original material')
+    expect(readFileSync(fixture.files.getObjectContentPath(externalLessonCopy.id), 'utf8')).toBe('original material')
     expect(fixture.files.getOverview().links).toEqual(expect.arrayContaining([
       expect.objectContaining({ fileId: copyA.id, targetType: 'lesson', targetId: lessonA.id }),
       expect.objectContaining({ fileId: copyB.id, targetType: 'lesson', targetId: lessonB.id }),
       expect.objectContaining({ fileId: studentCopy.id, targetType: 'student', targetId: student.id }),
+      expect.objectContaining({ fileId: externalLessonCopy.id, targetType: 'lesson', targetId: lessonA.id }),
     ]))
   })
 
@@ -167,6 +172,24 @@ describe('L02 managed file service', () => {
 
     expect(() => failingService.importFile(createSource(fixture))).toThrowError(
       new ManagedFileError('FILE_COPY_FAILED', '文件复制失败，未保留半成品。'),
+    )
+    expect(failingService.getOverview()).toEqual({ files: [], links: [] })
+    expect(readdirSync(fixture.workspace.paths.objectsDirectory)).toEqual([])
+  })
+
+  it('does not register a lesson file when direct external copying fails', () => {
+    const fixture = createFixture()
+    const course = fixture.core.nodes.createCourse('课程', 'class')
+    const period = fixture.core.nodes.createPeriod(course.id, '阶段')
+    const lesson = fixture.core.nodes.createLesson(period.id, '课次')
+    const failingService = new ManagedFileService(fixture.workspace.database.raw, fixture.workspace.paths, {
+      copyFile: () => {
+        throw new Error('simulated external copy failure')
+      },
+    })
+
+    expect(() => failingService.importToLesson(createSource(fixture), lesson.id)).toThrowError(
+      expect.objectContaining({ code: 'FILE_COPY_FAILED' }),
     )
     expect(failingService.getOverview()).toEqual({ files: [], links: [] })
     expect(readdirSync(fixture.workspace.paths.objectsDirectory)).toEqual([])

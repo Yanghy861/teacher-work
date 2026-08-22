@@ -59,6 +59,7 @@ import {
   type UpdateAiSettingsRequest,
   type GenerateDraftRequest,
   type ExternalPathRequest,
+  type ExternalLessonCopyRequest,
 } from '../shared/preload-api'
 
 async function invoke<T>(
@@ -136,6 +137,8 @@ const api = Object.freeze({
     listChildren: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.listChildren, request, isExternalDirectoryListing),
     openFile: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.openFile, request, isExternalActionResult),
     showInFolder: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.showInFolder, request, isExternalActionResult),
+    copyToLibrary: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLibrary, request, isManagedFileRecord),
+    copyToLesson: (request: ExternalLessonCopyRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
   }),
   backup: Object.freeze({
     create: () => invoke(BACKUP_IPC_CHANNELS.create, {}, (value): value is import('../shared/ipc-contracts').BackupSummary | null =>

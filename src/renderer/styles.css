@@ -703,6 +703,134 @@ button:disabled {
 .draft-note { display: grid; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 16px; }
 .draft-note .card-heading { margin-bottom: 0; }
 
+.start-prep-button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.prep-empty-state {
+  display: grid;
+  max-width: 760px;
+  min-height: 420px;
+  margin: 0 auto;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.prep-empty-state p {
+  max-width: 520px;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.lesson-prep-panel {
+  display: grid;
+  max-width: 1120px;
+  margin: 0 auto;
+  gap: 14px;
+}
+
+.prep-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  padding: 16px 20px;
+  background: #eef2ff;
+}
+
+.prep-context-bar h2 {
+  margin: 0;
+  color: #1e1b4b;
+  font-size: 19px;
+}
+
+.lesson-prep-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.prep-materials-panel {
+  position: sticky;
+  top: 20px;
+}
+
+.prep-material-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.prep-material-list li:not(.empty-state) {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.prep-material-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.prep-material-list label span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.prep-material-list strong {
+  overflow: hidden;
+  color: #1e293b;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prep-material-list small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.prep-source-actions,
+.prep-generate-actions {
+  display: grid;
+  gap: 9px;
+}
+
+.prep-workspace-column {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+}
+
+.prep-guidance {
+  margin-bottom: 18px !important;
+  color: #64748b !important;
+  line-height: 1.7;
+}
+
+.prep-generate-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.material-picker-panel {
+  display: grid;
+  max-width: 960px;
+  margin: 0 auto;
+  gap: 14px;
+}
+
 .external-library-panel {
   display: grid;
   max-width: 1120px;
@@ -997,5 +1125,14 @@ button:disabled {
 
   .external-metadata {
     grid-template-columns: 1fr;
+  }
+
+  .lesson-prep-layout,
+  .prep-generate-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .prep-materials-panel {
+    position: static;
   }
 }

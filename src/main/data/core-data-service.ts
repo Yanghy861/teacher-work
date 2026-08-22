@@ -54,7 +54,7 @@ interface LinkRow {
 
 interface NoteRow {
   readonly id: string
-  readonly student_id: string
+  readonly student_id: string | null
   readonly lesson_id: string | null
   readonly body_md: string
   readonly created_at: string
@@ -182,6 +182,42 @@ export class CoreDataService {
     })
   }
 
+  createLessonDraft(
+    lessonId: string,
+    bodyMd: string,
+    metadata: { readonly noteKind: DraftKind; readonly aiMetadata: DraftNoteMetadata },
+    studentId?: string,
+  ): NoteRecord {
+    if (typeof bodyMd !== 'string' || bodyMd.trim().length === 0) {
+      throw new CoreDataError('INVALID_NOTE', '记录内容不能为空。')
+    }
+    this.requireActiveLesson(lessonId)
+    if (studentId !== undefined) {
+      this.requireStudentLinkedToLessonCourse(lessonId, studentId)
+    }
+    return this.transaction(() => {
+      const id = this.idFactory()
+      const now = this.now()
+      this.database
+        .prepare(
+          `INSERT INTO notes
+             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at, note_kind, ai_metadata_json)
+           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+        )
+        .run(
+          id,
+          studentId ?? null,
+          lessonId,
+          bodyMd.trim(),
+          now,
+          now,
+          metadata.noteKind,
+          JSON.stringify(metadata.aiMetadata),
+        )
+      return this.requireNote(id)
+    })
+  }
+
   updateNote(noteId: string, bodyMd: string): NoteRecord {
     if (typeof bodyMd !== 'string' || bodyMd.trim().length === 0) {
       throw new CoreDataError('INVALID_NOTE', '记录内容不能为空。')
@@ -292,6 +328,30 @@ export class CoreDataService {
     }
     if (lesson.deletedAt !== null) {
       throw new CoreDataError('LESSON_DELETED', '课次已删除，请先恢复。')
+    }
+  }
+
+  private requireStudentLinkedToLessonCourse(lessonId: string, studentId: string): void {
+    this.requireActiveStudent(studentId)
+    const linked = this.database
+      .prepare(
+        `SELECT 1
+           FROM nodes AS lesson
+           JOIN nodes AS period ON period.id = lesson.parent_id
+           JOIN nodes AS course ON course.id = period.parent_id
+           JOIN course_students AS cs
+             ON cs.course_id = course.id AND cs.student_id = ?
+          WHERE lesson.id = ?
+            AND lesson.kind = 'lesson'
+            AND period.kind = 'period'
+            AND course.kind = 'course'
+            AND lesson.deleted_at IS NULL
+            AND period.deleted_at IS NULL
+            AND course.deleted_at IS NULL`,
+      )
+      .get(studentId, lessonId)
+    if (linked === undefined) {
+      throw new CoreDataError('STUDENT_NOT_LINKED', '所选学生不属于当前课次的课程。')
     }
   }
 
