@@ -47,13 +47,13 @@ describe('workspace paths and SQLite foundation', () => {
     expect(first.paths.searchDirectory).toBe(join(root, 'search'))
     expect(first.paths.cacheDirectory).toBe(join(root, 'cache'))
     expect(first.paths.backupsDirectory).toBe(join(root, 'backups'))
-    expect(first.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 10 })
-    expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(first.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 11 })
+    expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
     first.close()
 
     const second = initializeWorkspace(root, installDirectory, { idFactory: () => 'should-not-replace-id' })
-    expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 10 })
-    expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 11 })
+    expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
     expect(readWorkspaceIdentity(second.database.raw)).toEqual(second.identity)
     second.close()
   })
@@ -63,7 +63,7 @@ describe('workspace paths and SQLite foundation', () => {
     const root = join(temporaryRoot, 'workspace')
     const installDirectory = join(temporaryRoot, 'install')
     const failingMigration = {
-      version: 11,
+      version: 12,
       name: 'failing_test_migration',
       up: (database: SqliteDatabase) => {
         database.exec('CREATE TABLE should_rollback (value TEXT NOT NULL)')
@@ -78,8 +78,8 @@ describe('workspace paths and SQLite foundation', () => {
     ).toThrow('simulated migration failure')
 
     const reopened = initializeWorkspace(root, installDirectory)
-    expect(reopened.identity.schemaVersion).toBe(10)
-    expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(reopened.identity.schemaVersion).toBe(11)
+    expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
     const rolledBackTable = reopened.database.raw
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'should_rollback'")
       .get()
@@ -92,20 +92,58 @@ describe('workspace paths and SQLite foundation', () => {
     const root = join(temporaryRoot, 'workspace')
     const installDirectory = join(temporaryRoot, 'install')
     const beforeV11 = initializeWorkspace(root, installDirectory, {
-      migrations: workspaceMigrations.slice(0, 8),
+      migrations: workspaceMigrations.slice(0, 10),
     })
     const beforeCore = new CoreDataService(beforeV11.database.raw)
     const course = beforeCore.nodes.createCourse('旧一对一课程', 'one_to_one')
     const period = beforeCore.nodes.createPeriod(course.id, '旧阶段')
     const lesson = beforeCore.nodes.createLesson(period.id, '旧课次')
     const student = beforeCore.createStudentForCourse(course.id, '旧学生')
-    const oldNote = beforeCore.createNote(student.id, '迁移前记录', lesson.id)
+    const oldTimestamp = '2026-08-21T00:00:00.000Z'
+    beforeV11.database.raw.prepare(
+      `INSERT INTO notes
+         (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+          note_kind, ai_metadata_json)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+    ).run('old-manual-note', student.id, lesson.id, '迁移前记录', oldTimestamp, oldTimestamp, 'manual', null)
+    const oldMetadata = {
+      kind: 'lecture' as const,
+      promptVersion: 'l09-v1',
+      provider: 'openai-compatible',
+      model: 'fake-model',
+      sources: [{ fileId: 'old-file', charsSent: 4 }],
+      inputChars: 4,
+      maxChars: 100,
+      maxTokens: 100,
+    }
+    beforeV11.database.raw.prepare(
+      `INSERT INTO notes
+         (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+          note_kind, ai_metadata_json)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+    ).run('old-ai-note', student.id, lesson.id, '迁移前 AI 草稿', oldTimestamp, oldTimestamp, 'lecture', JSON.stringify(oldMetadata))
+    const oldNote = {
+      id: 'old-manual-note',
+      studentId: student.id,
+      lessonId: lesson.id,
+      bodyMd: '迁移前记录',
+      createdAt: oldTimestamp,
+      updatedAt: oldTimestamp,
+      deletedAt: null,
+    }
     beforeV11.close()
 
     const migrated = initializeWorkspace(root, installDirectory)
     const migratedCore = new CoreDataService(migrated.database.raw)
-    expect(migrated.identity.schemaVersion).toBe(10)
+    expect(migrated.identity.schemaVersion).toBe(11)
     expect(migratedCore.getOverview().notes).toContainEqual(oldNote)
+    expect(migratedCore.getOverview().notes).toContainEqual(expect.objectContaining({
+      id: 'old-ai-note',
+      bodyMd: '迁移前 AI 草稿',
+      noteKind: 'lecture',
+      draftStatus: 'draft',
+      aiMetadata: oldMetadata,
+    }))
     expect(new SkillService(migrated.database.raw).listSkills().map((skill) => skill.name)).toEqual([
       'AMC8 一对一常规备课',
       '初中数学常规备课',
@@ -131,7 +169,7 @@ describe('workspace paths and SQLite foundation', () => {
         },
       },
     )
-    expect(classDraft).toMatchObject({ studentId: null, lessonId: classLesson.id })
+    expect(classDraft).toMatchObject({ studentId: null, lessonId: classLesson.id, draftStatus: 'draft' })
     migrated.close()
   })
 
@@ -153,6 +191,51 @@ describe('workspace paths and SQLite foundation', () => {
     expect(second.identity.workspaceId).toBe('persistent-workspace-id')
     expect(readFileSync(join(buildDirectory, 'app.js'), 'utf8')).toBe('replacement build')
     second.close()
+  })
+
+  it('keeps draft and saved lifecycle states after closing and reopening the workspace', () => {
+    const temporaryRoot = createTemporaryDirectory()
+    const root = join(temporaryRoot, 'workspace')
+    const installDirectory = join(temporaryRoot, 'install')
+    const first = initializeWorkspace(root, installDirectory)
+    const firstCore = new CoreDataService(first.database.raw)
+    const course = firstCore.nodes.createCourse('持久化课程', 'class')
+    const period = firstCore.nodes.createPeriod(course.id, '阶段')
+    const lesson = firstCore.nodes.createLesson(period.id, '课次')
+    const draft = firstCore.createLessonDraft(lesson.id, '# 自动保存草稿', {
+      noteKind: 'lecture',
+      aiMetadata: {
+        kind: 'lecture',
+        promptVersion: 'v11-03-v1',
+        provider: 'openai-compatible',
+        model: 'fake-model',
+        sources: [{ fileId: 'source-file', charsSent: 4 }],
+        inputChars: 4,
+        maxChars: 100,
+        maxTokens: 100,
+      },
+    })
+    first.close()
+
+    const second = initializeWorkspace(root, installDirectory)
+    const secondCore = new CoreDataService(second.database.raw)
+    expect(secondCore.getOverview().notes).toContainEqual(expect.objectContaining({
+      id: draft.id,
+      bodyMd: '# 自动保存草稿',
+      draftStatus: 'draft',
+    }))
+    secondCore.saveDraftToLesson(draft.id, '# 保存后的课次成果')
+    second.close()
+
+    const third = initializeWorkspace(root, installDirectory)
+    expect(new CoreDataService(third.database.raw).getOverview().notes).toContainEqual(
+      expect.objectContaining({
+        id: draft.id,
+        bodyMd: '# 保存后的课次成果',
+        draftStatus: 'saved',
+      }),
+    )
+    third.close()
   })
 
   it('creates the default workspace beside application data, never inside the install directory', () => {

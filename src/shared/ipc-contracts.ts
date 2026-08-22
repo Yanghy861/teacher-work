@@ -45,6 +45,9 @@ export const AI_IPC_CHANNELS = {
 
 export const DRAFT_IPC_CHANNELS = {
   generate: 'draft:generate',
+  regenerate: 'draft:regenerate',
+  saveToLesson: 'draft:save-to-lesson',
+  softDelete: 'draft:soft-delete',
 } as const
 
 export const SKILL_IPC_CHANNELS = {

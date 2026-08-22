@@ -4,6 +4,8 @@ export type NodeKind = 'course' | 'period' | 'lesson'
 
 export type CourseMode = 'class' | 'one_to_one'
 
+export type DraftStatus = 'draft' | 'saved'
+
 export interface NodeRecord {
   readonly id: string
   readonly parentId: string | null
@@ -40,6 +42,7 @@ export interface NoteRecord {
   readonly updatedAt: string
   readonly deletedAt: string | null
   readonly noteKind?: 'manual' | DraftKind
+  readonly draftStatus?: DraftStatus
   readonly aiMetadata?: DraftNoteMetadata
 }
 
@@ -137,8 +140,16 @@ export function isCourseStudentLink(value: unknown): value is CourseStudentLink 
 }
 
 export function isNoteRecord(value: unknown): value is NoteRecord {
+  const hasValidLifecycle =
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    ('noteKind' in value && isDraftKind(value.noteKind)
+      ? 'draftStatus' in value && isDraftStatus(value.draftStatus)
+      : !('draftStatus' in value) || value.draftStatus === undefined)
   return (
     isRecord(value) &&
+    hasValidLifecycle &&
     isNonEmptyString(value.id) &&
     (value.studentId === null || isNonEmptyString(value.studentId)) &&
     (value.lessonId === null || isNonEmptyString(value.lessonId)) &&
@@ -149,6 +160,10 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
     (value.noteKind === undefined || value.noteKind === 'manual' || isDraftKind(value.noteKind)) &&
     (value.aiMetadata === undefined || isDraftNoteMetadata(value.aiMetadata))
   )
+}
+
+export function isDraftStatus(value: unknown): value is DraftStatus {
+  return value === 'draft' || value === 'saved'
 }
 
 export function isCoreOverview(value: unknown): value is CoreOverview {

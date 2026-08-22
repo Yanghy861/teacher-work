@@ -27,23 +27,54 @@ const validRequest = {
 }
 
 describe('draft IPC boundary', () => {
-  it('registers one narrow channel, rejects paths/oversized limits, and returns only a note result', async () => {
+  it('registers only narrow draft channels and validates generation, lifecycle, and delete requests', async () => {
     const logger = new TestLogger()
+    const metadata = {
+      kind: 'lecture' as const,
+      promptVersion: 'v11-03-v1',
+      provider: 'openai-compatible',
+      model: 'fake-model',
+      sources: [{ fileId: 'file-1', position: { type: 'line' as const, value: 1 }, charsSent: 13 }],
+      inputChars: 13,
+      maxChars: 100,
+      maxTokens: 100,
+    }
     const service = {
       generate: async () => ({
         noteId: 'note-1',
         kind: 'lecture' as const,
         bodyMd: '# 可编辑草稿',
-        metadata: {
-          kind: 'lecture' as const,
-          promptVersion: 'l09-v1',
-          provider: 'openai-compatible',
-          model: 'fake-model',
-          sources: [{ fileId: 'file-1', position: { type: 'line', value: 1 }, charsSent: 13 }],
-          inputChars: 13,
-          maxChars: 100,
-          maxTokens: 100,
-        },
+        metadata,
+      }),
+      regenerate: async () => ({
+        noteId: 'note-2',
+        kind: 'lecture' as const,
+        bodyMd: '# 新草稿',
+        metadata,
+      }),
+      saveToLesson: () => ({
+        id: 'note-1',
+        studentId: null,
+        lessonId: 'lesson-1',
+        bodyMd: '# 已保存成果',
+        createdAt: '2026-08-22T00:00:00.000Z',
+        updatedAt: '2026-08-22T00:01:00.000Z',
+        deletedAt: null,
+        noteKind: 'lecture' as const,
+        draftStatus: 'saved' as const,
+        aiMetadata: metadata,
+      }),
+      softDelete: () => ({
+        id: 'note-1',
+        studentId: null,
+        lessonId: 'lesson-1',
+        bodyMd: '# 可编辑草稿',
+        createdAt: '2026-08-22T00:00:00.000Z',
+        updatedAt: '2026-08-22T00:01:00.000Z',
+        deletedAt: '2026-08-22T00:01:00.000Z',
+        noteKind: 'lecture' as const,
+        draftStatus: 'draft' as const,
+        aiMetadata: metadata,
       }),
     } as unknown as DraftService
     const dependencies: DraftIpcDependencies = { getDraftService: () => service }
@@ -56,6 +87,12 @@ describe('draft IPC boundary', () => {
     await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.generate, { ...validRequest, skillId: '' }, dependencies, logger)).resolves.toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
     await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.generate, { ...validRequest, requirement: 'x'.repeat(4_001) }, dependencies, logger)).resolves.toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
     await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.generate, { ...validRequest, skillId: 'skill-1', requirement: '多安排基础题。' }, dependencies, logger)).resolves.toMatchObject({ ok: true })
+    await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.regenerate, { requestId: 'regen-1', noteId: 'note-1' }, dependencies, logger)).resolves.toMatchObject({ ok: true, data: { noteId: 'note-2' } })
+    await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.saveToLesson, { noteId: 'note-1', bodyMd: '# 已保存成果' }, dependencies, logger)).resolves.toMatchObject({ ok: true, data: { draftStatus: 'saved' } })
+    await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.softDelete, { noteId: 'note-1' }, dependencies, logger)).resolves.toMatchObject({ ok: true, data: { deletedAt: expect.any(String) } })
+    await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.regenerate, { requestId: 'regen-1', noteId: 'note-1', path: 'C:\\secret' }, dependencies, logger)).resolves.toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+    await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.saveToLesson, { noteId: 'note-1', bodyMd: '' }, dependencies, logger)).resolves.toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+    await expect(dispatchDraftIpc(DRAFT_IPC_CHANNELS.softDelete, { noteId: 'note-1', restore: true }, dependencies, logger)).resolves.toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
     const missingLesson = {
       requestId: validRequest.requestId,
       kind: validRequest.kind,

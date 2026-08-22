@@ -126,7 +126,27 @@ describe('L01 core data tree', () => {
         },
       })
 
-      expect(note.studentId).toBeNull()
+      expect(note).toMatchObject({ studentId: null, draftStatus: 'draft' })
+      const saved = service.saveDraftToLesson(note.id, '# 老师修改后的班课讲义')
+      expect(saved).toMatchObject({
+        id: note.id,
+        bodyMd: '# 老师修改后的班课讲义',
+        draftStatus: 'saved',
+      })
+      expect(() => service.softDeleteDraft(saved.id)).toThrowError(
+        expect.objectContaining({ code: 'INVALID_DRAFT' }),
+      )
+
+      const disposable = service.createLessonDraft(lesson.id, '# 可删除草稿', {
+        noteKind: 'homework',
+        aiMetadata: {
+          ...note.aiMetadata!,
+          kind: 'homework',
+        },
+      })
+      const deleted = service.softDeleteDraft(disposable.id)
+      expect(deleted.deletedAt).not.toBeNull()
+      expect(service.getOverview().notes.some((item) => item.id === disposable.id)).toBe(false)
       expect(isCoreOverview(service.getOverview())).toBe(true)
       expect(isCourseStudentLink({
         courseId: course.id,

@@ -17,6 +17,7 @@ export default function App(): React.JSX.Element {
   const [appVersion, setAppVersion] = useState('读取中…')
   const [workspaceStatus, setWorkspaceStatus] = useState('工作区读取中…')
   const [prepContext, setPrepContext] = useState<LessonPrepContext | null>(null)
+  const [prepDraftId, setPrepDraftId] = useState<string | null>(null)
   const [externalPickerOpen, setExternalPickerOpen] = useState(false)
   const [materialPickerOpen, setMaterialPickerOpen] = useState(false)
 
@@ -39,11 +40,24 @@ export default function App(): React.JSX.Element {
   function navigate(item: (typeof navigationItems)[number]): void {
     setExternalPickerOpen(false)
     setMaterialPickerOpen(false)
+    if (item === '备课') {
+      setPrepContext(null)
+      setPrepDraftId(null)
+    }
     setActiveItem(item)
   }
 
   function startPrep(context: LessonPrepContext): void {
     setPrepContext(context)
+    setPrepDraftId(null)
+    setExternalPickerOpen(false)
+    setMaterialPickerOpen(false)
+    setActiveItem('备课')
+  }
+
+  function openDraft(context: LessonPrepContext, noteId: string): void {
+    setPrepContext(context)
+    setPrepDraftId(noteId)
     setExternalPickerOpen(false)
     setMaterialPickerOpen(false)
     setActiveItem('备课')
@@ -111,12 +125,16 @@ export default function App(): React.JSX.Element {
         ) : activeItem === '备课' ? (
           <DraftPanel
             context={prepContext}
+            initialDraftId={prepDraftId}
+            onOpenDraft={openDraft}
             onBackToCourses={() => navigate('我的课程')}
             onBrowseExternal={() => {
+              setPrepDraftId(null)
               setExternalPickerOpen(true)
               setActiveItem('外部资料')
             }}
             onBrowseMaterials={() => {
+              setPrepDraftId(null)
               setMaterialPickerOpen(true)
               setActiveItem('素材库')
             }}

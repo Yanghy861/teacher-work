@@ -220,6 +220,13 @@ describe('L09 context builder and draft generation', () => {
       .toEqual(skillOnly.metadata.skill)
 
     skills.softDeleteSkill(skill.id)
+    const regeneratedWithSnapshot = await draft.regenerate({
+      requestId: 'combo-regenerate-snapshot',
+      noteId: skillOnly.noteId,
+    })
+    expect(regeneratedWithSnapshot.noteId).not.toBe(skillOnly.noteId)
+    expect(capturedPrompts.at(-1)).toContain('优先整理高频错题，并安排限时练习。')
+    expect(capturedPrompts.at(-1)).not.toContain('修改后的 Prompt')
     const requestCountBeforeDeletedSkill = capturedPrompts.length
     await expect(draft.generate({
       ...base,
@@ -227,6 +234,69 @@ describe('L09 context builder and draft generation', () => {
       skillId: skill.id,
     })).rejects.toMatchObject({ code: 'DRAFT_INVALID_REQUEST' })
     expect(capturedPrompts).toHaveLength(requestCountBeforeDeletedSkill)
+  })
+
+  it('regenerates into a new draft, keeps the old result, and saves the same record to its lesson', async () => {
+    const { core, draft, gateway, fileId, lessonId, workspace } = fixture()
+    let generation = 0
+    gateway.requestText = async () => ({ text: `# 第 ${++generation} 版`, model: 'fake-model' })
+
+    const first = await draft.generate({
+      requestId: 'lifecycle-first',
+      kind: 'lecture',
+      lessonId,
+      sources: [{ fileId }],
+      maxChars: 100,
+      maxTokens: 100,
+    })
+    expect(core.getActiveAiResult(first.noteId)).toMatchObject({
+      bodyMd: '# 第 1 版',
+      draftStatus: 'draft',
+    })
+
+    const regenerated = await draft.regenerate({
+      requestId: 'lifecycle-regenerated',
+      noteId: first.noteId,
+    })
+    expect(regenerated.noteId).not.toBe(first.noteId)
+    expect(core.getOverview().notes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: first.noteId, bodyMd: '# 第 1 版', draftStatus: 'draft' }),
+      expect.objectContaining({ id: regenerated.noteId, bodyMd: '# 第 2 版', draftStatus: 'draft' }),
+    ]))
+
+    const resultCountBeforeSave = core.getOverview().notes.length
+    const saved = draft.saveToLesson({
+      noteId: regenerated.noteId,
+      bodyMd: '# 老师确认后的第 2 版',
+    })
+    expect(saved).toMatchObject({
+      id: regenerated.noteId,
+      bodyMd: '# 老师确认后的第 2 版',
+      draftStatus: 'saved',
+    })
+    expect(core.getOverview().notes).toHaveLength(resultCountBeforeSave)
+    const regeneratedFromSaved = await draft.regenerate({
+      requestId: 'lifecycle-from-saved',
+      noteId: saved.id,
+    })
+    expect(regeneratedFromSaved.noteId).not.toBe(saved.id)
+    expect(core.getActiveAiResult(saved.id)).toMatchObject({
+      bodyMd: '# 老师确认后的第 2 版',
+      draftStatus: 'saved',
+    })
+    expect(core.getActiveAiResult(regeneratedFromSaved.noteId)).toMatchObject({
+      bodyMd: '# 第 3 版',
+      draftStatus: 'draft',
+    })
+    expect(() => draft.softDelete({ noteId: saved.id })).toThrowError(
+      expect.objectContaining({ code: 'DRAFT_INVALID_REQUEST' }),
+    )
+
+    const deletedOldDraft = draft.softDelete({ noteId: first.noteId })
+    expect(deletedOldDraft.deletedAt).not.toBeNull()
+    expect(core.getOverview().notes.map((note) => note.id)).toContain(saved.id)
+    expect(readFileSync(join(workspace.paths.objectsDirectory, fileId, 'content'), 'utf8'))
+      .toContain('selected source text')
   })
 
   it('can be retried after an empty/invalid provider response without duplicating a prior note', async () => {

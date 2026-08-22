@@ -60,6 +60,9 @@ import {
   type AiTextRequest,
   type UpdateAiSettingsRequest,
   type GenerateDraftRequest,
+  type DraftIdRequest,
+  type RegenerateDraftRequest,
+  type SaveDraftRequest,
   type CreateSkillRequest,
   type SkillIdRequest,
   type UpdateSkillRequest,
@@ -135,6 +138,9 @@ const api = Object.freeze({
   }),
   drafts: Object.freeze({
     generate: (request: GenerateDraftRequest) => invoke(DRAFT_IPC_CHANNELS.generate, request, isGenerateDraftResult),
+    regenerate: (request: RegenerateDraftRequest) => invoke(DRAFT_IPC_CHANNELS.regenerate, request, isGenerateDraftResult),
+    saveToLesson: (request: SaveDraftRequest) => invoke(DRAFT_IPC_CHANNELS.saveToLesson, request, isNoteRecord),
+    softDelete: (request: DraftIdRequest) => invoke(DRAFT_IPC_CHANNELS.softDelete, request, isNoteRecord),
   }),
   skills: Object.freeze({
     list: () => invoke(SKILL_IPC_CHANNELS.list, {}, (value): value is readonly import('../shared/preload-api').SkillRecord[] =>

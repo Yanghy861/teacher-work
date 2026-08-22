@@ -6,7 +6,18 @@ import {
   type IpcChannel,
   type IpcResponse,
 } from '../../shared/ipc-contracts'
-import { isGenerateDraftRequest, isGenerateDraftResult, type GenerateDraftRequest } from '../../shared/draft-contracts'
+import {
+  isDraftIdRequest,
+  isGenerateDraftRequest,
+  isGenerateDraftResult,
+  isRegenerateDraftRequest,
+  isSaveDraftRequest,
+  type DraftIdRequest,
+  type GenerateDraftRequest,
+  type RegenerateDraftRequest,
+  type SaveDraftRequest,
+} from '../../shared/draft-contracts'
+import { isNoteRecord } from '../../shared/core-contracts'
 import { AiGatewayError } from '../ai/ai-gateway'
 import { DraftService, DraftServiceError } from '../draft/draft-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
@@ -58,17 +69,32 @@ export async function dispatchDraftIpc(
     return failure(IPC_ERROR_CODES.UNKNOWN_CHANNEL, '未知的 IPC 通道。')
   }
   try {
-    if (channel !== DRAFT_IPC_CHANNELS.generate) {
-      throw new Error('Unhandled draft IPC channel')
+    const service = dependencies.getDraftService()
+    switch (channel) {
+      case DRAFT_IPC_CHANNELS.generate: {
+        assertRequest(payload, isGenerateDraftRequest)
+        const result = await service.generate(payload as GenerateDraftRequest)
+        if (!isGenerateDraftResult(result)) {
+          throw new Error('Draft service returned an invalid generation response')
+        }
+        return success(result)
+      }
+      case DRAFT_IPC_CHANNELS.regenerate: {
+        assertRequest(payload, isRegenerateDraftRequest)
+        const result = await service.regenerate(payload as RegenerateDraftRequest)
+        if (!isGenerateDraftResult(result)) {
+          throw new Error('Draft service returned an invalid regeneration response')
+        }
+        return success(result)
+      }
+      case DRAFT_IPC_CHANNELS.saveToLesson:
+        assertRequest(payload, isSaveDraftRequest)
+        return ensureNoteResponse(service.saveToLesson(payload as SaveDraftRequest))
+      case DRAFT_IPC_CHANNELS.softDelete:
+        assertRequest(payload, isDraftIdRequest)
+        return ensureNoteResponse(service.softDelete(payload as DraftIdRequest))
     }
-    if (!isGenerateDraftRequest(payload)) {
-      throw new DraftIpcRequestError('请求参数无效。')
-    }
-    const result = await dependencies.getDraftService().generate(payload as GenerateDraftRequest)
-    if (!isGenerateDraftResult(result)) {
-      throw new Error('Draft service returned an invalid response')
-    }
-    return success(result)
+    throw new Error('Unhandled draft IPC channel')
   } catch (error) {
     const response = mapDraftIpcError(error)
     logger.error('ipc.draft_request_failed', error, {
@@ -77,6 +103,18 @@ export async function dispatchDraftIpc(
     })
     return response
   }
+}
+
+function assertRequest<T>(
+  payload: unknown,
+  guard: (value: unknown) => value is T,
+): asserts payload is T {
+  if (!guard(payload)) throw new DraftIpcRequestError('请求参数无效。')
+}
+
+function ensureNoteResponse(value: unknown): IpcResponse<unknown> {
+  if (!isNoteRecord(value)) throw new Error('Draft service returned an invalid note response')
+  return success(value)
 }
 
 function mapDraftIpcError(error: unknown): IpcResponse<never> {
@@ -89,5 +127,5 @@ function mapDraftIpcError(error: unknown): IpcResponse<never> {
   if (error instanceof AiGatewayError) {
     return failure(IPC_ERROR_CODES.AI_ERROR, error.message)
   }
-  return failure(IPC_ERROR_CODES.INTERNAL_ERROR, '无法完成草稿生成，请稍后重试。')
+  return failure(IPC_ERROR_CODES.INTERNAL_ERROR, '无法完成草稿操作，请稍后重试。')
 }

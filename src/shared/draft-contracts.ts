@@ -79,6 +79,18 @@ export interface GenerateDraftResult {
   readonly metadata: DraftNoteMetadata
 }
 
+export interface DraftIdRequest {
+  readonly noteId: string
+}
+
+export interface RegenerateDraftRequest extends DraftIdRequest {
+  readonly requestId: string
+}
+
+export interface SaveDraftRequest extends DraftIdRequest {
+  readonly bodyMd?: string
+}
+
 export function isDraftKind(value: unknown): value is DraftKind {
   return value === DRAFT_KINDS.lecture || value === DRAFT_KINDS.example || value === DRAFT_KINDS.homework
 }
@@ -113,6 +125,26 @@ export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRe
     value.sources.every(isDraftSourceSelection) &&
     isSafeLimit(value.maxChars, DRAFT_MAX_CHARS) &&
     isSafeLimit(value.maxTokens, DRAFT_MAX_TOKENS)
+  )
+}
+
+export function isDraftIdRequest(value: unknown): value is DraftIdRequest {
+  return hasOnlyKeys(value, ['noteId']) && isNonEmptyString(value.noteId, 128)
+}
+
+export function isRegenerateDraftRequest(value: unknown): value is RegenerateDraftRequest {
+  return (
+    hasOnlyKeys(value, ['requestId', 'noteId']) &&
+    isNonEmptyString(value.requestId, 128) &&
+    isNonEmptyString(value.noteId, 128)
+  )
+}
+
+export function isSaveDraftRequest(value: unknown): value is SaveDraftRequest {
+  return (
+    hasOnlyKeys(value, ['noteId'], ['bodyMd']) &&
+    isNonEmptyString(value.noteId, 128) &&
+    (value.bodyMd === undefined || isNonEmptyString(value.bodyMd, DRAFT_MAX_CHARS))
   )
 }
 

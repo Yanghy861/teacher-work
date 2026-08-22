@@ -922,6 +922,221 @@ button:disabled {
   align-content: start;
 }
 
+.draft-inbox-panel {
+  display: grid;
+  max-width: 960px;
+  margin: 0 auto;
+  gap: 14px;
+}
+
+.draft-inbox-list,
+.draft-result-list {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.draft-inbox-list li:not(.empty-state),
+.draft-result-list li:not(.empty-state) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  padding: 8px 10px;
+  background: #f8fafc;
+}
+
+.draft-inbox-open,
+.draft-result-select {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  border: 0;
+  padding: 2px;
+  color: #1e293b;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.draft-inbox-open > span:nth-child(2),
+.draft-result-select > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.draft-inbox-open strong,
+.draft-inbox-open small,
+.draft-result-select strong,
+.draft-result-select small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-inbox-open small,
+.draft-result-select small,
+.draft-inbox-open time {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.draft-kind-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 9px;
+  color: #3730a3;
+  background: #e0e7ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.result-entry-button {
+  width: 100%;
+}
+
+.draft-result-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.draft-result-list-panel {
+  position: sticky;
+  top: 20px;
+}
+
+.draft-result-list li.is-selected {
+  border-color: #818cf8;
+  background: #eef2ff;
+  box-shadow: 0 0 0 2px rgb(99 102 241 / 10%);
+}
+
+.draft-status {
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.draft-status-draft {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.draft-status-saved {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.draft-content-panel {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.draft-content-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 20px 22px;
+}
+
+.draft-content-header h2 {
+  margin: 0;
+}
+
+.draft-content-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.draft-content-body {
+  min-height: 520px;
+  padding: 28px 34px;
+  background: #fff;
+}
+
+.draft-content-body.is-editing {
+  padding: 20px 22px;
+}
+
+.draft-content-body textarea {
+  min-height: 500px;
+  resize: vertical;
+  line-height: 1.75;
+}
+
+.draft-content-empty {
+  display: grid;
+  min-height: 560px;
+  place-items: center;
+  padding: 30px;
+  text-align: center;
+}
+
+.draft-markdown-preview {
+  max-width: 760px;
+  margin: 0 auto;
+  color: #1f2937;
+  line-height: 1.8;
+}
+
+.draft-markdown-preview h2,
+.draft-markdown-preview h3,
+.draft-markdown-preview h4,
+.draft-markdown-preview h5 {
+  margin: 1.3em 0 0.45em;
+  color: #111827;
+}
+
+.draft-markdown-preview h2:first-child,
+.draft-markdown-preview h3:first-child {
+  margin-top: 0;
+}
+
+.draft-markdown-preview p {
+  margin: 0.35em 0;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.draft-markdown-preview .draft-bullet {
+  padding-left: 1.3em;
+}
+
+.draft-markdown-preview .draft-bullet::before {
+  content: "•";
+  display: inline-block;
+  width: 1.1em;
+  margin-left: -1.1em;
+  color: #4f46e5;
+}
+
+.draft-markdown-preview .draft-numbered {
+  padding-left: 0.3em;
+}
+
+.draft-preview-space {
+  display: block;
+  height: 0.7em;
+}
+
 .external-library-panel {
   display: grid;
   max-width: 1120px;
@@ -1219,6 +1434,7 @@ button:disabled {
   }
 
   .lesson-prep-layout,
+  .draft-result-layout,
   .prep-generate-actions,
   .prep-input-grid,
   .skill-settings-layout {
@@ -1227,5 +1443,17 @@ button:disabled {
 
   .prep-materials-panel {
     position: static;
+  }
+
+  .draft-result-list-panel {
+    position: static;
+  }
+
+  .draft-content-header {
+    flex-direction: column;
+  }
+
+  .draft-content-actions {
+    justify-content: flex-start;
   }
 }

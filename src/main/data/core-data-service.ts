@@ -3,9 +3,11 @@ import { randomUUID } from 'node:crypto'
 import type {
   CourseStudentLink,
   CoreOverview,
+  DraftStatus,
   NoteRecord,
   StudentRecord,
 } from '../../shared/core-contracts'
+import { isDraftStatus } from '../../shared/core-contracts'
 import {
   isDraftNoteMetadata,
   type DraftKind,
@@ -27,6 +29,7 @@ export type CoreDataErrorCode =
   | 'LESSON_NOT_FOUND'
   | 'LESSON_DELETED'
   | 'INVALID_LESSON'
+  | 'INVALID_DRAFT'
 
 export class CoreDataError extends Error {
   readonly code: CoreDataErrorCode
@@ -67,6 +70,7 @@ interface NoteRow {
   readonly deleted_at: string | null
   readonly note_kind: 'manual' | DraftKind
   readonly ai_metadata_json: string | null
+  readonly draft_status: DraftStatus | null
 }
 
 interface DraftLessonContextRow {
@@ -179,8 +183,9 @@ export class CoreDataService {
       this.database
         .prepare(
           `INSERT INTO notes
-             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at, note_kind, ai_metadata_json)
-           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+              note_kind, ai_metadata_json, draft_status)
+           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
         )
         .run(
           id,
@@ -191,6 +196,7 @@ export class CoreDataService {
           now,
           metadata?.noteKind ?? 'manual',
           metadata?.aiMetadata === undefined ? null : JSON.stringify(metadata.aiMetadata),
+          metadata?.noteKind === undefined || metadata.noteKind === 'manual' ? null : 'draft',
         )
       return this.requireNote(id)
     })
@@ -215,8 +221,9 @@ export class CoreDataService {
       this.database
         .prepare(
           `INSERT INTO notes
-             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at, note_kind, ai_metadata_json)
-           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+              note_kind, ai_metadata_json, draft_status)
+           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'draft')`,
         )
         .run(
           id,
@@ -278,11 +285,60 @@ export class CoreDataService {
       throw new CoreDataError('INVALID_NOTE', '记录内容不能为空。')
     }
     return this.transaction(() => {
-      const existing = this.requireNote(noteId)
+      const existing = this.requireActiveNote(noteId)
       this.database
         .prepare('UPDATE notes SET body_md = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
         .run(bodyMd.trim(), this.now(), existing.id)
       return this.requireNote(noteId)
+    })
+  }
+
+  getActiveAiResult(noteId: string): NoteRecord & {
+    readonly lessonId: string
+    readonly noteKind: DraftKind
+    readonly draftStatus: DraftStatus
+  } {
+    const note = this.requireActiveNote(noteId)
+    if (note.noteKind === undefined || note.noteKind === 'manual' || note.draftStatus === undefined) {
+      throw new CoreDataError('INVALID_DRAFT', '所选记录不是 AI 生成结果。')
+    }
+    if (note.lessonId === null) {
+      throw new CoreDataError('INVALID_DRAFT', '所选结果缺少当前课次。')
+    }
+    return note as NoteRecord & {
+      readonly lessonId: string
+      readonly noteKind: DraftKind
+      readonly draftStatus: DraftStatus
+    }
+  }
+
+  saveDraftToLesson(noteId: string, bodyMd?: string): NoteRecord {
+    const normalizedBody = bodyMd === undefined ? undefined : normalizeNoteBody(bodyMd)
+    return this.transaction(() => {
+      const existing = this.getActiveAiResult(noteId)
+      this.requireActiveLesson(existing.lessonId)
+      this.database
+        .prepare(
+          `UPDATE notes
+              SET body_md = COALESCE(?, body_md), draft_status = 'saved', updated_at = ?
+            WHERE id = ? AND deleted_at IS NULL`,
+        )
+        .run(normalizedBody ?? null, this.now(), existing.id)
+      return this.requireActiveNote(existing.id)
+    })
+  }
+
+  softDeleteDraft(noteId: string): NoteRecord {
+    return this.transaction(() => {
+      const existing = this.getActiveAiResult(noteId)
+      if (existing.draftStatus !== 'draft') {
+        throw new CoreDataError('INVALID_DRAFT', '已保存到课次的结果不能从草稿箱删除。')
+      }
+      const now = this.now()
+      this.database
+        .prepare('UPDATE notes SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
+        .run(now, now, existing.id)
+      return this.requireNote(existing.id)
     })
   }
 
@@ -331,7 +387,7 @@ export class CoreDataService {
     const rows = this.database
       .prepare(
         `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
-                note_kind, ai_metadata_json
+                note_kind, ai_metadata_json, draft_status
            FROM notes
           WHERE deleted_at IS NULL
             AND (? IS NULL OR student_id = ?)
@@ -447,7 +503,7 @@ export class CoreDataService {
     const row = this.database
       .prepare(
         `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
-                note_kind, ai_metadata_json
+                note_kind, ai_metadata_json, draft_status
            FROM notes
           WHERE id = ?`,
       )
@@ -456,6 +512,14 @@ export class CoreDataService {
       throw new CoreDataError('INVALID_NOTE', '记录创建失败。')
     }
     return mapNote(row)
+  }
+
+  private requireActiveNote(noteId: string): NoteRecord {
+    const note = this.requireNote(noteId)
+    if (note.deletedAt !== null) {
+      throw new CoreDataError('INVALID_NOTE', '记录已删除。')
+    }
+    return note
   }
 
   private transaction<T>(callback: () => T): T {
@@ -468,6 +532,13 @@ function normalizeName(name: string): string {
     throw new CoreDataError('INVALID_NAME', '学生姓名不能为空。')
   }
   return name.trim()
+}
+
+function normalizeNoteBody(bodyMd: string): string {
+  if (typeof bodyMd !== 'string' || bodyMd.trim().length === 0) {
+    throw new CoreDataError('INVALID_NOTE', '记录内容不能为空。')
+  }
+  return bodyMd.trim()
 }
 
 function mapStudent(row: StudentRow): StudentRecord {
@@ -498,6 +569,9 @@ function mapNote(row: NoteRow): NoteRecord {
       // Optional metadata must not make the editable note unavailable.
     }
   }
+  if (row.note_kind !== 'manual' && !isDraftStatus(row.draft_status)) {
+    throw new CoreDataError('INVALID_DRAFT', '草稿生命周期状态无效。')
+  }
   return {
     id: row.id,
     studentId: row.student_id,
@@ -507,6 +581,7 @@ function mapNote(row: NoteRow): NoteRecord {
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
     ...(row.note_kind === 'manual' ? {} : { noteKind: row.note_kind }),
+    ...(row.note_kind === 'manual' ? {} : { draftStatus: row.draft_status as DraftStatus }),
     ...(aiMetadata === undefined ? {} : { aiMetadata }),
   }
 }

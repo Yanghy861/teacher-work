@@ -259,6 +259,51 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 11,
+    name: 'add_draft_lifecycle',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE notes_v11_04 (
+          id TEXT PRIMARY KEY NOT NULL,
+          student_id TEXT REFERENCES students(id) ON DELETE SET NULL,
+          lesson_id TEXT REFERENCES nodes(id) ON DELETE SET NULL,
+          body_md TEXT NOT NULL CHECK (length(trim(body_md)) > 0),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT,
+          note_kind TEXT NOT NULL DEFAULT 'manual'
+            CHECK (note_kind IN ('manual', 'lecture', 'example', 'homework')),
+          ai_metadata_json TEXT,
+          draft_status TEXT,
+          CHECK (
+            (note_kind = 'manual' AND draft_status IS NULL)
+            OR
+            (note_kind <> 'manual' AND draft_status IS NOT NULL
+              AND draft_status IN ('draft', 'saved'))
+          )
+        );
+
+        INSERT INTO notes_v11_04
+          (id, student_id, lesson_id, body_md, created_at, updated_at,
+           deleted_at, note_kind, ai_metadata_json, draft_status)
+        SELECT id, student_id, lesson_id, body_md, created_at, updated_at,
+               deleted_at, note_kind, ai_metadata_json,
+               CASE WHEN note_kind = 'manual' THEN NULL ELSE 'draft' END
+          FROM notes;
+
+        DROP TABLE notes;
+        ALTER TABLE notes_v11_04 RENAME TO notes;
+
+        CREATE INDEX idx_notes_student_created
+          ON notes (student_id, created_at, id);
+        CREATE INDEX idx_notes_lesson_created
+          ON notes (lesson_id, created_at, id);
+        CREATE INDEX idx_notes_draft_inbox
+          ON notes (draft_status, deleted_at, updated_at DESC, id);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(
