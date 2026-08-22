@@ -170,6 +170,22 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 8,
+    name: 'create_external_library_root',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS external_roots (
+          singleton_id INTEGER PRIMARY KEY NOT NULL CHECK (singleton_id = 1),
+          id TEXT NOT NULL UNIQUE,
+          name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+          path TEXT NOT NULL CHECK (length(trim(path)) > 0),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

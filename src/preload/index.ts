@@ -9,6 +9,7 @@ import {
   AI_IPC_CHANNELS,
   DRAFT_IPC_CHANNELS,
   BACKUP_IPC_CHANNELS,
+  EXTERNAL_LIBRARY_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContentChanged,
   isManagedFileOverview,
@@ -30,6 +31,9 @@ import {
   isGenerateDraftResult,
   isBackupSummary,
   isRestoreSummary,
+  isExternalActionResult,
+  isExternalDirectoryListing,
+  isNullableExternalRootSummary,
   parseIpcResponse,
   TeacherWorkbenchError,
   type CreateCourseRequest,
@@ -54,6 +58,7 @@ import {
   type AiTextRequest,
   type UpdateAiSettingsRequest,
   type GenerateDraftRequest,
+  type ExternalPathRequest,
 } from '../shared/preload-api'
 
 async function invoke<T>(
@@ -124,6 +129,13 @@ const api = Object.freeze({
   }),
   drafts: Object.freeze({
     generate: (request: GenerateDraftRequest) => invoke(DRAFT_IPC_CHANNELS.generate, request, isGenerateDraftResult),
+  }),
+  externalLibrary: Object.freeze({
+    getRoot: () => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.getRoot, {}, isNullableExternalRootSummary),
+    chooseRoot: () => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.chooseRoot, {}, isNullableExternalRootSummary),
+    listChildren: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.listChildren, request, isExternalDirectoryListing),
+    openFile: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.openFile, request, isExternalActionResult),
+    showInFolder: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.showInFolder, request, isExternalActionResult),
   }),
   backup: Object.freeze({
     create: () => invoke(BACKUP_IPC_CHANNELS.create, {}, (value): value is import('../shared/ipc-contracts').BackupSummary | null =>

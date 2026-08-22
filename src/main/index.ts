@@ -9,6 +9,7 @@ import { registerSearchIpc } from './ipc/search-ipc'
 import { registerAiIpc } from './ipc/ai-ipc'
 import { registerDraftIpc } from './ipc/draft-ipc'
 import { registerBackupIpc } from './ipc/backup-ipc'
+import { registerExternalLibraryIpc } from './ipc/external-library-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
@@ -23,6 +24,7 @@ import { AiSettingsService } from './ai/ai-settings-service'
 import { electronSecureStorage } from './ai/secure-storage'
 import { DraftService } from './draft/draft-service'
 import { BackupRestoreService } from './backup/backup-service'
+import { ExternalLibraryService } from './external/external-library-service'
 import { BACKUP_DIRECTORY_NAME } from './backup/backup-service'
 import { WorkspaceActivityError, WorkspaceActivityGate } from './workspace/activity-gate'
 import {
@@ -46,10 +48,12 @@ let unregisterSearchIpc: (() => void) | null = null
 let unregisterAiIpc: (() => void) | null = null
 let unregisterDraftIpc: (() => void) | null = null
 let unregisterBackupIpc: (() => void) | null = null
+let unregisterExternalLibraryIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
 let backupRestoreService: BackupRestoreService | null = null
+let externalLibraryService: ExternalLibraryService | null = null
 const deferredIndexIds = new Set<string>()
 const deferredRefreshTriggers = new Set<string>()
 let servicesClosed = false
@@ -169,6 +173,13 @@ function getBackupRestoreService(): BackupRestoreService {
     },
   )
   return backupRestoreService
+}
+
+function getExternalLibraryService(): ExternalLibraryService {
+  if (workspaceHandle === null) getWorkspaceInfo()
+  if (workspaceHandle === null) throw new Error('Workspace was not initialized')
+  externalLibraryService ??= new ExternalLibraryService(workspaceHandle.database.raw)
+  return externalLibraryService
 }
 
 function enqueueIndex(fileId: string): void {
@@ -375,6 +386,26 @@ void app.whenReady().then(() => {
     },
     logger,
   )
+  unregisterExternalLibraryIpc = registerExternalLibraryIpc(
+    ipcMain,
+    {
+      getService: getExternalLibraryService,
+      activityGate,
+      chooseRootPath: async () => {
+        const options: OpenDialogOptions = {
+          properties: ['openDirectory'],
+          title: '选择外部资料目录',
+        }
+        const result = mainWindow !== null && !mainWindow.isDestroyed()
+          ? await dialog.showOpenDialog(mainWindow, options)
+          : await dialog.showOpenDialog(options)
+        return result.canceled ? null : result.filePaths[0] ?? null
+      },
+      openPath: (path) => shell.openPath(path),
+      showInFolder: (path) => shell.showItemInFolder(path),
+    },
+    logger,
+  )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
   void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
@@ -408,11 +439,13 @@ app.on('before-quit', (event) => {
   unregisterAiIpc?.()
   unregisterDraftIpc?.()
   unregisterBackupIpc?.()
+  unregisterExternalLibraryIpc?.()
   coreDataService = null
   managedFileService = null
   aiGateway = null
   aiSettingsService = null
   draftService = null
+  externalLibraryService = null
   void (async () => {
     await documentIndexWorker?.close()
     documentIndexWorker = null

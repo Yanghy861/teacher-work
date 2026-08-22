@@ -425,3 +425,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 实施链：新增 `v1.1-tasks/V11-01`–`V11-05` 五个轻量里程碑。V11-01–V11-04 只做相关测试、typecheck、lint；V11-05 做完整回归、build、portable packaging 和代表性 Windows smoke。
 - 明确 Later：多 root、外部目录扫描/监听/全文索引、Office/PDF 高保真预览、草稿版本树、审批审计、Workflow/Agent 和企业级验证矩阵。
 - Git：方案作为独立本地 `plan(V1.1)` 提交保存；后续使用 `v1.1(V11-XX)` 里程碑提交，最终通过标签为 `checkpoint-V1.1-pass`；不自动 push。
+
+## 2026-08-22 · V11-01 · DONE
+
+- 关键改动：新增一个外部资料 root 的 SQLite 持久化、设置/更换入口和 Main 侧只读目录服务；Renderer 只接收 root 摘要、root ID 与相对路径，绝对路径不进入 Preload 响应。
+- 浏览交互：新增“外部资料”导航，提供“全局导航｜可折叠资料树｜内容区”；目录逐层 lazy 读取，支持手动刷新、中文多层目录、文件信息、系统应用打开和资源管理器定位，折叠资料树后内容区自动扩展。
+- 安全边界：每次访问都重新解析真实路径并确认仍位于登记 root 内；拒绝绝对路径、`..` 穿越、过期 root ID、未登记路径和根外链接/目录联接；不写入、删除、移动或重命名外部原文件。
+- 取舍：V11-01 不加入 watcher、递归扫描、搜索、多 root、Office/PDF 高保真预览，也不提前实现 V11-02 的“用于本次备课”。
+- 验证：相关测试 5 files / 18 tests 通过；`npm run typecheck`、`npm run lint`、`git diff --check` 通过。开发 Electron 窗口确认 V1.1 导航、schema v8、外部资料空状态和目录选择入口；检测到用户正在使用前台窗口后停止自动操作，其余展开/刷新/越界行为由自动测试覆盖。
+- Git：准备创建本地 `v1.1(V11-01): external library browsing` 里程碑提交；不 push、不添加远程、不创建 V1.1 最终通过标签。

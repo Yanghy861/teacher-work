@@ -86,8 +86,19 @@ import {
   type ManagedFileRecord,
 } from './file-contracts'
 import type { BackupSummary, RestoreSummary } from './ipc-contracts'
+import {
+  isExternalActionResult,
+  isExternalDirectoryListing,
+  isExternalPathRequest,
+  isExternalRootSummary,
+  isNullableExternalRootSummary,
+  type ExternalActionResult,
+  type ExternalDirectoryListing,
+  type ExternalPathRequest,
+  type ExternalRootSummary,
+} from './external-library-contracts'
 
-export { AI_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
+export { AI_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
 export type { BackupSummary, IpcChannel, RestoreSummary, WorkspaceInfo } from './ipc-contracts'
 export { isBackupSummary, isRestoreSummary } from './ipc-contracts'
 export type {
@@ -119,6 +130,13 @@ export type {
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
 export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
 export type { DraftNoteMetadata, DraftSourceSelection, GenerateDraftRequest, GenerateDraftResult } from './draft-contracts'
+export type {
+  ExternalActionResult,
+  ExternalDirectoryListing,
+  ExternalEntry,
+  ExternalPathRequest,
+  ExternalRootSummary,
+} from './external-library-contracts'
 
 export interface TeacherWorkbenchApi {
   app: {
@@ -166,6 +184,13 @@ export interface TeacherWorkbenchApi {
   }
   drafts: {
     generate: (request: GenerateDraftRequest) => Promise<GenerateDraftResult>
+  }
+  externalLibrary: {
+    getRoot: () => Promise<ExternalRootSummary | null>
+    chooseRoot: () => Promise<ExternalRootSummary | null>
+    listChildren: (request: ExternalPathRequest) => Promise<ExternalDirectoryListing>
+    openFile: (request: ExternalPathRequest) => Promise<ExternalActionResult>
+    showInFolder: (request: ExternalPathRequest) => Promise<ExternalActionResult>
   }
   backup: {
     create: () => Promise<BackupSummary | null>
@@ -215,4 +240,9 @@ export {
   isDraftNoteMetadata,
   isGenerateDraftRequest,
   isGenerateDraftResult,
+  isExternalActionResult,
+  isExternalDirectoryListing,
+  isExternalPathRequest,
+  isExternalRootSummary,
+  isNullableExternalRootSummary,
 }

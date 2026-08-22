@@ -52,6 +52,14 @@ export const BACKUP_IPC_CHANNELS = {
   restore: 'backup:restore',
 } as const
 
+export const EXTERNAL_LIBRARY_IPC_CHANNELS = {
+  getRoot: 'external-library:get-root',
+  chooseRoot: 'external-library:choose-root',
+  listChildren: 'external-library:list-children',
+  openFile: 'external-library:open-file',
+  showInFolder: 'external-library:show-in-folder',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -64,6 +72,7 @@ export type IpcChannel =
   | (typeof AI_IPC_CHANNELS)[keyof typeof AI_IPC_CHANNELS]
   | (typeof DRAFT_IPC_CHANNELS)[keyof typeof DRAFT_IPC_CHANNELS]
   | (typeof BACKUP_IPC_CHANNELS)[keyof typeof BACKUP_IPC_CHANNELS]
+  | (typeof EXTERNAL_LIBRARY_IPC_CHANNELS)[keyof typeof EXTERNAL_LIBRARY_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -78,6 +87,7 @@ export const IPC_ERROR_CODES = {
   INVALID_RESPONSE: 'INVALID_RESPONSE',
   BACKUP_ERROR: 'BACKUP_ERROR',
   WORKSPACE_BUSY: 'WORKSPACE_BUSY',
+  EXTERNAL_LIBRARY_ERROR: 'EXTERNAL_LIBRARY_ERROR',
 } as const
 
 export type IpcErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES]

@@ -6,8 +6,9 @@ import ManagedFilesPanel from './managed-files-panel'
 import SearchPanel from './search-panel'
 import SettingsPanel from './settings-panel'
 import DraftPanel from './draft-panel'
+import ExternalLibraryPanel from './external-library-panel'
 
-const navigationItems = ['我的课程', '搜索', '素材库', '学生', '备课', '设置'] as const
+const navigationItems = ['我的课程', '搜索', '外部资料', '素材库', '学生', '备课', '设置'] as const
 
 export default function App(): React.JSX.Element {
   const [activeItem, setActiveItem] = useState<(typeof navigationItems)[number]>('我的课程')
@@ -55,7 +56,7 @@ export default function App(): React.JSX.Element {
       <main className="content-area">
         <header className="content-header">
           <div>
-            <p className="eyebrow">教师工作台 V1</p>
+            <p className="eyebrow">教师工作台 V1.1</p>
             <h1>{activeItem}</h1>
           </div>
           <div className="status-pill">{workspaceStatus}</div>
@@ -66,6 +67,8 @@ export default function App(): React.JSX.Element {
           <CourseDashboard />
         ) : activeItem === '素材库' ? (
           <ManagedFilesPanel />
+        ) : activeItem === '外部资料' ? (
+          <ExternalLibraryPanel />
         ) : activeItem === '学生' ? (
           <ManagedFilesPanel heading="学生资料" />
         ) : activeItem === '设置' ? (

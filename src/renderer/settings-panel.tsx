@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import type { AiKeyStorageMode, AiSettings } from '../shared/preload-api'
+import type { AiKeyStorageMode, AiSettings, ExternalRootSummary } from '../shared/preload-api'
 
 const initialSettings: AiSettings = {
   provider: 'openai-compatible',
@@ -19,6 +19,8 @@ export default function SettingsPanel(): React.JSX.Element {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [backupBusy, setBackupBusy] = useState(false)
+  const [externalRoot, setExternalRoot] = useState<ExternalRootSummary | null>(null)
+  const [externalBusy, setExternalBusy] = useState(false)
 
   useEffect(() => {
     void window.teacherWorkbench.ai.getSettings().then((value) => {
@@ -26,6 +28,12 @@ export default function SettingsPanel(): React.JSX.Element {
       setModel(value.model)
       setEndpoint(value.endpoint)
     }).catch((loadError: unknown) => setError(toErrorMessage(loadError)))
+  }, [])
+
+  useEffect(() => {
+    void window.teacherWorkbench.externalLibrary.getRoot()
+      .then(setExternalRoot)
+      .catch((loadError: unknown) => setError(toErrorMessage(loadError)))
   }, [])
 
   async function save(): Promise<void> {
@@ -117,8 +125,55 @@ export default function SettingsPanel(): React.JSX.Element {
     }
   }
 
+  async function chooseExternalRoot(): Promise<void> {
+    setExternalBusy(true)
+    setMessage('')
+    setError('')
+    try {
+      const selectedRoot = await window.teacherWorkbench.externalLibrary.chooseRoot()
+      if (selectedRoot === null) {
+        setMessage('已取消选择。')
+      } else {
+        setExternalRoot(selectedRoot)
+        setMessage(`外部资料目录已连接：${selectedRoot.name}`)
+      }
+    } catch (rootError) {
+      setError(toErrorMessage(rootError))
+    } finally {
+      setExternalBusy(false)
+    }
+  }
+
   return (
     <section className="settings-panel" aria-label="AI 设置">
+      <div className="workspace-card">
+        <div className="card-heading">
+          <div>
+            <p className="section-kicker">只读本地资料</p>
+            <h2>外部资料位置</h2>
+          </div>
+          <span className={`key-status key-status-${externalRoot?.available ? 'ready' : 'empty'}`}>
+            {externalRoot === null
+              ? '未设置'
+              : externalRoot.available
+                ? '已连接'
+                : '目录不可用'}
+          </span>
+        </div>
+        <p className="settings-note external-root-summary">
+          {externalRoot === null
+            ? '选择一个已有教学资料文件夹。工作台只按需浏览，不会修改原文件。'
+            : `当前目录：${externalRoot.name}。绝对路径只保留在 Main，不会暴露给页面。`}
+        </p>
+        <button
+          className="primary-button"
+          type="button"
+          onClick={() => void chooseExternalRoot()}
+          disabled={externalBusy || backupBusy || busy}
+        >
+          {externalRoot === null ? '选择资料目录' : '更改资料目录'}
+        </button>
+      </div>
       <div className="workspace-card">
         <div className="card-heading">
           <div>
