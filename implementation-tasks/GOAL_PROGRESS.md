@@ -469,3 +469,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 修复：窗口根节点固定为单屏，最左侧全局导航保持满高且不再跟随页面内容滚动；右侧内容区改为独立纵向滚动，小窗口下导航仅在自身确实溢出时内部滚动。
 - 验证：`tests/renderer-boundary.test.ts` 2 项测试、`npm run typecheck`、`npm run lint` 和 `git diff --check` 通过；在用户当前 Electron 开发窗口中向下滚动右侧长资料树，右侧内容正常移动，品牌、全部导航项和底部版本号位置保持不变，随后恢复到顶部。
 - Git：准备创建本地 `fix(V11-04): keep sidebar fixed while scrolling` 修复提交；不 push。
+
+## 2026-08-22 · V11-05 · DONE
+
+- 自动主流程：新增 `tests/v1.1-acceptance.test.ts`，以 schema v11、班课无学生、最小有效 DOCX/PPTX/PDF、素材库 Markdown 和 fake provider 串起外部/素材选材、解析索引、Skill、本次要求、讲义生成/编辑/同行保存、保留旧稿的重新生成、例题/作业保存、退出重开与草稿/成果持久化；外部原件和素材原件保持不变。
+- V1 回归与质量门：`npm test`（31 files / 96 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run package:portable` 和 `git diff --check` 全部通过；课程/学生/课次、managed 文件、素材复制、搜索、Parser、AI Gateway、备份恢复和 portable 均纳入代表性证据。
+- Windows packaged smoke：最终 `release-l12/win-unpacked/教师工作台.exe` 在隔离 app-data 与 `user-data-dir` 启动成功；UI 显示 schema v11、假课程/课次/素材与两套预置 Skill；localhost fake AI 连接成功（31 ms）；固定全局导航在长内容滚动后仍存在。未使用真实 Key、真实资料、正式工作区或付费 provider。
+- 安全审计：`app.asar` 共 996 个文件，未发现 `.env`、运行数据库/索引、日志、证书、Key、秘密、备份或工作区数据；隔离 fake Key 明文在工作区、portable 和 build 中零命中；Renderer/Preload/Main 边界及 Electron sandbox 配置未退化。
+- 验收记录：完整结果与产品负责人最终操作清单见 `docs/v1.1-acceptance.md`。Windows 前台其他全屏应用会持续最小化验收窗口，因此没有用桌面自动化重复整条已由端到端测试覆盖的点击链；临时假资料、临时工作区、隔离用户数据和 fake server 已删除且不可恢复，未删除任何用户资料。
+- 当前状态：V11-05 实现与交付验证已完成，准备创建独立里程碑提交。产品负责人正在对候选包做体验测试；最终 `checkpoint-V1.1-pass` 仍须等待体验确认，V11-05 之后发现的小问题不回填到本任务中。
