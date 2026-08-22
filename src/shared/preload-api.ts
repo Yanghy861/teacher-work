@@ -99,8 +99,18 @@ import {
   type ExternalPathRequest,
   type ExternalRootSummary,
 } from './external-library-contracts'
+import {
+  isCreateSkillRequest,
+  isSkillIdRequest,
+  isSkillRecord,
+  isUpdateSkillRequest,
+  type CreateSkillRequest,
+  type SkillIdRequest,
+  type SkillRecord,
+  type UpdateSkillRequest,
+} from './skill-contracts'
 
-export { AI_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS } from './ipc-contracts'
+export { AI_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS, SKILL_IPC_CHANNELS } from './ipc-contracts'
 export type { BackupSummary, IpcChannel, RestoreSummary, WorkspaceInfo } from './ipc-contracts'
 export { isBackupSummary, isRestoreSummary } from './ipc-contracts'
 export type {
@@ -140,6 +150,7 @@ export type {
   ExternalPathRequest,
   ExternalRootSummary,
 } from './external-library-contracts'
+export type { CreateSkillRequest, SkillIdRequest, SkillRecord, UpdateSkillRequest } from './skill-contracts'
 
 export interface TeacherWorkbenchApi {
   app: {
@@ -187,6 +198,12 @@ export interface TeacherWorkbenchApi {
   }
   drafts: {
     generate: (request: GenerateDraftRequest) => Promise<GenerateDraftResult>
+  }
+  skills: {
+    list: () => Promise<readonly SkillRecord[]>
+    create: (request: CreateSkillRequest) => Promise<SkillRecord>
+    update: (request: UpdateSkillRequest) => Promise<SkillRecord>
+    softDelete: (request: SkillIdRequest) => Promise<SkillRecord>
   }
   externalLibrary: {
     getRoot: () => Promise<ExternalRootSummary | null>
@@ -251,4 +268,8 @@ export {
   isExternalPathRequest,
   isExternalRootSummary,
   isNullableExternalRootSummary,
+  isCreateSkillRequest,
+  isSkillIdRequest,
+  isSkillRecord,
+  isUpdateSkillRequest,
 }

@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { CoreDataService } from '../src/main/data/core-data-service'
+import { SkillService } from '../src/main/skills/skill-service'
 import {
   getAppliedMigrationVersions,
   type SqliteDatabase,
@@ -46,13 +47,13 @@ describe('workspace paths and SQLite foundation', () => {
     expect(first.paths.searchDirectory).toBe(join(root, 'search'))
     expect(first.paths.cacheDirectory).toBe(join(root, 'cache'))
     expect(first.paths.backupsDirectory).toBe(join(root, 'backups'))
-    expect(first.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 9 })
-    expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(first.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 10 })
+    expect(getAppliedMigrationVersions(first.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     first.close()
 
     const second = initializeWorkspace(root, installDirectory, { idFactory: () => 'should-not-replace-id' })
-    expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 9 })
-    expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(second.identity).toEqual({ workspaceId: 'workspace-test-id', schemaVersion: 10 })
+    expect(getAppliedMigrationVersions(second.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     expect(readWorkspaceIdentity(second.database.raw)).toEqual(second.identity)
     second.close()
   })
@@ -62,7 +63,7 @@ describe('workspace paths and SQLite foundation', () => {
     const root = join(temporaryRoot, 'workspace')
     const installDirectory = join(temporaryRoot, 'install')
     const failingMigration = {
-      version: 10,
+      version: 11,
       name: 'failing_test_migration',
       up: (database: SqliteDatabase) => {
         database.exec('CREATE TABLE should_rollback (value TEXT NOT NULL)')
@@ -77,8 +78,8 @@ describe('workspace paths and SQLite foundation', () => {
     ).toThrow('simulated migration failure')
 
     const reopened = initializeWorkspace(root, installDirectory)
-    expect(reopened.identity.schemaVersion).toBe(9)
-    expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(reopened.identity.schemaVersion).toBe(10)
+    expect(getAppliedMigrationVersions(reopened.database.raw)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     const rolledBackTable = reopened.database.raw
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'should_rollback'")
       .get()
@@ -103,8 +104,12 @@ describe('workspace paths and SQLite foundation', () => {
 
     const migrated = initializeWorkspace(root, installDirectory)
     const migratedCore = new CoreDataService(migrated.database.raw)
-    expect(migrated.identity.schemaVersion).toBe(9)
+    expect(migrated.identity.schemaVersion).toBe(10)
     expect(migratedCore.getOverview().notes).toContainEqual(oldNote)
+    expect(new SkillService(migrated.database.raw).listSkills().map((skill) => skill.name)).toEqual([
+      'AMC8 一对一常规备课',
+      '初中数学常规备课',
+    ])
 
     const classCourse = migratedCore.nodes.createCourse('无学生班课', 'class')
     const classPeriod = migratedCore.nodes.createPeriod(classCourse.id, '班课阶段')

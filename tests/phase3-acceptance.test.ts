@@ -14,6 +14,7 @@ import { dispatchCoreIpc } from '../src/main/ipc/core-ipc'
 import { dispatchDraftIpc } from '../src/main/ipc/draft-ipc'
 import { openSearchDatabase } from '../src/main/search/search-database'
 import { SearchService } from '../src/main/search/search-service'
+import { SkillService } from '../src/main/skills/skill-service'
 import { CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, IPC_ERROR_CODES } from '../src/shared/ipc-contracts'
 import { isGenerateDraftResult, type GenerateDraftResult } from '../src/shared/draft-contracts'
 import type { IpcLogger } from '../src/main/ipc/app-ipc'
@@ -112,7 +113,13 @@ function fixture(): AcceptanceFixture {
   }
   const logger = new AcceptanceLogger()
   const gateway = new AiGateway(settings, { fetch: fetcher, timeoutMs: 200, logger })
-  const draft = new DraftService(core, search, gateway, settings)
+  const draft = new DraftService(
+    core,
+    search,
+    gateway,
+    settings,
+    new SkillService(workspace.database.raw),
+  )
 
   const course = core.nodes.createCourse('L10 验收课程', 'one_to_one')
   const period = core.nodes.createPeriod(course.id, '阶段一')

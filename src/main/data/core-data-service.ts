@@ -6,7 +6,12 @@ import type {
   NoteRecord,
   StudentRecord,
 } from '../../shared/core-contracts'
-import { isDraftNoteMetadata, type DraftKind, type DraftNoteMetadata } from '../../shared/draft-contracts'
+import {
+  isDraftNoteMetadata,
+  type DraftKind,
+  type DraftLessonSnapshot,
+  type DraftNoteMetadata,
+} from '../../shared/draft-contracts'
 import type { SqliteDatabase } from '../db/migrations'
 import { NodeService } from './node-service'
 
@@ -62,6 +67,15 @@ interface NoteRow {
   readonly deleted_at: string | null
   readonly note_kind: 'manual' | DraftKind
   readonly ai_metadata_json: string | null
+}
+
+interface DraftLessonContextRow {
+  readonly course_id: string
+  readonly course_title: string
+  readonly course_mode: 'class' | 'one_to_one'
+  readonly period_title: string
+  readonly lesson_id: string
+  readonly lesson_title: string
 }
 
 export class CoreDataService {
@@ -216,6 +230,47 @@ export class CoreDataService {
         )
       return this.requireNote(id)
     })
+  }
+
+  getDraftLessonSnapshot(lessonId: string, studentId?: string): DraftLessonSnapshot {
+    this.requireActiveLesson(lessonId)
+    const row = this.database
+      .prepare(
+        `SELECT course.id AS course_id,
+                course.title AS course_title,
+                course.course_mode AS course_mode,
+                period.title AS period_title,
+                lesson.id AS lesson_id,
+                lesson.title AS lesson_title
+           FROM nodes AS lesson
+           JOIN nodes AS period ON period.id = lesson.parent_id AND period.kind = 'period'
+           JOIN nodes AS course ON course.id = period.parent_id AND course.kind = 'course'
+          WHERE lesson.id = ?
+            AND lesson.kind = 'lesson'
+            AND lesson.deleted_at IS NULL
+            AND period.deleted_at IS NULL
+            AND course.deleted_at IS NULL`,
+      )
+      .get(lessonId) as DraftLessonContextRow | undefined
+    if (row === undefined) {
+      throw new CoreDataError('INVALID_LESSON', '课次缺少有效的课程或阶段上下文。')
+    }
+
+    let student: StudentRecord | undefined
+    if (studentId !== undefined) {
+      this.requireStudentLinkedToLessonCourse(lessonId, studentId)
+      student = this.requireActiveStudent(studentId)
+    }
+
+    return {
+      courseId: row.course_id,
+      courseTitle: row.course_title,
+      courseMode: row.course_mode,
+      periodTitle: row.period_title,
+      lessonId: row.lesson_id,
+      lessonTitle: row.lesson_title,
+      ...(student === undefined ? {} : { studentId: student.id, studentName: student.name }),
+    }
   }
 
   updateNote(noteId: string, bodyMd: string): NoteRecord {

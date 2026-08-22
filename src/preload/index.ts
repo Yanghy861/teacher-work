@@ -10,6 +10,7 @@ import {
   DRAFT_IPC_CHANNELS,
   BACKUP_IPC_CHANNELS,
   EXTERNAL_LIBRARY_IPC_CHANNELS,
+  SKILL_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContentChanged,
   isManagedFileOverview,
@@ -29,6 +30,7 @@ import {
   isAiSettings,
   isAiTextResult,
   isGenerateDraftResult,
+  isSkillRecord,
   isBackupSummary,
   isRestoreSummary,
   isExternalActionResult,
@@ -58,6 +60,9 @@ import {
   type AiTextRequest,
   type UpdateAiSettingsRequest,
   type GenerateDraftRequest,
+  type CreateSkillRequest,
+  type SkillIdRequest,
+  type UpdateSkillRequest,
   type ExternalPathRequest,
   type ExternalLessonCopyRequest,
 } from '../shared/preload-api'
@@ -130,6 +135,14 @@ const api = Object.freeze({
   }),
   drafts: Object.freeze({
     generate: (request: GenerateDraftRequest) => invoke(DRAFT_IPC_CHANNELS.generate, request, isGenerateDraftResult),
+  }),
+  skills: Object.freeze({
+    list: () => invoke(SKILL_IPC_CHANNELS.list, {}, (value): value is readonly import('../shared/preload-api').SkillRecord[] =>
+      Array.isArray(value) && value.every(isSkillRecord),
+    ),
+    create: (request: CreateSkillRequest) => invoke(SKILL_IPC_CHANNELS.create, request, isSkillRecord),
+    update: (request: UpdateSkillRequest) => invoke(SKILL_IPC_CHANNELS.update, request, isSkillRecord),
+    softDelete: (request: SkillIdRequest) => invoke(SKILL_IPC_CHANNELS.softDelete, request, isSkillRecord),
   }),
   externalLibrary: Object.freeze({
     getRoot: () => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.getRoot, {}, isNullableExternalRootSummary),

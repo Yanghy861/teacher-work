@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import type { AiKeyStorageMode, AiSettings, ExternalRootSummary } from '../shared/preload-api'
+import SkillSettingsPanel from './skill-settings-panel'
 
 const initialSettings: AiSettings = {
   provider: 'openai-compatible',
@@ -145,7 +146,7 @@ export default function SettingsPanel(): React.JSX.Element {
   }
 
   return (
-    <section className="settings-panel" aria-label="AI 设置">
+    <section className="settings-panel" aria-label="设置">
       <div className="workspace-card">
         <div className="card-heading">
           <div>
@@ -174,6 +175,7 @@ export default function SettingsPanel(): React.JSX.Element {
           {externalRoot === null ? '选择资料目录' : '更改资料目录'}
         </button>
       </div>
+      <SkillSettingsPanel />
       <div className="workspace-card">
         <div className="card-heading">
           <div>

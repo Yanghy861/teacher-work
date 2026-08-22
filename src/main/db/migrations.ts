@@ -221,6 +221,44 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 10,
+    name: 'create_prompt_skills',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE skills (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+          prompt TEXT NOT NULL CHECK (length(trim(prompt)) > 0),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+
+        CREATE INDEX idx_skills_active_updated
+          ON skills (deleted_at, updated_at DESC, id);
+
+        INSERT INTO skills (id, name, prompt, created_at, updated_at, deleted_at)
+        VALUES
+          (
+            'starter-amc8-lesson-prep-v1',
+            'AMC8 一对一常规备课',
+            '你是我的 AMC8 一对一备课助手。请围绕当前课次和明确选择的资料组织内容：讲义要面向学生、简洁、结构清楚并突出公式、解题动作与常见错误；例题按基础热身、标准应用、综合迁移和挑战题形成难度梯度；作业默认控制为 10 题，兼顾直接巩固与 AMC8 风格应用，较难题用 * 标记。除非本次要求明确提出，否则不要在学生版练习或作业中泄露答案，也不要加入教师内部规划说明。',
+            '2026-08-22T00:00:00.000Z',
+            '2026-08-22T00:00:00.000Z',
+            NULL
+          ),
+          (
+            'starter-middle-school-math-prep-v1',
+            '初中数学常规备课',
+            '你是我的初中数学一对一备课助手。请以当前课次、教材范围、学生实际进度和明确选择的资料为依据：优先提炼核心知识与前置基础，少讲空泛理论，多用分层例题说明方法，突出学生容易出错的地方和可直接用于课堂的表达。作业量不要套用固定题数，应根据本节范围、题目难度、学生状态与当前薄弱点安排；不要超出已学范围，也不要虚构资料中没有的学情。',
+            '2026-08-22T00:00:00.000Z',
+            '2026-08-22T00:00:00.000Z',
+            NULL
+          );
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

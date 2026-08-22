@@ -47,6 +47,13 @@ export const DRAFT_IPC_CHANNELS = {
   generate: 'draft:generate',
 } as const
 
+export const SKILL_IPC_CHANNELS = {
+  list: 'skills:list',
+  create: 'skills:create',
+  update: 'skills:update',
+  softDelete: 'skills:soft-delete',
+} as const
+
 export const BACKUP_IPC_CHANNELS = {
   create: 'backup:create',
   restore: 'backup:restore',
@@ -73,6 +80,7 @@ export type IpcChannel =
   | (typeof SEARCH_IPC_CHANNELS)[keyof typeof SEARCH_IPC_CHANNELS]
   | (typeof AI_IPC_CHANNELS)[keyof typeof AI_IPC_CHANNELS]
   | (typeof DRAFT_IPC_CHANNELS)[keyof typeof DRAFT_IPC_CHANNELS]
+  | (typeof SKILL_IPC_CHANNELS)[keyof typeof SKILL_IPC_CHANNELS]
   | (typeof BACKUP_IPC_CHANNELS)[keyof typeof BACKUP_IPC_CHANNELS]
   | (typeof EXTERNAL_LIBRARY_IPC_CHANNELS)[keyof typeof EXTERNAL_LIBRARY_IPC_CHANNELS]
 
@@ -85,6 +93,7 @@ export const IPC_ERROR_CODES = {
   SEARCH_ERROR: 'SEARCH_ERROR',
   AI_ERROR: 'AI_ERROR',
   DRAFT_ERROR: 'DRAFT_ERROR',
+  SKILL_ERROR: 'SKILL_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   INVALID_RESPONSE: 'INVALID_RESPONSE',
   BACKUP_ERROR: 'BACKUP_ERROR',

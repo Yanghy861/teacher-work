@@ -6,8 +6,10 @@ import {
   DRAFT_DEFAULT_MAX_CHARS,
   DRAFT_DEFAULT_MAX_TOKENS,
   DRAFT_KINDS,
+  DRAFT_REQUIREMENT_MAX_CHARS,
   type DraftKind,
 } from '../shared/draft-contracts'
+import type { SkillRecord } from '../shared/skill-contracts'
 import {
   listLessonPrepFiles,
   reconcileSelectedLessonFileIds,
@@ -34,6 +36,9 @@ export default function DraftPanel({
   const [files, setFiles] = useState<ManagedFileOverview | null>(null)
   const [core, setCore] = useState<CoreOverview | null>(null)
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
+  const [skills, setSkills] = useState<readonly SkillRecord[]>([])
+  const [selectedSkillId, setSelectedSkillId] = useState('')
+  const [requirement, setRequirement] = useState('')
   const [busyKind, setBusyKind] = useState<DraftKind | ''>('')
   const [editing, setEditing] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
@@ -56,6 +61,8 @@ export default function DraftPanel({
   useEffect(() => {
     knownLessonFileIds.current = new Set()
     setSelectedFileIds([])
+    setSelectedSkillId('')
+    setRequirement('')
     setEditing({})
     if (context !== null) void reload()
   }, [context?.lessonId])
@@ -71,12 +78,14 @@ export default function DraftPanel({
 
   async function reload(): Promise<void> {
     try {
-      const [nextFiles, nextCore] = await Promise.all([
+      const [nextFiles, nextCore, nextSkills] = await Promise.all([
         window.teacherWorkbench.files.getOverview(),
         window.teacherWorkbench.core.getOverview(),
+        window.teacherWorkbench.skills.list(),
       ])
       setFiles(nextFiles)
       setCore(nextCore)
+      setSkills(nextSkills)
       setError('')
     } catch (loadError) {
       setError(toErrorMessage(loadError))
@@ -103,6 +112,8 @@ export default function DraftPanel({
         kind,
         lessonId: context.lessonId,
         ...(context.studentId === undefined ? {} : { studentId: context.studentId }),
+        ...(selectedSkillId === '' ? {} : { skillId: selectedSkillId }),
+        ...(requirement.trim() === '' ? {} : { requirement: requirement.trim() }),
         sources: selectedFiles.map((file) => ({ fileId: file.id })),
         maxChars: DRAFT_DEFAULT_MAX_CHARS,
         maxTokens: DRAFT_DEFAULT_MAX_TOKENS,
@@ -211,8 +222,35 @@ export default function DraftPanel({
               <span className="selection-label">已选 {selectedFiles.length} 份</span>
             </div>
             <p className="prep-guidance">
-              本阶段使用当前课次和已勾选资料生成；Skill 与本次要求将在下一里程碑接入。
+              当前课次、已勾选资料、可选 Skill 与本次要求会在 Main 中分区组合，再执行固定生成任务。
             </p>
+            <div className="prep-input-grid">
+              <label>
+                我的 Skill（可选）
+                <select
+                  value={selectedSkillId}
+                  onChange={(event) => setSelectedSkillId(event.target.value)}
+                  disabled={busyKind !== ''}
+                >
+                  <option value="">不使用 Skill</option>
+                  {skills.map((skill) => (
+                    <option key={skill.id} value={skill.id}>{skill.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                本次要求（可选）
+                <textarea
+                  value={requirement}
+                  onChange={(event) => setRequirement(event.target.value)}
+                  maxLength={DRAFT_REQUIREMENT_MAX_CHARS}
+                  rows={4}
+                  placeholder="例如：今天少讲理论，多安排基础题，重点讲圆的面积。"
+                  disabled={busyKind !== ''}
+                />
+                <small className="field-counter">{requirement.length} / {DRAFT_REQUIREMENT_MAX_CHARS}</small>
+              </label>
+            </div>
             <div className="prep-generate-actions">
               {([DRAFT_KINDS.lecture, DRAFT_KINDS.example, DRAFT_KINDS.homework] as DraftKind[]).map((kind) => (
                 <button

@@ -10,6 +10,7 @@ import { registerAiIpc } from './ipc/ai-ipc'
 import { registerDraftIpc } from './ipc/draft-ipc'
 import { registerBackupIpc } from './ipc/backup-ipc'
 import { registerExternalLibraryIpc } from './ipc/external-library-ipc'
+import { registerSkillIpc } from './ipc/skill-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
@@ -25,6 +26,7 @@ import { electronSecureStorage } from './ai/secure-storage'
 import { DraftService } from './draft/draft-service'
 import { BackupRestoreService } from './backup/backup-service'
 import { ExternalLibraryService } from './external/external-library-service'
+import { SkillService } from './skills/skill-service'
 import { BACKUP_DIRECTORY_NAME } from './backup/backup-service'
 import { WorkspaceActivityError, WorkspaceActivityGate } from './workspace/activity-gate'
 import {
@@ -49,11 +51,13 @@ let unregisterAiIpc: (() => void) | null = null
 let unregisterDraftIpc: (() => void) | null = null
 let unregisterBackupIpc: (() => void) | null = null
 let unregisterExternalLibraryIpc: (() => void) | null = null
+let unregisterSkillIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
 let backupRestoreService: BackupRestoreService | null = null
 let externalLibraryService: ExternalLibraryService | null = null
+let skillService: SkillService | null = null
 const deferredIndexIds = new Set<string>()
 const deferredRefreshTriggers = new Set<string>()
 let servicesClosed = false
@@ -145,8 +149,21 @@ function getAiGateway(): AiGateway {
   return aiGateway
 }
 
+function getSkillService(): SkillService {
+  if (workspaceHandle === null) getWorkspaceInfo()
+  if (workspaceHandle === null) throw new Error('Workspace was not initialized')
+  skillService ??= new SkillService(workspaceHandle.database.raw)
+  return skillService
+}
+
 function getDraftService(): DraftService {
-  draftService ??= new DraftService(getCoreData(), getSearchService(), getAiGateway(), getAiSettings())
+  draftService ??= new DraftService(
+    getCoreData(),
+    getSearchService(),
+    getAiGateway(),
+    getAiSettings(),
+    getSkillService(),
+  )
   return draftService
 }
 
@@ -339,6 +356,11 @@ void app.whenReady().then(() => {
     { getDraftService, activityGate },
     logger,
   )
+  unregisterSkillIpc = registerSkillIpc(
+    ipcMain,
+    { getSkillService, activityGate },
+    logger,
+  )
   unregisterBackupIpc = registerBackupIpc(
     ipcMain,
     {
@@ -442,12 +464,14 @@ app.on('before-quit', (event) => {
   unregisterDraftIpc?.()
   unregisterBackupIpc?.()
   unregisterExternalLibraryIpc?.()
+  unregisterSkillIpc?.()
   coreDataService = null
   managedFileService = null
   aiGateway = null
   aiSettingsService = null
   draftService = null
   externalLibraryService = null
+  skillService = null
   void (async () => {
     await documentIndexWorker?.close()
     documentIndexWorker = null

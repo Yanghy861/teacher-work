@@ -831,6 +831,97 @@ button:disabled {
   gap: 14px;
 }
 
+.prep-input-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.8fr) minmax(280px, 1.2fr);
+  align-items: start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.prep-input-grid label,
+.skill-editor-form label {
+  display: grid;
+  gap: 7px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.prep-input-grid textarea,
+.skill-editor-form textarea {
+  resize: vertical;
+}
+
+.field-counter {
+  justify-self: end;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.skill-settings-card {
+  grid-column: 1 / -1;
+}
+
+.skill-settings-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(320px, 1.2fr);
+  gap: 16px;
+}
+
+.skill-settings-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skill-settings-list li:not(.empty-state) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px;
+  background: #f8fafc;
+}
+
+.skill-settings-list li.is-selected {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.skill-select-button {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
+  border: 0;
+  padding: 3px;
+  background: transparent;
+  color: #1e293b;
+  text-align: left;
+}
+
+.skill-select-button strong,
+.skill-select-button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-select-button small {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.skill-editor-form {
+  align-content: start;
+}
+
 .external-library-panel {
   display: grid;
   max-width: 1120px;
@@ -1128,7 +1219,9 @@ button:disabled {
   }
 
   .lesson-prep-layout,
-  .prep-generate-actions {
+  .prep-generate-actions,
+  .prep-input-grid,
+  .skill-settings-layout {
     grid-template-columns: 1fr;
   }
 
