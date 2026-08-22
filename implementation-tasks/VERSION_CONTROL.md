@@ -1,4 +1,4 @@
-# 教师工作台 Lean V1 · Git 版本控制协议
+# 教师工作台 V1 / V1.1 · Git 版本控制协议
 
 ## 1. 授权与禁止事项
 
@@ -12,22 +12,25 @@
 - `checkpoint-T00`、`checkpoint-T03-pass` 及 T01–T08 的提交历史继续有效；
 - T08 通过后创建 `checkpoint-T08-pass`；
 - 旧 T09–T42 不再产生任务提交；活动链只使用 L01–L12；
-- 后续审核标签依次为 `checkpoint-L04-pass`、`checkpoint-L07-pass`、`checkpoint-L10-pass`、`checkpoint-L12-pass`。
+- V1 审核标签 `checkpoint-L04-pass`、`checkpoint-L07-pass`、`checkpoint-L10-pass`、`checkpoint-L12-pass` 均已创建；`checkpoint-L12-pass` 是 V1.1 的固定起点；
+- V1.1 唯一活动链为 V11-01–V11-05，不继续编号为 L13/L14，也不回改 L01–L12；
+- V1.1 方案提交使用 `plan(V1.1): <摘要>`，里程碑提交使用 `v1.1(V11-XX): <摘要>`；
+- V11-05 完成全部验证且产品负责人确认代表性流程后，才可在最终提交上创建 `checkpoint-V1.1-pass`。
 
-## 3. Luna 的里程碑提交
+## 3. 实施里程碑提交
 
-每个 Lxx 里程碑执行：
+每个活动里程碑执行：
 
 1. 开始前检查 `git status --short --branch` 和最近提交；保留被中断的已有成果，不 reset/clean；
 2. 只修改当前里程碑及必要的状态/进度文件；
-3. 普通里程碑运行相关测试、typecheck、lint；审核闸门额外运行全量测试和 production build；
+3. 普通里程碑运行相关测试、typecheck、lint；V1 历史闸门按原协议执行，V11-05 额外运行全量测试、production build、portable packaging 和代表性 Windows smoke；
 4. 检查 `.gitignore`，确保 `.env`、Key、真实资料、运行数据库、索引、备份、日志、临时文件、`node_modules` 和构建产物未进入暂存区；
 5. 使用路径明确的 `git add -- <files...>`，不使用 `git add .` 或 `git add -A`；
 6. 提交前运行 `git diff --check`、`git diff --cached --stat`，并审阅完整 staged diff；
-7. 验收齐全且状态为 `DONE` 时提交 `lean(LXX): <简短名称>`；真实阻塞可提交 `blocked(LXX): <原因>`；
+7. 验收齐全且状态为 `DONE` 时，历史 V1 使用 `lean(LXX): <简短名称>`，V1.1 使用 `v1.1(V11-XX): <简短名称>`；真实阻塞使用对应任务号提交 `blocked(<任务号>): <原因>`；
 8. 不自动 push。无法把当前成果与不明改动安全分离时停止并说明。
 
-## 4. 审核交接
+## 4. V1 历史审核交接
 
 审核点为 T08、L04、L07、L10、L12：
 
@@ -40,7 +43,9 @@
 
 审核基线：T08 使用 `checkpoint-T03-pass`；L04 使用 `checkpoint-T08-pass`；L07 使用 `checkpoint-L04-pass`；L10 使用 `checkpoint-L07-pass`；L12 使用 `checkpoint-L10-pass`。
 
-## 5. Sol 的独立审核
+上述审核链已全部完成，只用于历史追溯。V1.1 不复制这套多阶段审核流程：V11-01–V11-04 正常完成和提交；V11-05 是唯一最终验收点，形成 `docs/v1.1-acceptance.md`，在自动质量门、Windows 代表性流程和产品负责人体验确认均完成后创建 `checkpoint-V1.1-pass`。
+
+## 5. V1 历史 Sol 独立审核
 
 - 验证候选 SHA、审核基线与工作区状态，审核 `<上一通过标签>..<候选 SHA>`，并查看候选后的送审元数据；
 - 按当前 Lean 任务及适用风险复现关键检查，不得按已退役 T09–T42 的增强要求拒绝通过；

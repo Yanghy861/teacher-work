@@ -415,3 +415,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 结论：无 P0–P3 阻塞 finding；portable Windows 交付、首次启动/工作区创建/退出/重开、资料管理、搜索、fake-provider 备课、备份恢复、Renderer 安全边界与包内容审计均通过。
 - 验证：`npm test`（24 files / 70 tests）、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run package:portable`、`git diff --check` 全部通过。
 - 审核状态：L12 `PASS`；待在审核提交上创建 `checkpoint-L12-pass`。Lean V1 总验收完成。
+
+## 2026-08-22 · V1.1 · PLAN_CONFIRMED
+
+- 基线：Lean V1 已完成并固定在 `checkpoint-L12-pass`；L01–L12 保持 `DONE`，V1.1 不回改历史里程碑。
+- 产品方向：文字规格优先于三张参考图；外部资料采用一个只读 root 的 lazy 资料树，从课次直接进入备课，加入的外部/素材均复制为本课 managed 独立副本。
+- AI 取舍：草稿必须绑定 lesson、不再强制 student；Skill 只是可复用 Prompt；本次要求可空；继续使用讲义/例题/作业三个固定动作和现有 Gateway/ContextBuilder。
+- 草稿规则：生成成功自动保存为 `draft`；全局备课入口提供草稿箱；重新生成创建新草稿并保留旧稿；同一内容区切换 Preview/Editor；“保存到当前课次”把同一正文改为 `saved`，不复制双份内容。
+- 实施链：新增 `v1.1-tasks/V11-01`–`V11-05` 五个轻量里程碑。V11-01–V11-04 只做相关测试、typecheck、lint；V11-05 做完整回归、build、portable packaging 和代表性 Windows smoke。
+- 明确 Later：多 root、外部目录扫描/监听/全文索引、Office/PDF 高保真预览、草稿版本树、审批审计、Workflow/Agent 和企业级验证矩阵。
+- Git：方案作为独立本地 `plan(V1.1)` 提交保存；后续使用 `v1.1(V11-XX)` 里程碑提交，最终通过标签为 `checkpoint-V1.1-pass`；不自动 push。

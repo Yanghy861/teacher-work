@@ -1,5 +1,7 @@
 # Sol Max 独立审核提示词
 
+> 历史说明：V1 的 T08、L04、L07、L10、L12 均已 PASS。本提示词只用于历史复现；V1.1 不建立多阶段 Sol 审核链。
+
 当 `SOL_REVIEW_STATUS.md` 有 `AWAITING_REVIEW` 时，在同一个 `D:\teacher_work` checkout 使用 Sol Max 执行：
 
 ```text

@@ -1,4 +1,6 @@
-# Lean V1 全局实施约束
+# 教师工作台 V1 / V1.1 全局实施约束
+
+Lean V1 已在 `checkpoint-L12-pass` 完成。本文件中的安全边界继续适用于 V1.1；V1.1 的新增产品范围与简单化裁决以 `V1_1_DECISIONS.md` 为准。
 
 ## 1. 产品目标
 
@@ -35,7 +37,7 @@ V1 只证明三条核心流程：
 
 ## 4. 文件刷新、搜索与解析
 
-- V1 只管理导入到工作台的副本；任意外部根目录扫描、重定位和长期同步进入 Later；
+- V1 只管理导入到工作台的副本；V1.1 仅新增一个外部根目录的按需只读浏览和复制入口，任意后台扫描、多 root、重定位、全文索引和长期同步继续进入 Later；
 - 启动、窗口重新获得焦点、重新打开文件和手动刷新时做轻量核对；watcher 可以省略，不能成为正确性的前置条件；
 - 搜索覆盖标题、文件名、note/body，以及 TXT、MD、文本 PDF、DOCX、PPTX、XLSX 的可提取文本；不做 OCR；
 - 必须区分 `indexed`、`no_text` 和 `parse_failed`，但单个文件失败不能阻止其他文件可用；
@@ -52,7 +54,7 @@ V1 只证明三条核心流程：
 
 ## 6. 完成与阻塞规则
 
-普通 Lxx 里程碑必须运行相关测试、typecheck、lint；L04、L07、L10、L12 额外运行全量测试和 production build，并接受 Sol 审核。
+历史 Lxx 的验证规则保持不变。V11-01–V11-04 运行相关测试、typecheck、lint；V11-05 额外运行全量测试、production build、portable packaging 和代表性 Windows smoke。V1.1 不建立多层企业审核链。
 
 只有以下情况可以标记 `BLOCKED`：
 

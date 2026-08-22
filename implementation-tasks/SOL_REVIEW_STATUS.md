@@ -7,7 +7,7 @@
 - `CHANGES_REQUIRED`：Sol 发现阻塞问题，Luna 只能修复当前审核区间后再次送审；
 - `PASS`：Sol 已审核通过，可以进入下一段。
 
-Luna 只能把 `PENDING`/`CHANGES_REQUIRED` 改为 `AWAITING_REVIEW` 并填写候选提交；只有独立 Sol 会话可以写 `PASS` 或 `CHANGES_REQUIRED`。旧 T15/T20/T24/T32/T33/T38/T40/T42 审核点随 T09–T42 一并退役；当前审核链只有 T08、L04、L07、L10、L12。
+Luna 只能把 `PENDING`/`CHANGES_REQUIRED` 改为 `AWAITING_REVIEW` 并填写候选提交；只有独立 Sol 会话可以写 `PASS` 或 `CHANGES_REQUIRED`。旧 T15/T20/T24/T32/T33/T38/T40/T42 审核点随 T09–T42 一并退役；V1 的 T08、L04、L07、L10、L12 审核链已全部完成。本表作为 V1 历史审核记录保留，V1.1 不新增多阶段 Sol 审核表，只有 V11-05 一个轻量最终验收点。
 
 | 审核点 | 审核区间 | 状态 | 候选提交 SHA | 通过标签 | Sol 报告/备注 |
 |---|---|---|---|---|---|

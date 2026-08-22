@@ -1,5 +1,7 @@
 # Luna Max 单个 Lean 里程碑提示词
 
+> 历史说明：Lean V1 已在 `checkpoint-L12-pass` 完成。本提示词只保留用于复现 V1；当前 V1.1 请使用 `V1_1_RUN_PROMPT.md`。
+
 把 `LXX` 与文件名替换为当前活动里程碑：
 
 ```text
