@@ -1,94 +1,70 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import type {
-  CoreOverview,
-  CourseMode,
-  NodeRecord,
-} from '../shared/core-contracts'
-import ManagedFilesPanel from './managed-files-panel'
+import type { CoreOverview, CourseMode } from '../shared/core-contracts'
+import ConfirmLessonTaughtModal from './confirm-lesson-taught-modal'
+import CourseDetail from './course-detail'
+import CourseList from './course-list'
+import {
+  buildCourseSummaries,
+  formatLocalDateTime,
+  listTodayAttendance,
+  type CourseSummary,
+} from './course-view-model'
+import LessonAttendanceModal from './lesson-attendance-modal'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
+import Modal from './modal'
+
+type CourseFilter = 'active' | 'ended'
 
 export default function CourseDashboard({
   onStartPrep,
+  onOpenDraft,
+  onOpenDraftInbox,
 }: {
   readonly onStartPrep: (context: LessonPrepContext) => void
+  readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
+  readonly onOpenDraftInbox: () => void
 }): React.JSX.Element {
   const [overview, setOverview] = useState<CoreOverview | null>(null)
   const [selectedCourseId, setSelectedCourseId] = useState('')
-  const [selectedPeriodId, setSelectedPeriodId] = useState('')
-  const [selectedLessonId, setSelectedLessonId] = useState('')
-  const [selectedStudentId, setSelectedStudentId] = useState('')
-  const [courseTitle, setCourseTitle] = useState('')
-  const [courseMode, setCourseMode] = useState<CourseMode>('one_to_one')
-  const [periodTitle, setPeriodTitle] = useState('')
-  const [lessonTitle, setLessonTitle] = useState('')
-  const [studentName, setStudentName] = useState('')
-  const [noteBody, setNoteBody] = useState('')
+  const [viewedLessonId, setViewedLessonId] = useState('')
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<CourseFilter>('active')
+  const [createCourseOpen, setCreateCourseOpen] = useState(false)
+  const [attendanceLessonId, setAttendanceLessonId] = useState<string | null>(null)
+  const [confirmLessonId, setConfirmLessonId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
-  const courses = useMemo(
-    () => overview?.nodes.filter((node) => node.kind === 'course') ?? [],
+  const summaries = useMemo(
+    () => overview === null ? [] : buildCourseSummaries(overview),
     [overview],
   )
-  const selectedCourse = courses.find((course) => course.id === selectedCourseId)
-  const periods = useMemo(
-    () =>
-      overview?.nodes.filter(
-        (node) => node.kind === 'period' && node.parentId === selectedCourseId,
-      ) ?? [],
-    [overview, selectedCourseId],
+  const visibleSummaries = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('zh-CN')
+    return summaries.filter((summary) =>
+      summary.ended === (filter === 'ended') &&
+      (query === '' || summary.course.title.toLocaleLowerCase('zh-CN').includes(query)),
+    )
+  }, [filter, search, summaries])
+  const selectedSummary = summaries.find((summary) => summary.course.id === selectedCourseId) ?? null
+  const todayItems = useMemo(
+    () => overview === null ? [] : listTodayAttendance(overview),
+    [overview],
   )
-  const lessons = useMemo(
-    () =>
-      overview?.nodes.filter(
-        (node) => node.kind === 'lesson' && node.parentId === selectedPeriodId,
-      ) ?? [],
-    [overview, selectedPeriodId],
-  )
-  const students = useMemo(
-    () =>
-      overview?.students.filter((student) =>
-        overview.courseStudentLinks.some(
-          (link) => link.courseId === selectedCourseId && link.studentId === student.id,
-        ),
-      ) ?? [],
-    [overview, selectedCourseId],
-  )
-  const selectedStudent = students.find((student) => student.id === selectedStudentId)
-  const selectedLesson = lessons.find((lesson) => lesson.id === selectedLessonId)
-  const selectedStudentNotes = overview?.notes.filter(
-    (note) => note.studentId === selectedStudentId,
-  ) ?? []
+  const draftCount = overview?.notes.filter(
+    (note) => note.deletedAt === null && note.draftStatus === 'draft',
+  ).length ?? 0
+
+  useEffect(() => { void reload() }, [])
 
   useEffect(() => {
-    void reload()
-  }, [])
-
-  useEffect(() => {
-    if (selectedCourseId === '' || !courses.some((course) => course.id === selectedCourseId)) {
-      setSelectedCourseId(courses[0]?.id ?? '')
+    if (!visibleSummaries.some((summary) => summary.course.id === selectedCourseId)) {
+      setSelectedCourseId(visibleSummaries[0]?.course.id ?? '')
     }
-  }, [courses, selectedCourseId])
-
-  useEffect(() => {
-    if (selectedPeriodId === '' || !periods.some((period) => period.id === selectedPeriodId)) {
-      setSelectedPeriodId(periods[0]?.id ?? '')
-    }
-  }, [periods, selectedPeriodId])
-
-  useEffect(() => {
-    if (selectedLessonId === '' || !lessons.some((lesson) => lesson.id === selectedLessonId)) {
-      setSelectedLessonId(lessons[0]?.id ?? '')
-    }
-  }, [lessons, selectedLessonId])
-
-  useEffect(() => {
-    if (selectedStudentId === '' || !students.some((student) => student.id === selectedStudentId)) {
-      setSelectedStudentId(students[0]?.id ?? '')
-    }
-  }, [selectedStudentId, students])
+  }, [selectedCourseId, visibleSummaries])
 
   async function reload(): Promise<void> {
     setLoading(true)
@@ -102,360 +78,256 @@ export default function CourseDashboard({
     }
   }
 
-  async function runAction(action: () => Promise<unknown>): Promise<void> {
+  async function runAction(
+    action: () => Promise<void>,
+    successMessage: string,
+  ): Promise<boolean> {
     setBusy(true)
     setError('')
+    setNotice('')
     try {
       await action()
       await reload()
+      setNotice(successMessage)
+      return true
     } catch (actionError) {
       setError(toErrorMessage(actionError))
+      return false
     } finally {
       setBusy(false)
     }
   }
 
-  function submitCourse(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    if (courseTitle.trim() === '') {
-      return
-    }
-    void runAction(async () => {
-      const created = await window.teacherWorkbench.core.createCourse({
-        title: courseTitle,
-        mode: courseMode,
-      })
-      setSelectedCourseId(created.id)
-      setCourseTitle('')
-    })
+  function selectCourse(courseId: string): void {
+    setSelectedCourseId(courseId)
+    const summary = summaries.find((candidate) => candidate.course.id === courseId)
+    setViewedLessonId(summary?.currentLesson?.id ?? summary?.lessons[0]?.id ?? '')
   }
 
-  function submitPeriod(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    if (selectedCourseId === '' || periodTitle.trim() === '') {
+  function primaryAction(summary: CourseSummary): void {
+    selectCourse(summary.course.id)
+    if (summary.primaryAction === 'continue_prep' && summary.currentLesson !== null && summary.currentDraft !== null) {
+      onOpenDraft(
+        createLessonPrepContext(summary.course, summary.currentLesson, summary.activeStudents),
+        summary.currentDraft.id,
+      )
       return
     }
-    void runAction(async () => {
-      const created = await window.teacherWorkbench.core.createPeriod({
-        courseId: selectedCourseId,
-        title: periodTitle,
-      })
-      setSelectedPeriodId(created.id)
-      setPeriodTitle('')
-    })
+    if (summary.primaryAction === 'start_prep' && summary.currentLesson !== null) {
+      onStartPrep(createLessonPrepContext(summary.course, summary.currentLesson, summary.activeStudents))
+      return
+    }
+    if (summary.primaryAction === 'reopen') {
+      void runAction(async () => {
+        await window.teacherWorkbench.core.reopenCourse({ courseId: summary.course.id })
+        setFilter('active')
+      }, '课程已重新开启。')
+    }
   }
 
-  function submitLesson(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    if (selectedPeriodId === '' || lessonTitle.trim() === '') {
-      return
-    }
-    void runAction(async () => {
-      const created = await window.teacherWorkbench.core.createLesson({
-        periodId: selectedPeriodId,
-        title: lessonTitle,
-      })
-      setSelectedLessonId(created.id)
-      setLessonTitle('')
-    })
-  }
-
-  function submitStudent(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    if (selectedCourseId === '' || studentName.trim() === '') {
-      return
-    }
-    void runAction(async () => {
-      const created = await window.teacherWorkbench.core.createStudent({
-        courseId: selectedCourseId,
-        name: studentName,
-      })
-      setSelectedStudentId(created.id)
-      setStudentName('')
-    })
-  }
-
-  function submitNote(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    if (selectedStudentId === '' || noteBody.trim() === '') {
-      return
-    }
-    void runAction(async () => {
-      setNoteBody('')
-      await window.teacherWorkbench.core.createNote({
-        studentId: selectedStudentId,
-        bodyMd: noteBody,
-      })
-    })
+  function openTodayAttendance(courseId: string, lessonId: string): void {
+    setFilter('active')
+    setSelectedCourseId(courseId)
+    setViewedLessonId(lessonId)
+    setAttendanceLessonId(lessonId)
   }
 
   if (loading && overview === null) {
     return <section className="workspace-card">正在读取课程数据…</section>
   }
 
+  const attendanceContext = attendanceLessonId === null
+    ? null
+    : findLessonContext(summaries, attendanceLessonId)
+  const confirmContext = confirmLessonId === null
+    ? null
+    : findLessonContext(summaries, confirmLessonId)
+
   return (
     <div className="course-dashboard" aria-live="polite">
-      {error !== '' && (
-        <div className="inline-error" role="alert">
-          {error}
+      {error !== '' && <div className="inline-error" role="alert">{error}</div>}
+      {notice !== '' && <div className="inline-notice" role="status">{notice}</div>}
+
+      <header className="course-page-header">
+        <div className="course-page-stats">
+          <span><strong>全部课程 {summaries.length}</strong></span>
+          <button type="button" onClick={onOpenDraftInbox}>待处理草稿 {draftCount}</button>
         </div>
+        <div className="course-page-actions">
+          <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
+          <button className="primary-button" type="button" disabled={busy} onClick={() => setCreateCourseOpen(true)}>+ 创建课程</button>
+        </div>
+      </header>
+
+      {todayItems.length > 0 && (
+        <section className="today-attendance-strip" aria-label="今日待点名">
+          <h2>今日待点名</h2>
+          <div className="today-attendance-list">
+            {todayItems.map((item) => (
+              <div className="today-attendance-row" key={item.lesson.id}>
+                <time>{formatLocalDateTime(item.session.scheduledAt)}</time>
+                <div>
+                  <strong>{item.course.title} · {item.period.title} · 第 {item.lessonNumber} 课 {item.lesson.title}</strong>
+                  <span>{attendanceSummary(item.session, item.activeStudentCount)}</span>
+                </div>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => openTodayAttendance(item.course.id, item.lesson.id)}
+                >
+                  {item.session.attendanceRecordedAt === null ? '点名' : '修改点名'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
-      <section className="workspace-card introduction-card">
-        <div>
-          <p className="section-kicker">核心数据</p>
-          <h2>课程树</h2>
-          <p>选择具体课次后可直接开始备课，页面会自动带入课程、课次和可用学生信息。</p>
-        </div>
-        <button className="secondary-button" type="button" onClick={() => void reload()} disabled={busy}>
-          刷新
-        </button>
-      </section>
-
-      <section className="workspace-card">
-        <div className="card-heading">
-          <div>
-            <p className="section-kicker">第一步</p>
-            <h2>建立课程</h2>
-          </div>
-          <span className="count-label">{courses.length} 门课程</span>
-        </div>
-        <form className="inline-form" onSubmit={submitCourse}>
-          <label>
-            课程名称
-            <input
-              aria-label="课程名称"
-              value={courseTitle}
-              onChange={(event) => setCourseTitle(event.target.value)}
-              placeholder="例如：张三一对一"
-              disabled={busy}
-            />
-          </label>
-          <label>
-            类型
-            <select
-              aria-label="课程类型"
-              value={courseMode}
-              onChange={(event) => setCourseMode(event.target.value as CourseMode)}
-              disabled={busy}
-            >
-              <option value="one_to_one">一对一</option>
-              <option value="class">班课</option>
-            </select>
-          </label>
-          <button className="primary-button" type="submit" disabled={busy || courseTitle.trim() === ''}>
-            创建课程
-          </button>
-        </form>
-        <div className="tree-list" aria-label="课程树">
-          {courses.length === 0 && <p className="empty-state">还没有课程，从上面的表单开始。</p>}
-          {courses.map((course) => (
-            <CourseTreeItem
-              key={course.id}
-              course={course}
-              nodes={overview?.nodes ?? []}
-              selected={course.id === selectedCourseId}
-              onSelect={() => setSelectedCourseId(course.id)}
-            />
-          ))}
-        </div>
-      </section>
-
-      <div className="two-column-grid">
-        <section className="workspace-card">
-          <div className="card-heading">
-            <div>
-              <p className="section-kicker">课程结构</p>
-              <h2>阶段与课次</h2>
+      <div className="course-workspace-layout">
+        <div className="course-list-column">
+          <div className="course-list-tools">
+            <input aria-label="搜索课程" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索课程" />
+            <div className="segmented-control" aria-label="课程状态筛选">
+              <button className={filter === 'active' ? 'is-active' : ''} type="button" onClick={() => setFilter('active')}>活动课程</button>
+              <button className={filter === 'ended' ? 'is-active' : ''} type="button" onClick={() => setFilter('ended')}>已结束</button>
             </div>
-            <span className="selection-label">{selectedCourse?.title ?? '请先选择课程'}</span>
           </div>
-          <form className="stacked-form" onSubmit={submitPeriod}>
-            <label>
-              阶段名称
-              <input
-                aria-label="阶段名称"
-                value={periodTitle}
-                onChange={(event) => setPeriodTitle(event.target.value)}
-                placeholder="例如：2026 春·六下"
-                disabled={busy || selectedCourseId === ''}
-              />
-            </label>
-            <button className="primary-button" type="submit" disabled={busy || selectedCourseId === '' || periodTitle.trim() === ''}>
-              创建阶段
-            </button>
-          </form>
-          <label className="select-field">
-            当前阶段
-            <select
-              aria-label="当前阶段"
-              value={selectedPeriodId}
-              onChange={(event) => setSelectedPeriodId(event.target.value)}
-              disabled={busy || periods.length === 0}
-            >
-              {periods.length === 0 && <option value="">暂无阶段</option>}
-              {periods.map((period) => (
-                <option key={period.id} value={period.id}>{period.title}</option>
-              ))}
-            </select>
-          </label>
-          <form className="stacked-form" onSubmit={submitLesson}>
-            <label>
-              课次名称
-              <input
-                aria-label="课次名称"
-                value={lessonTitle}
-                onChange={(event) => setLessonTitle(event.target.value)}
-                placeholder="例如：有理数混合运算"
-                disabled={busy || selectedPeriodId === ''}
-              />
-            </label>
-            <button className="secondary-button" type="submit" disabled={busy || selectedPeriodId === '' || lessonTitle.trim() === ''}>
-              创建课次
-            </button>
-          </form>
-          <label className="select-field">
-            当前课次
-            <select
-              aria-label="当前课次"
-              value={selectedLessonId}
-              onChange={(event) => setSelectedLessonId(event.target.value)}
-              disabled={busy || lessons.length === 0}
-            >
-              {lessons.length === 0 && <option value="">暂无课次</option>}
-              {lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
-            </select>
-          </label>
-          <button
-            className="primary-button start-prep-button"
-            type="button"
-            disabled={busy || selectedCourse === undefined || selectedLesson === undefined}
-            onClick={() => {
-              if (selectedCourse === undefined || selectedLesson === undefined) return
-              onStartPrep(createLessonPrepContext(selectedCourse, selectedLesson, students))
-            }}
-          >
-            开始备课
-          </button>
-        </section>
-
-        <section className="workspace-card">
-          <div className="card-heading">
-            <div>
-              <p className="section-kicker">学生记录</p>
-              <h2>学生与普通记录</h2>
-            </div>
-            <span className="count-label">{students.length} 位学生</span>
-          </div>
-          <form className="stacked-form" onSubmit={submitStudent}>
-            <label>
-              学生姓名
-              <input
-                aria-label="学生姓名"
-                value={studentName}
-                onChange={(event) => setStudentName(event.target.value)}
-                placeholder="例如：张三"
-                disabled={busy || selectedCourseId === ''}
-              />
-            </label>
-            <button className="primary-button" type="submit" disabled={busy || selectedCourseId === '' || studentName.trim() === ''}>
-              添加学生到当前课程
-            </button>
-          </form>
-          <label className="select-field">
-            当前学生
-            <select
-              aria-label="当前学生"
-              value={selectedStudentId}
-              onChange={(event) => setSelectedStudentId(event.target.value)}
-              disabled={busy || students.length === 0}
-            >
-              {students.length === 0 && <option value="">暂无学生</option>}
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>{student.name}</option>
-              ))}
-            </select>
-          </label>
-          <form className="stacked-form" onSubmit={submitNote}>
-            <label>
-              新记录
-              <textarea
-                aria-label="学生记录"
-                value={noteBody}
-                onChange={(event) => setNoteBody(event.target.value)}
-                placeholder="记录本次课的表现或后续重点"
-                rows={3}
-                disabled={busy || selectedStudentId === ''}
-              />
-            </label>
-            <button className="secondary-button" type="submit" disabled={busy || selectedStudentId === '' || noteBody.trim() === ''}>
-              保存记录
-            </button>
-          </form>
-          <ul className="compact-list">
-            {selectedStudentNotes.map((note) => (
-              <li key={note.id}>
-                <span>{note.bodyMd}</span>
-                <small>{selectedStudent?.name ?? '学生'} · {note.createdAt.slice(0, 10)}</small>
-              </li>
-            ))}
-            {selectedStudentNotes.length === 0 && <li className="empty-state">当前学生还没有记录。</li>}
-          </ul>
-        </section>
+          <CourseList
+            courses={visibleSummaries}
+            selectedCourseId={selectedCourseId}
+            busy={busy}
+            onSelect={selectCourse}
+            onPrimaryAction={primaryAction}
+          />
+        </div>
+        {overview !== null && (
+          <CourseDetail
+            overview={overview}
+            summary={selectedSummary}
+            viewedLessonId={viewedLessonId}
+            busy={busy}
+            onViewLesson={setViewedLessonId}
+            onStartPrep={onStartPrep}
+            onOpenAttendance={setAttendanceLessonId}
+            onConfirmTaught={setConfirmLessonId}
+            onAction={runAction}
+          />
+        )}
       </div>
-      <ManagedFilesPanel
-        compact
-        heading="当前课次与学生资料"
-        lessonId={selectedLessonId}
-        lessonLabel={lessons.find((lesson) => lesson.id === selectedLessonId)?.title}
-        studentId={selectedStudentId}
-        studentLabel={selectedStudent?.name}
-      />
+
+      {createCourseOpen && overview !== null && (
+        <CreateCourseModal
+          overview={overview}
+          busy={busy}
+          onClose={() => setCreateCourseOpen(false)}
+          onCreated={(courseId) => {
+            setFilter('active')
+            setSearch('')
+            setSelectedCourseId(courseId)
+            setViewedLessonId('')
+          }}
+          onAction={runAction}
+        />
+      )}
+      {attendanceContext !== null && (
+        <LessonAttendanceModal
+          lessonId={attendanceContext.lesson.id}
+          courseTitle={attendanceContext.summary.course.title}
+          lessonTitle={attendanceContext.lesson.title}
+          onClose={() => setAttendanceLessonId(null)}
+          onSaved={async (message) => {
+            await reload()
+            setNotice(message)
+          }}
+        />
+      )}
+      {confirmContext !== null && overview !== null && (
+        <ConfirmLessonTaughtModal
+          overview={overview}
+          summary={confirmContext.summary}
+          lesson={confirmContext.lesson}
+          onClose={() => setConfirmLessonId(null)}
+          onSaved={async (message) => {
+            await reload()
+            setNotice(message)
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function CourseTreeItem({
-  course,
-  nodes,
-  selected,
-  onSelect,
-}: {
-  readonly course: NodeRecord
-  readonly nodes: readonly NodeRecord[]
-  readonly selected: boolean
-  readonly onSelect: () => void
+function CreateCourseModal({ overview, busy, onClose, onCreated, onAction }: {
+  readonly overview: CoreOverview
+  readonly busy: boolean
+  readonly onClose: () => void
+  readonly onCreated: (courseId: string) => void
+  readonly onAction: (action: () => Promise<void>, successMessage: string) => Promise<boolean>
 }): React.JSX.Element {
-  const periods = nodes.filter((node) => node.kind === 'period' && node.parentId === course.id)
+  const [title, setTitle] = useState('')
+  const [mode, setMode] = useState<CourseMode>('one_to_one')
+  const [studentIds, setStudentIds] = useState<string[]>([])
+
+  function toggleStudent(studentId: string): void {
+    setStudentIds((current) => current.includes(studentId)
+      ? current.filter((id) => id !== studentId)
+      : mode === 'one_to_one' ? [studentId] : [...current, studentId])
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    let createdId = ''
+    const success = await onAction(async () => {
+      const created = await window.teacherWorkbench.core.createCourse({ title, mode, studentIds })
+      createdId = created.id
+    }, '课程已创建，请继续创建第一个阶段。')
+    if (success) {
+      onCreated(createdId)
+      onClose()
+    }
+  }
+
   return (
-    <div className={`tree-course${selected ? ' is-selected' : ''}`}>
-      <button className="tree-course-button" type="button" onClick={onSelect}>
-        <span>
-          <strong>{course.title}</strong>
-          <small>{course.courseMode === 'one_to_one' ? '一对一' : '班课'}</small>
-        </span>
-        <span className="tree-chevron" aria-hidden="true">›</span>
-      </button>
-      {selected && (
-        <ul className="tree-children">
-          {periods.map((period) => {
-            const lessons = nodes.filter((node) => node.kind === 'lesson' && node.parentId === period.id)
-            return (
-              <li key={period.id}>
-                <span className="tree-period">{period.title}</span>
-                {lessons.length > 0 && (
-                  <ul>
-                    {lessons.map((lesson) => <li key={lesson.id}>{lesson.title}</li>)}
-                  </ul>
-                )}
-              </li>
-            )
-          })}
-          {periods.length === 0 && <li className="empty-state">还没有阶段。</li>}
-        </ul>
-      )}
-    </div>
+    <Modal title="创建课程" description="课程与可选学生关联会在同一个 Main 事务中完成。" onClose={onClose}>
+      <form className="modal-form" onSubmit={(event) => void submit(event)}>
+        <label className="modal-field">课程名称 *<input autoFocus value={title} disabled={busy} onChange={(event) => setTitle(event.target.value)} placeholder="例如：张三一对一" /></label>
+        <fieldset className="course-mode-fieldset" disabled={busy}>
+          <legend>课程类型 *</legend>
+          <label><input type="radio" name="course-mode" checked={mode === 'one_to_one'} onChange={() => { setMode('one_to_one'); setStudentIds((current) => current.slice(0, 1)) }} />一对一</label>
+          <label><input type="radio" name="course-mode" checked={mode === 'class'} onChange={() => setMode('class')} />班课</label>
+        </fieldset>
+        <fieldset className="course-student-fieldset" disabled={busy}>
+          <legend>关联已有学生（可选）</legend>
+          {overview.students.map((student) => (
+            <label key={student.id}><input type="checkbox" checked={studentIds.includes(student.id)} onChange={() => toggleStudent(student.id)} />{student.name}</label>
+          ))}
+          {overview.students.length === 0 && <p className="empty-state">还没有学生，可稍后从学生页创建并关联。</p>}
+        </fieldset>
+        <footer className="modal-actions"><button className="secondary-button" type="button" disabled={busy} onClick={onClose}>取消</button><button className="primary-button" type="submit" disabled={busy || title.trim() === ''}>创建课程</button></footer>
+      </form>
+    </Modal>
   )
+}
+
+function findLessonContext(summaries: readonly CourseSummary[], lessonId: string): {
+  readonly summary: CourseSummary
+  readonly lesson: CourseSummary['lessons'][number]
+} | null {
+  for (const summary of summaries) {
+    const lesson = summary.lessons.find((candidate) => candidate.id === lessonId)
+    if (lesson !== undefined) return { summary, lesson }
+  }
+  return null
+}
+
+function attendanceSummary(
+  session: CoreOverview['lessonSessions'][number],
+  activeStudentCount: number,
+): string {
+  if (session.attendanceRecordedAt === null) {
+    return activeStudentCount === 0 ? '未关联学生' : `${activeStudentCount} 位学生 · 待点名`
+  }
+  return `已到 ${session.presentCount} / ${session.totalCount} · 请假 ${session.leaveCount} · 缺席 ${session.absentCount}`
 }
 
 function toErrorMessage(error: unknown): string {

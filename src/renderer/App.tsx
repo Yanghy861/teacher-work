@@ -100,7 +100,11 @@ export default function App(): React.JSX.Element {
         {activeItem === '搜索' ? (
           <SearchPanel />
         ) : activeItem === '我的课程' ? (
-          <CourseDashboard onStartPrep={startPrep} />
+          <CourseDashboard
+            onStartPrep={startPrep}
+            onOpenDraft={openDraft}
+            onOpenDraftInbox={() => navigate('备课')}
+          />
         ) : activeItem === '素材库' ? (
           materialPickerOpen && prepContext !== null ? (
             <MaterialPickerPanel

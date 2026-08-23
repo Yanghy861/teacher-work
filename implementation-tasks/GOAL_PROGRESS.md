@@ -531,3 +531,20 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - IPC 与隔离：Core/Preload 增量使用严格 contract；考勤只注册 `attendance:update-schedule`、`attendance:get-lesson`、`attendance:save-lesson` 三个通道，Renderer 仍不接触 SQLite/Node/文件系统/秘密。
 - 验收：V12 专项 11 项通过；`npm test` 34 files / 112 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main/Preload/Renderer）；`git diff --check` ✅。按 V1.2 冻结规则未运行 portable/installer packaging。
 - 范围：未实现任何 V12-02 Renderer；日历、提醒、分析、复杂 enrollment、多 session、文件共享和新 AI 工作流均未扩展。
+
+## 2026-08-23 · V12-02 · IN_PROGRESS
+
+- 前置：V12-01 已 `DONE`，全量自动门与风险 build 通过，本地里程碑提交为 `5ec6c89`。
+- 当前唯一实现范围：我的课程三栏架构、活动/已结束筛选、Current Lesson 与 Viewed Lesson 分离、课程/阶段/课次最小创建、软推进确认、课次时间与点名 Modal。
+- 复用：继续使用 CoreOverview、LessonPrepContext、V1.1 草稿入口与 V12-01 CourseProgressService/AttendanceService；不新增日历、提醒、分析、多 session 或新备课内核。
+
+## 2026-08-23 · V12-02 · DONE
+
+- 信息架构：我的课程重构为全局导航、课程列表、课程详情三栏；顶部仅保留全部课程/待处理草稿入口，增加搜索、活动/已结束筛选和本地今日待点名。课程详情只保留课次、学生、资料三个分区。
+- 课程与课次：课程、阶段、课次使用局部 Modal；阶段内按 sort_order/ID 稳定显示第 N 课。新课程第一课显式初始化 Current Lesson，后续创建和点击只改变 Viewed Lesson，不自动推进。
+- 软推进：确认 Modal 展示并提交明确 keep/clear/set；非 Current 课次默认保持，Current 课次只建议同阶段靠后的未确认课次，阶段边界不跨阶段。调整到其他阶段显式调用 startPeriod；结束/撤销收在低频菜单，重开保留有效指针。
+- 排课与点名：datetime-local 按 Windows 本地时间输入并转 UTC ISO；今日区域按本地日界派生。点名 Modal 提供完整名单、全部到课和三态保存；保存/修改点名不改变 Current Lesson。
+- V1.1 复用：课程卡继续/开始备课和 Viewed Lesson 开始备课均复用 LessonPrepContext、草稿入口和现有 DraftPanel；没有改写 DraftService、AI、Parser、Search、外部资料或素材库核心。
+- 自动验收：25 项 V12-02 相关测试通过；`npm test` 36 files / 119 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。未运行 portable/installer packaging。
+- Windows smoke：当前 production build 使用 Windows 临时目录中的隔离 schema v12 工作区启动；验证 1264px 窗口中课程列表 320px/详情 804px、课程/阶段/三课创建、第一课初始化、Viewed/Current 分离、关联隔离学生、今日 18:30 排课、1/1 点名、非 Current 保持、Current 推进到同阶段第 3 课、结束筛选与重开恢复。数据库 `integrity_check=ok`、foreign_key_check 0；隔离目录随后已删除。
+- 范围：资料分区只保留 Viewed Lesson 边界提示，实际课次资料留给 V12-04；学生全局页留给 V12-03。未扩展日历、提醒、统计分析、学生文件 UI、复杂 enrollment、多 session 或新 AI 工作流。
