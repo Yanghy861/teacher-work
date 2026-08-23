@@ -218,6 +218,7 @@ export default function CourseDashboard({
             busy={busy}
             onViewLesson={setViewedLessonId}
             onStartPrep={onStartPrep}
+            onOpenDraft={onOpenDraft}
             onOpenAttendance={setAttendanceLessonId}
             onConfirmTaught={setConfirmLessonId}
             onOpenStudent={onOpenStudent}

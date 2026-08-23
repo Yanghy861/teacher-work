@@ -564,3 +564,20 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动验收：22 项 V12-03 相关测试通过；`npm test` 38 files / 127 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main/Preload/Renderer）；`git diff --check` ✅。未运行 portable/installer packaging。
 - Windows smoke：当前 production build 使用新的 Windows 临时隔离工作区启动；验证学生页新建/搜索、课程创建时事务关联、课程→学生与学生→课程跳转、关联课次 manual 记录、退出后归入历史且仍可为历史课次补录。隔离库 schema v12、`integrity_check=ok`、foreign_key_check 0，1 位学生/1 条 ended 关系/2 条 manual 记录；目录随后已删除。
 - 范围：保留既有 student_files/copyToStudent 数据与后端兼容能力，但 V1.2 UI 不暴露入口；未实现学生文件、成绩、画像、附件、复杂 enrollment 或 V12-04 资料视图。
+
+## 2026-08-23 · V12-04 · IN_PROGRESS
+
+- 前置：V12-03 已 `DONE`，自动门、production build 与隔离 Electron smoke 通过，本地里程碑提交为 `b64922f`。
+- 当前唯一实现范围：课程详情资料只读取 Viewed Lesson 的 `lesson_files`；任意 Viewed Lesson 可进入既有 V1.1 备课；课程卡继续只按 Current Lesson 草稿决定开始/继续。
+- 冻结边界：不重写 LessonPrepContext、DraftService、ManagedFileService、外部资料、素材、Skill、AI、Parser、Search 或 Backup；不暴露学生文件入口，不改变 Current Lesson。
+
+## 2026-08-23 · V12-04 · DONE
+
+- 课次资料：课程详情“资料”使用独立 LessonFilesSection，只通过 ManagedFileOverview 和 `listLessonPrepFiles()` 展示当前 Viewed Lesson 的有效 `lesson_files`；无 Viewed Lesson 与无资料分别显示明确空状态，支持刷新、打开和定位文件。
+- 备课接入：课程卡继续只按 Current Lesson 最近 draft 判断“开始/继续备课”；Viewed Lesson 在课次面板和资料页均按自身最近 draft 开始或继续，统一生成 LessonPrepContext 后进入冻结的 V1.1 DraftPanel。
+- Prep 边界：备课页统一显示“本次备课课次”和“保存到本次课次”；添加资料、生成、编辑与保存继续以 `LessonPrepContext.lessonId` 为真相，不调用课程进度接口。
+- 学生文件：全局素材库移除学生目标选择和 `copyToStudent` 前端动作；`student_files` 表、ManagedFileService.copyToStudent、搜索及备份恢复兼容代码未删除，备份测试补充了 lesson/student 两类关联恢复断言。
+- 关键验收：新增集成测试证明 Current 第 8 课、Prep 第 9 课时，第 9 课独立资料副本、AI 草稿和 saved 成果均绑定第 9 课，Current 仍为第 8 课且原资料不变。
+- 自动验收：35 项 V12-04 相关测试通过；`npm test` 40 files / 131 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 44 / Preload 10 / Renderer 53 modules）；`git diff --check` ✅。未运行 portable/installer packaging。
+- Windows smoke：当前 production build 在新的 Windows 临时隔离工作区通过本机 DevTools 启动；实际 Preload/Main 创建班课、阶段和两课，保持第 8 课为 Current，查看第 9 课资料并进入“本次备课课次”；备课后 Current 仍为第 8 课，素材库无学生文件动作。隔离库 schema v12、`integrity_check=ok`、foreign_key_check 0；目录随后已删除。
+- 范围：V1.1 外部资料、素材、Skill、三类 AI 动作、草稿箱、同区预览编辑、保存、Parser、Search、Backup 继续复用；未新增文件共享、学生文件 UI 或新 AI 工作流。

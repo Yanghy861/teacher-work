@@ -80,6 +80,11 @@ describe('L11 backup and restore', () => {
     expect(overview.nodes.map((node) => node.title)).toEqual(expect.arrayContaining(['L11 课程', '第一阶段', '一次函数']))
     expect(overview.students.map((student) => student.name)).toContain('学生甲')
     expect(overview.notes.map((note) => note.bodyMd)).toContain('L11 note 内容')
+    const restoredLinks = new ManagedFileService(reopened.database.raw, reopened.paths).getOverview().links
+    expect(restoredLinks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ targetType: 'lesson', targetId: value.lesson.id }),
+      expect.objectContaining({ targetType: 'student', targetId: value.student.id }),
+    ]))
     const restoredObject = join(reopened.paths.objectsDirectory, value.file.id, 'content')
     expect(readFileSync(restoredObject, 'utf8')).toBe('L11 managed content')
 

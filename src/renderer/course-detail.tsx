@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import type { CoreOverview, NodeRecord } from '../shared/core-contracts'
+import type { CoreOverview, NodeRecord, NoteRecord } from '../shared/core-contracts'
 import {
   formatLocalDateTime,
   getLessonNumber,
@@ -10,6 +10,7 @@ import {
   type CourseSummary,
 } from './course-view-model'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
+import LessonFilesSection from './lesson-files-section'
 import Modal from './modal'
 
 type CourseTab = 'lessons' | 'students' | 'materials'
@@ -21,6 +22,7 @@ export default function CourseDetail({
   busy,
   onViewLesson,
   onStartPrep,
+  onOpenDraft,
   onOpenAttendance,
   onConfirmTaught,
   onOpenStudent,
@@ -32,6 +34,7 @@ export default function CourseDetail({
   readonly busy: boolean
   readonly onViewLesson: (lessonId: string) => void
   readonly onStartPrep: (context: LessonPrepContext) => void
+  readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
   readonly onOpenAttendance: (lessonId: string) => void
   readonly onConfirmTaught: (lessonId: string) => void
   readonly onOpenStudent: (studentId: string) => void
@@ -63,6 +66,7 @@ export default function CourseDetail({
 
   const viewedLesson = summary.lessons.find((lesson) => lesson.id === viewedLessonId) ?? null
   const viewedPeriod = summary.periods.find((period) => period.id === viewedLesson?.parentId) ?? null
+  const viewedDraft = viewedLesson === null ? null : latestLessonDraft(overview, viewedLesson.id)
 
   return (
     <section className="course-detail-pane" aria-label="课程详情">
@@ -133,6 +137,8 @@ export default function CourseDetail({
           onOpenAttendance={onOpenAttendance}
           onConfirmTaught={onConfirmTaught}
           onStartPrep={onStartPrep}
+          onOpenDraft={onOpenDraft}
+          viewedDraft={viewedDraft}
           onAction={onAction}
         />
       ) : tab === 'students' ? (
@@ -144,19 +150,16 @@ export default function CourseDetail({
           onAction={onAction}
         />
       ) : (
-        <div className="course-materials-placeholder">
-          <h3>{viewedLesson === null ? '课次资料' : `${viewedPeriod?.title ?? ''} · ${viewedLesson.title}`}</h3>
-          <p>{viewedLesson === null
-            ? '请先选择一个课次查看资料。'
-            : '当前 Viewed Lesson 已明确；课次资料的复用视图将在 V12-04 接入，不显示学生文件。'}</p>
-          {viewedLesson !== null && (
-            <button className="primary-button" type="button" onClick={() => onStartPrep(
-              createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents),
-            )}>
-              开始备课
-            </button>
-          )}
-        </div>
+        <LessonFilesSection
+          lesson={viewedLesson}
+          periodTitle={viewedPeriod?.title ?? ''}
+          prepContext={viewedLesson === null
+            ? null
+            : createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents)}
+          draft={viewedDraft}
+          onStartPrep={onStartPrep}
+          onOpenDraft={onOpenDraft}
+        />
       )}
 
       {createPeriodOpen && (
@@ -212,6 +215,8 @@ function LessonsSection({
   onOpenAttendance,
   onConfirmTaught,
   onStartPrep,
+  onOpenDraft,
+  viewedDraft,
   onAction,
 }: {
   readonly overview: CoreOverview
@@ -225,6 +230,8 @@ function LessonsSection({
   readonly onOpenAttendance: (lessonId: string) => void
   readonly onConfirmTaught: (lessonId: string) => void
   readonly onStartPrep: (context: LessonPrepContext) => void
+  readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
+  readonly viewedDraft: NoteRecord | null
   readonly onAction: (action: () => Promise<void>, successMessage: string) => Promise<boolean>
 }): React.JSX.Element {
   const sessionByLesson = new Map(overview.lessonSessions.map((session) => [session.lessonId, session]))
@@ -287,9 +294,11 @@ function LessonsSection({
             <p>排课：{formatLocalDateTime(viewedSession?.scheduledAt ?? null)} · 点名：{viewedSession?.attendanceRecordedAt === null || viewedSession === undefined ? '未保存' : `已记录 ${viewedSession.totalCount} 人`}</p>
           </div>
           <div className="viewed-lesson-actions">
-            <button className="primary-button" type="button" onClick={() => onStartPrep(
-              createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents),
-            )}>开始备课</button>
+            <button className="primary-button" type="button" onClick={() => {
+              const context = createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents)
+              if (viewedDraft === null) onStartPrep(context)
+              else onOpenDraft(context, viewedDraft.id)
+            }}>{viewedDraft === null ? '开始备课' : '继续备课'}</button>
             <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={() => onSchedule(viewedLesson.id)}>设置时间</button>
             <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={() => onOpenAttendance(viewedLesson.id)}>
               {viewedSession?.attendanceRecordedAt === null || viewedSession === undefined ? '点名' : '修改点名'}
@@ -535,4 +544,14 @@ function currentLessonLine(summary: CourseSummary): string {
   if (summary.ended) return '状态：已结束'
   if (summary.currentLesson === null) return summary.lessons.length === 0 ? '当前：尚未创建课次' : '当前：等待老师选择下一课'
   return `当前：${summary.currentPeriod?.title ?? '未命名阶段'} / ${summary.currentLesson.title}`
+}
+
+function latestLessonDraft(overview: CoreOverview, lessonId: string): NoteRecord | null {
+  return overview.notes
+    .filter((note) =>
+      note.lessonId === lessonId &&
+      note.deletedAt === null &&
+      note.draftStatus === 'draft',
+    )
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
 }

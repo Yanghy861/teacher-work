@@ -1577,6 +1577,21 @@ button:disabled {
 .course-student-row span { color: #64748b; font-size: 11px; }
 .historical-students { margin-top: 14px; color: #64748b; font-size: 12px; }
 .historical-students summary { margin-bottom: 8px; cursor: pointer; font-weight: 700; }
+
+.lesson-files-section { display: grid; gap: 14px; padding: 15px; }
+.lesson-files-empty { min-height: 360px; place-items: center; align-content: center; color: #64748b; text-align: center; }
+.lesson-files-empty h3 { margin: 0; color: #334155; }
+.lesson-files-empty p { margin: 6px 0 0; }
+.lesson-files-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.lesson-files-header h3 { margin: 3px 0 5px; color: #172554; }
+.lesson-files-header > div > p:last-child { margin: 0; color: #64748b; font-size: 12px; }
+.lesson-files-actions,
+.lesson-file-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lesson-file-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.lesson-file-list > li:not(.empty-state) { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #e2e8f0; border-radius: 9px; padding: 11px 12px; background: #f8fafc; }
+.lesson-file-list > li > div:first-child { display: grid; gap: 3px; min-width: 0; }
+.lesson-file-list strong { overflow: hidden; color: #334155; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.lesson-file-list small { color: #64748b; font-size: 10px; }
 .course-materials-placeholder { display: grid; min-height: 300px; place-items: center; align-content: center; gap: 10px; text-align: center; }
 
 .students-page { display: grid; width: 100%; gap: 12px; margin: 0; }

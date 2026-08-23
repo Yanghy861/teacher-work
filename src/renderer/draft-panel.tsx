@@ -125,7 +125,7 @@ export default function DraftPanel({
 
   async function generate(kind: DraftKind): Promise<void> {
     if (context === null || selectedFiles.length === 0) {
-      setError('请先从当前课次资料中选择至少一份资料。')
+      setError('请先从本次课次资料中选择至少一份资料。')
       return
     }
     setBusyAction(kind)
@@ -216,7 +216,7 @@ export default function DraftPanel({
       })
       setEditing(false)
       setEditBody('')
-      setMessage('当前版本已保存到课次。')
+      setMessage('当前版本已保存到本次课次。')
       await reload()
     } catch (saveError) {
       setError(toErrorMessage(saveError))
@@ -294,11 +294,11 @@ export default function DraftPanel({
   }
 
   return (
-    <section className="lesson-prep-panel" aria-label="当前课次备课">
+    <section className="lesson-prep-panel" aria-label="本次课次备课">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       {message !== '' && <div className="inline-notice" role="status">{message}</div>}
       <div className="prep-context-bar">
-        <div><p className="section-kicker">当前课次</p><h2>{context.courseTitle} / {context.lessonTitle}</h2></div>
+        <div><p className="section-kicker">本次备课课次</p><h2>{context.courseTitle} / {context.lessonTitle}</h2></div>
         <span className="selection-label">{formatStudentContext(context)}</span>
       </div>
       {showResults ? (
@@ -358,7 +358,7 @@ function DraftInbox({ core, busy, error, message, onOpenDraft, onDeleteDraft, on
       {message !== '' && <div className="inline-notice" role="status">{message}</div>}
       <div className="workspace-card">
         <div className="card-heading">
-          <div><p className="section-kicker">自动保存</p><h2>草稿箱</h2><p>这里只显示尚未“保存到当前课次”的 AI 草稿。</p></div>
+          <div><p className="section-kicker">自动保存</p><h2>草稿箱</h2><p>这里只显示尚未“保存到本次课次”的 AI 草稿。</p></div>
           <span className="count-label">{entries.length} 份</span>
         </div>
         <ul className="draft-inbox-list">
@@ -430,7 +430,7 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, selectedFilesCount, sk
       <div className="prep-workspace-column">
         <section className="workspace-card">
           <div className="card-heading"><div><p className="section-kicker">固定 AI 动作</p><h2>AI 备课</h2></div><span className="selection-label">已选 {selectedFilesCount} 份</span></div>
-          <p className="prep-guidance">当前课次、已勾选资料、可选 Skill 与本次要求会在 Main 中分区组合，再执行固定生成任务。</p>
+          <p className="prep-guidance">本次课次、已勾选资料、可选 Skill 与本次要求会在 Main 中分区组合，再执行固定生成任务。</p>
           <div className="prep-input-grid">
             <label>我的 Skill（可选）<select value={selectedSkillId} onChange={(event) => onSelectSkill(event.target.value)} disabled={busyAction !== ''}><option value="">不使用 Skill</option>{skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</select></label>
             <label>本次要求（可选）<textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={4} placeholder="例如：今天少讲理论，多安排基础题，重点讲圆的面积。" disabled={busyAction !== ''} /><small className="field-counter">{requirement.length} / {DRAFT_REQUIREMENT_MAX_CHARS}</small></label>
@@ -441,7 +441,7 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, selectedFilesCount, sk
             ))}
           </div>
         </section>
-        {resultCount > 0 && <button className="secondary-button result-entry-button" type="button" onClick={onShowResults}>查看当前课次生成结果（{resultCount}）</button>}
+        {resultCount > 0 && <button className="secondary-button result-entry-button" type="button" onClick={onShowResults}>查看本次课次生成结果（{resultCount}）</button>}
       </div>
     </div>
   )
@@ -466,7 +466,7 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
   return (
     <div className="draft-result-layout">
       <aside className="workspace-card draft-result-list-panel">
-        <div className="card-heading"><div><p className="section-kicker">当前课次</p><h2>生成结果</h2></div><span className="count-label">{notes.length} 份</span></div>
+        <div className="card-heading"><div><p className="section-kicker">本次课次</p><h2>生成结果</h2></div><span className="count-label">{notes.length} 份</span></div>
         <ul className="draft-result-list">
           {notes.map((note) => {
             const kind = note.noteKind as DraftKind
@@ -481,7 +481,7 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
               </li>
             )
           })}
-          {notes.length === 0 && <li className="empty-state">当前课次还没有生成结果。</li>}
+          {notes.length === 0 && <li className="empty-state">本次课次还没有生成结果。</li>}
         </ul>
         <button className="secondary-button" type="button" onClick={onReturnToSetup} disabled={busy}>返回备课设置</button>
       </aside>
@@ -491,11 +491,11 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
         ) : (
           <>
             <div className="draft-content-header">
-              <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '尚未保存到课次' : '当前课次成果'}</p><h2>{kindLabels[selectedNote.noteKind as DraftKind]}{selectedNote.draftStatus === 'draft' ? '草稿' : '成果'}</h2></div>
+              <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '尚未保存到本次课次' : '本次课次成果'}</p><h2>{kindLabels[selectedNote.noteKind as DraftKind]}{selectedNote.draftStatus === 'draft' ? '草稿' : '成果'}</h2></div>
               <div className="draft-content-actions">
                 {editing ? <><button className="secondary-button" type="button" onClick={onCancelEdit} disabled={busy}>取消编辑</button><button className="secondary-button" type="button" onClick={onSaveModification} disabled={busy}>保存修改</button></> : <button className="secondary-button" type="button" onClick={onEdit} disabled={busy}>编辑</button>}
                 <button className="secondary-button" type="button" onClick={onRegenerate} disabled={busy}>重新生成</button>
-                {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={onSaveToLesson} disabled={busy}>保存到当前课次</button>}
+                {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={onSaveToLesson} disabled={busy}>保存到本次课次</button>}
               </div>
             </div>
             <div className={`draft-content-body${editing ? ' is-editing' : ' is-preview'}`}>

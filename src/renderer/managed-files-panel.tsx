@@ -8,8 +8,6 @@ interface ManagedFilesPanelProps {
   readonly heading?: string
   readonly lessonId?: string
   readonly lessonLabel?: string
-  readonly studentId?: string
-  readonly studentLabel?: string
 }
 
 export default function ManagedFilesPanel({
@@ -17,13 +15,10 @@ export default function ManagedFilesPanel({
   heading = '素材库',
   lessonId,
   lessonLabel,
-  studentId,
-  studentLabel,
 }: ManagedFilesPanelProps): React.JSX.Element {
   const [overview, setOverview] = useState<ManagedFileOverview | null>(null)
   const [coreOverview, setCoreOverview] = useState<CoreOverview | null>(null)
   const [selectedLessonId, setSelectedLessonId] = useState('')
-  const [selectedStudentId, setSelectedStudentId] = useState('')
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -33,9 +28,7 @@ export default function ManagedFilesPanel({
     () => coreOverview?.nodes.filter((node) => node.kind === 'lesson') ?? [],
     [coreOverview],
   )
-  const students = coreOverview?.students ?? []
   const activeLessonId = lessonId ?? selectedLessonId
-  const activeStudentId = studentId ?? selectedStudentId
   const files = overview?.files ?? []
   const activeFiles = files.filter((file) => file.deletedAt === null)
   const deletedFiles = files.filter((file) => file.deletedAt !== null)
@@ -57,12 +50,6 @@ export default function ManagedFilesPanel({
       setSelectedLessonId(lessons[0]?.id ?? '')
     }
   }, [lessonId, lessons, selectedLessonId])
-
-  useEffect(() => {
-    if (studentId === undefined && (selectedStudentId === '' || !students.some((student) => student.id === selectedStudentId))) {
-      setSelectedStudentId(students[0]?.id ?? '')
-    }
-  }, [selectedStudentId, studentId, students])
 
   async function reload(): Promise<void> {
     setLoading(true)
@@ -148,24 +135,12 @@ export default function ManagedFilesPanel({
                 {lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
               </select>
             </label>
-            <label className="select-field">
-              添加学生附件
-              <select
-                aria-label="添加学生附件"
-                value={selectedStudentId}
-                onChange={(event) => setSelectedStudentId(event.target.value)}
-                disabled={busy || students.length === 0}
-              >
-                {students.length === 0 && <option value="">暂无学生</option>}
-                {students.map((student) => <option key={student.id} value={student.id}>{student.name}</option>)}
-              </select>
-            </label>
           </div>
         )}
 
         {compact && (
           <p className="file-context">
-            当前课次：{lessonLabel ?? (activeLessonId === '' ? '未选择' : '已选择')} · 当前学生：{studentLabel ?? (activeStudentId === '' ? '未选择' : '已选择')}
+            当前课次：{lessonLabel ?? (activeLessonId === '' ? '未选择' : '已选择')}
           </p>
         )}
 
@@ -174,7 +149,6 @@ export default function ManagedFilesPanel({
           deletedFiles={deletedFiles}
           busy={busy}
           lessonId={activeLessonId}
-          studentId={activeStudentId}
           onAction={runAction}
         />
       </section>
@@ -187,14 +161,12 @@ function FileList({
   deletedFiles,
   busy,
   lessonId,
-  studentId,
   onAction,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly deletedFiles: readonly ManagedFileRecord[]
   readonly busy: boolean
   readonly lessonId: string
-  readonly studentId: string
   readonly onAction: (action: () => Promise<unknown>, successMessage?: string) => Promise<void>
 }): React.JSX.Element {
   return (
@@ -212,9 +184,6 @@ function FileList({
               </button>
               <button className="link-button" type="button" onClick={() => void onAction(() => window.teacherWorkbench.files.copyToLesson({ fileId: file.id, lessonId }), '已加入当前课次。')} disabled={busy || lessonId === ''}>
                 加入课次
-              </button>
-              <button className="link-button" type="button" onClick={() => void onAction(() => window.teacherWorkbench.files.copyToStudent({ fileId: file.id, studentId }), '已添加学生附件。')} disabled={busy || studentId === ''}>
-                加到学生
               </button>
               <button className="danger-button" type="button" onClick={() => void onAction(() => window.teacherWorkbench.files.softDeleteFile({ fileId: file.id }), '资料已移除。')} disabled={busy}>
                 移除
