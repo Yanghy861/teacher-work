@@ -500,3 +500,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Windows packaged smoke：使用仓库 `tmp/` 下被忽略的隔离 app-data 与 `user-data-dir` 启动当前候选；唯一窗口标题正确，默认菜单隐藏，主工作区自适应撑满，内容滚动后 104px 全局导航仍固定；随后正常关闭，目标窗口数归零。隔离 SQLite 为 schema v11，`integrity_check=ok`。
 - 安全边界：未读取正式工作区、真实教学资料或真实 API Key；`out/`、`release-l12/` 与 `tmp/` 均继续被 `.gitignore` 排除。
 - 当前门禁：自动质量门、当前 package 和代表性 Windows 启动体验证据已齐全；根据 V1.1 产品规格与版本控制协议，仍须产品负责人明确确认一次真实但不敏感的完整备课体验后，才创建 `checkpoint-V1.1-pass` 并开始 V1.2。
+
+## 2026-08-23 · V1.1 最终体验确认 · PASS
+
+- 产品负责人明确回复“V1.1 最终体验通过”。
+- 自动质量门、当前 package、代表性 Windows packaged smoke、安全审计和最终人工体验现已全部齐全。
+- 本确认与验收状态写入最终 V1.1 审计提交；`checkpoint-V1.1-pass` 创建在该提交上，不 push、不移动既有标签。
+- V1.1 在此冻结。下一步按冻结方案建立 V1.2 decisions、V12-01–V12-05、状态记录与活动索引，然后从 V12-01 顺序实施。
