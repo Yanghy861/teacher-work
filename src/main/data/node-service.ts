@@ -6,6 +6,7 @@ import type {
   NodeRecord,
 } from '../../shared/core-contracts'
 import type { SqliteDatabase } from '../db/migrations'
+import { reconcileCourseProgressPointers } from './course-progress-service'
 
 export type NodeServiceErrorCode =
   | 'INVALID_TITLE'
@@ -160,6 +161,7 @@ export class NodeService {
       this.database
         .prepare('UPDATE nodes SET parent_id = ?, sort_order = ?, updated_at = ? WHERE id = ?')
         .run(parentId, this.nextSortOrder(parentId), updatedAt, nodeId)
+      reconcileCourseProgressPointers(this.database, updatedAt)
       return this.requireNode(nodeId)
     })
   }
@@ -201,6 +203,7 @@ export class NodeService {
         'UPDATE nodes SET deleted_at = ?, updated_at = ? WHERE id = ?',
       )
       ids.forEach((id) => statement.run(deletedAt, deletedAt, id))
+      reconcileCourseProgressPointers(this.database, deletedAt)
       return this.requireNode(nodeId, true)
     })
   }

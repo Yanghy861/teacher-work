@@ -516,3 +516,18 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 复用与 Later：复用 Node/Core/ManagedFile/Draft/LessonPrep/Search/Parser/AI/Backup，不重做 V1.1 备课内核；日历、提醒、成绩分析、学生文件 UI、复杂 enrollment、多 session、共享和新 AI 工作流继续 Later。
 - 验收：V12-01–V12-04 各跑相关测试、typecheck、lint并按风险补 smoke/build；V12-05 跑全量测试、typecheck、lint、build、diff check 和代表性本地 Windows 流程。V1.2 不运行 portable/installer packaging。
 - Git：方案与活动链使用独立 `plan(V1.2)` 本地提交；里程碑使用 `v1.2(V12-XX)`；最终体验确认前不创建 `checkpoint-V1.2-pass`，不 push。
+
+## 2026-08-23 · V12-01 · IN_PROGRESS
+
+- 基线：`checkpoint-V1.1-pass` 与 `plan(V1.2)` 提交已就绪；工作区无未解释改动。
+- 当前唯一实现范围：schema v12、CoreOverview、课程进度/学生关系/点名 Service 与严格白名单 IPC；不提前实现 V12-02 Renderer 重构。
+- 验收计划：专项测试覆盖迁移、跨课程/过期状态、幂等确认、点名快照、学生退出/重加和原子性；随后运行 typecheck、lint，并按数据层风险补 production build。
+
+## 2026-08-23 · V12-01 · DONE
+
+- 数据与迁移：schema 升至 v12；旧 `course_students` 无损增加 `ended_at`，新增 `course_progress`、`lesson_sessions`、`lesson_attendance` 和索引。`CoreOverview` 批量返回进度与 session 摘要。
+- 课程与学生：新增独立学生、课程与可选学生事务创建、退出/重新加入和一对一在读限制；结束/重开只修改 `ended_at` 并保留有效指针，节点移动或软删除会清理失效指针。
+- 进度与点名：复用 Node/Core 并新增薄 CourseProgressService、AttendanceService；`keep/clear/set` 与 taught confirmation 同事务，expected pointer 防过期覆盖，重复确认幂等；点名首次重查当前名单、历史严格使用快照，保存不推进 Current Lesson。
+- IPC 与隔离：Core/Preload 增量使用严格 contract；考勤只注册 `attendance:update-schedule`、`attendance:get-lesson`、`attendance:save-lesson` 三个通道，Renderer 仍不接触 SQLite/Node/文件系统/秘密。
+- 验收：V12 专项 11 项通过；`npm test` 34 files / 112 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main/Preload/Renderer）；`git diff --check` ✅。按 V1.2 冻结规则未运行 portable/installer packaging。
+- 范围：未实现任何 V12-02 Renderer；日历、提醒、分析、复杂 enrollment、多 session、文件共享和新 AI 工作流均未扩展。

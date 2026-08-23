@@ -304,6 +304,55 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 12,
+    name: 'add_course_progress_and_attendance',
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE course_students ADD COLUMN ended_at TEXT;
+
+        CREATE INDEX idx_course_students_active
+          ON course_students (course_id, ended_at, student_id);
+
+        CREATE TABLE course_progress (
+          course_id TEXT PRIMARY KEY NOT NULL
+            REFERENCES nodes(id) ON DELETE CASCADE,
+          active_period_id TEXT
+            REFERENCES nodes(id) ON DELETE SET NULL,
+          current_lesson_id TEXT
+            REFERENCES nodes(id) ON DELETE SET NULL,
+          ended_at TEXT,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE lesson_sessions (
+          lesson_id TEXT PRIMARY KEY NOT NULL
+            REFERENCES nodes(id) ON DELETE CASCADE,
+          scheduled_at TEXT,
+          taught_confirmed_at TEXT,
+          attendance_recorded_at TEXT,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE INDEX idx_lesson_sessions_schedule
+          ON lesson_sessions (scheduled_at);
+
+        CREATE TABLE lesson_attendance (
+          lesson_id TEXT NOT NULL
+            REFERENCES lesson_sessions(lesson_id) ON DELETE CASCADE,
+          student_id TEXT NOT NULL
+            REFERENCES students(id) ON DELETE RESTRICT,
+          status TEXT NOT NULL
+            CHECK (status IN ('present', 'leave', 'absent')),
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (lesson_id, student_id)
+        );
+
+        CREATE INDEX idx_lesson_attendance_student
+          ON lesson_attendance (student_id, lesson_id);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

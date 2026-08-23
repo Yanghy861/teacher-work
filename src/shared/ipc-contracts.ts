@@ -9,6 +9,9 @@ export const CORE_IPC_CHANNELS = {
   createPeriod: 'core:create-period',
   createLesson: 'core:create-lesson',
   createStudent: 'core:create-student',
+  linkStudentToCourse: 'core:link-student-to-course',
+  endCourseStudentLink: 'core:end-course-student-link',
+  reactivateCourseStudentLink: 'core:reactivate-course-student-link',
   createNote: 'core:create-note',
   updateNote: 'core:update-note',
   renameNode: 'core:rename-node',
@@ -16,6 +19,19 @@ export const CORE_IPC_CHANNELS = {
   reorderNode: 'core:reorder-node',
   softDeleteNode: 'core:soft-delete-node',
   restoreNode: 'core:restore-node',
+  setCurrentLesson: 'core:set-current-lesson',
+  clearCurrentLesson: 'core:clear-current-lesson',
+  startPeriod: 'core:start-period',
+  confirmLessonTaught: 'core:confirm-lesson-taught',
+  undoLessonTaught: 'core:undo-lesson-taught',
+  endCourse: 'core:end-course',
+  reopenCourse: 'core:reopen-course',
+} as const
+
+export const ATTENDANCE_IPC_CHANNELS = {
+  updateSchedule: 'attendance:update-schedule',
+  getLesson: 'attendance:get-lesson',
+  saveLesson: 'attendance:save-lesson',
 } as const
 
 export const FILE_IPC_CHANNELS = {
@@ -80,6 +96,7 @@ export const FILE_IPC_EVENTS = {
 export type IpcChannel =
   | (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
   | (typeof CORE_IPC_CHANNELS)[keyof typeof CORE_IPC_CHANNELS]
+  | (typeof ATTENDANCE_IPC_CHANNELS)[keyof typeof ATTENDANCE_IPC_CHANNELS]
   | (typeof FILE_IPC_CHANNELS)[keyof typeof FILE_IPC_CHANNELS]
   | (typeof SEARCH_IPC_CHANNELS)[keyof typeof SEARCH_IPC_CHANNELS]
   | (typeof AI_IPC_CHANNELS)[keyof typeof AI_IPC_CHANNELS]
@@ -93,6 +110,7 @@ export const IPC_ERROR_CODES = {
   UNKNOWN_CHANNEL: 'UNKNOWN_CHANNEL',
   WORKSPACE_UNAVAILABLE: 'WORKSPACE_UNAVAILABLE',
   CORE_DATA_ERROR: 'CORE_DATA_ERROR',
+  ATTENDANCE_ERROR: 'ATTENDANCE_ERROR',
   MANAGED_FILE_ERROR: 'MANAGED_FILE_ERROR',
   SEARCH_ERROR: 'SEARCH_ERROR',
   AI_ERROR: 'AI_ERROR',

@@ -11,6 +11,7 @@ import { registerDraftIpc } from './ipc/draft-ipc'
 import { registerBackupIpc } from './ipc/backup-ipc'
 import { registerExternalLibraryIpc } from './ipc/external-library-ipc'
 import { registerSkillIpc } from './ipc/skill-ipc'
+import { registerAttendanceIpc } from './ipc/attendance-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
@@ -52,6 +53,7 @@ let unregisterDraftIpc: (() => void) | null = null
 let unregisterBackupIpc: (() => void) | null = null
 let unregisterExternalLibraryIpc: (() => void) | null = null
 let unregisterSkillIpc: (() => void) | null = null
+let unregisterAttendanceIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
@@ -307,6 +309,11 @@ void app.whenReady().then(() => {
     logger,
   )
   unregisterCoreIpc = registerCoreIpc(ipcMain, { getCoreData, activityGate }, logger)
+  unregisterAttendanceIpc = registerAttendanceIpc(
+    ipcMain,
+    { getAttendanceService: () => getCoreData().attendance, activityGate },
+    logger,
+  )
   unregisterFileIpc = registerFileIpc(
     ipcMain,
     {
@@ -462,6 +469,7 @@ app.on('before-quit', (event) => {
   unregisterBackupIpc?.()
   unregisterExternalLibraryIpc?.()
   unregisterSkillIpc?.()
+  unregisterAttendanceIpc?.()
   coreDataService = null
   managedFileService = null
   aiGateway = null

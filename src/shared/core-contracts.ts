@@ -6,6 +6,13 @@ export type CourseMode = 'class' | 'one_to_one'
 
 export type DraftStatus = 'draft' | 'saved'
 
+export type AttendanceStatus = 'present' | 'leave' | 'absent'
+
+export type CurrentLessonDecision =
+  | { readonly type: 'keep' }
+  | { readonly type: 'clear' }
+  | { readonly type: 'set'; readonly lessonId: string }
+
 export interface NodeRecord {
   readonly id: string
   readonly parentId: string | null
@@ -31,7 +38,55 @@ export interface CourseStudentLink {
   readonly courseId: string
   readonly studentId: string
   readonly createdAt: string
+  readonly endedAt: string | null
 }
+
+export interface CourseProgressRecord {
+  readonly courseId: string
+  readonly activePeriodId: string | null
+  readonly currentLessonId: string | null
+  readonly endedAt: string | null
+  readonly updatedAt: string
+}
+
+export interface LessonSessionSummary {
+  readonly lessonId: string
+  readonly scheduledAt: string | null
+  readonly taughtConfirmedAt: string | null
+  readonly attendanceRecordedAt: string | null
+  readonly presentCount: number
+  readonly leaveCount: number
+  readonly absentCount: number
+  readonly totalCount: number
+}
+
+export interface AttendanceStudentEntry {
+  readonly studentId: string
+  readonly studentName: string
+  readonly status: AttendanceStatus | null
+}
+
+export interface LessonAttendanceRecord {
+  readonly lessonId: string
+  readonly scheduledAt: string | null
+  readonly taughtConfirmedAt: string | null
+  readonly attendanceRecordedAt: string | null
+  readonly students: readonly AttendanceStudentEntry[]
+}
+
+export type ConfirmLessonResult =
+  | {
+      readonly status: 'confirmed'
+      readonly lessonId: string
+      readonly taughtConfirmedAt: string
+      readonly progress: CourseProgressRecord
+    }
+  | {
+      readonly status: 'already_confirmed'
+      readonly lessonId: string
+      readonly taughtConfirmedAt: string
+      readonly progress: CourseProgressRecord
+    }
 
 export interface NoteRecord {
   readonly id: string
@@ -51,11 +106,14 @@ export interface CoreOverview {
   readonly students: readonly StudentRecord[]
   readonly courseStudentLinks: readonly CourseStudentLink[]
   readonly notes: readonly NoteRecord[]
+  readonly courseProgress: readonly CourseProgressRecord[]
+  readonly lessonSessions: readonly LessonSessionSummary[]
 }
 
 export interface CreateCourseRequest {
   readonly title: string
   readonly mode: CourseMode
+  readonly studentIds?: readonly string[]
 }
 
 export interface CreatePeriodRequest {
@@ -69,8 +127,68 @@ export interface CreateLessonRequest {
 }
 
 export interface CreateStudentRequest {
-  readonly courseId: string
   readonly name: string
+  readonly courseId?: string
+}
+
+export interface CourseStudentRequest {
+  readonly courseId: string
+  readonly studentId: string
+}
+
+export interface SetCurrentLessonRequest {
+  readonly courseId: string
+  readonly lessonId: string
+  readonly expectedCurrentLessonId: string | null
+}
+
+export interface ClearCurrentLessonRequest {
+  readonly courseId: string
+  readonly expectedCurrentLessonId: string | null
+}
+
+export interface StartPeriodRequest {
+  readonly courseId: string
+  readonly periodId: string
+  readonly initialLessonId: string
+}
+
+export interface ConfirmLessonTaughtRequest {
+  readonly courseId: string
+  readonly lessonId: string
+  readonly expectedCurrentLessonId: string | null
+  readonly decision: CurrentLessonDecision
+}
+
+export interface CourseLessonRequest {
+  readonly courseId: string
+  readonly lessonId: string
+}
+
+export interface CourseIdRequest {
+  readonly courseId: string
+}
+
+export interface UpdateLessonScheduleRequest {
+  readonly lessonId: string
+  readonly scheduledAt: string | null
+}
+
+export interface LessonIdRequest {
+  readonly lessonId: string
+}
+
+export interface SaveLessonAttendanceRequest {
+  readonly lessonId: string
+  readonly entries: readonly {
+    readonly studentId: string
+    readonly status: AttendanceStatus
+  }[]
+}
+
+export interface LocalDayUtcRange {
+  readonly startUtc: string
+  readonly endUtc: string
 }
 
 export interface CreateNoteRequest {
@@ -135,7 +253,61 @@ export function isCourseStudentLink(value: unknown): value is CourseStudentLink 
     isRecord(value) &&
     isNonEmptyString(value.courseId) &&
     isNonEmptyString(value.studentId) &&
-    isNonEmptyString(value.createdAt)
+    isNonEmptyString(value.createdAt) &&
+    (value.endedAt === null || isNonEmptyString(value.endedAt))
+  )
+}
+
+export function isCourseProgressRecord(value: unknown): value is CourseProgressRecord {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.courseId) &&
+    (value.activePeriodId === null || isNonEmptyString(value.activePeriodId)) &&
+    (value.currentLessonId === null || isNonEmptyString(value.currentLessonId)) &&
+    (value.endedAt === null || isNonEmptyString(value.endedAt)) &&
+    isNonEmptyString(value.updatedAt)
+  )
+}
+
+export function isLessonSessionSummary(value: unknown): value is LessonSessionSummary {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.lessonId) &&
+    (value.scheduledAt === null || isUtcIsoString(value.scheduledAt)) &&
+    (value.taughtConfirmedAt === null || isUtcIsoString(value.taughtConfirmedAt)) &&
+    (value.attendanceRecordedAt === null || isUtcIsoString(value.attendanceRecordedAt)) &&
+    isNonNegativeInteger(value.presentCount) &&
+    isNonNegativeInteger(value.leaveCount) &&
+    isNonNegativeInteger(value.absentCount) &&
+    isNonNegativeInteger(value.totalCount) &&
+    value.presentCount + value.leaveCount + value.absentCount === value.totalCount
+  )
+}
+
+export function isLessonAttendanceRecord(value: unknown): value is LessonAttendanceRecord {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.lessonId) &&
+    (value.scheduledAt === null || isUtcIsoString(value.scheduledAt)) &&
+    (value.taughtConfirmedAt === null || isUtcIsoString(value.taughtConfirmedAt)) &&
+    (value.attendanceRecordedAt === null || isUtcIsoString(value.attendanceRecordedAt)) &&
+    Array.isArray(value.students) &&
+    value.students.every((student) =>
+      isRecord(student) &&
+      isNonEmptyString(student.studentId) &&
+      isNonEmptyString(student.studentName) &&
+      (student.status === null || isAttendanceStatus(student.status)),
+    )
+  )
+}
+
+export function isConfirmLessonResult(value: unknown): value is ConfirmLessonResult {
+  return (
+    isRecord(value) &&
+    (value.status === 'confirmed' || value.status === 'already_confirmed') &&
+    isNonEmptyString(value.lessonId) &&
+    isUtcIsoString(value.taughtConfirmedAt) &&
+    isCourseProgressRecord(value.progress)
   )
 }
 
@@ -176,15 +348,20 @@ export function isCoreOverview(value: unknown): value is CoreOverview {
     Array.isArray(value.courseStudentLinks) &&
     value.courseStudentLinks.every(isCourseStudentLink) &&
     Array.isArray(value.notes) &&
-    value.notes.every(isNoteRecord)
+    value.notes.every(isNoteRecord) &&
+    Array.isArray(value.courseProgress) &&
+    value.courseProgress.every(isCourseProgressRecord) &&
+    Array.isArray(value.lessonSessions) &&
+    value.lessonSessions.every(isLessonSessionSummary)
   )
 }
 
 export function isCreateCourseRequest(value: unknown): value is CreateCourseRequest {
   return (
-    hasOnlyKeys(value, ['title', 'mode']) &&
+    hasOnlyKeys(value, ['title', 'mode'], ['studentIds']) &&
     isNonEmptyString(value.title) &&
-    isCourseMode(value.mode)
+    isCourseMode(value.mode) &&
+    (value.studentIds === undefined || isUniqueStringArray(value.studentIds))
   )
 }
 
@@ -206,10 +383,100 @@ export function isCreateLessonRequest(value: unknown): value is CreateLessonRequ
 
 export function isCreateStudentRequest(value: unknown): value is CreateStudentRequest {
   return (
-    hasOnlyKeys(value, ['courseId', 'name']) &&
-    isNonEmptyString(value.courseId) &&
-    isNonEmptyString(value.name)
+    hasOnlyKeys(value, ['name'], ['courseId']) &&
+    isNonEmptyString(value.name) &&
+    (value.courseId === undefined || isNonEmptyString(value.courseId))
   )
+}
+
+export function isCourseStudentRequest(value: unknown): value is CourseStudentRequest {
+  return hasOnlyKeys(value, ['courseId', 'studentId']) &&
+    isNonEmptyString(value.courseId) && isNonEmptyString(value.studentId)
+}
+
+export function isSetCurrentLessonRequest(value: unknown): value is SetCurrentLessonRequest {
+  return hasOnlyKeys(value, ['courseId', 'lessonId', 'expectedCurrentLessonId']) &&
+    isNonEmptyString(value.courseId) && isNonEmptyString(value.lessonId) &&
+    (value.expectedCurrentLessonId === null || isNonEmptyString(value.expectedCurrentLessonId))
+}
+
+export function isClearCurrentLessonRequest(value: unknown): value is ClearCurrentLessonRequest {
+  return hasOnlyKeys(value, ['courseId', 'expectedCurrentLessonId']) &&
+    isNonEmptyString(value.courseId) &&
+    (value.expectedCurrentLessonId === null || isNonEmptyString(value.expectedCurrentLessonId))
+}
+
+export function isStartPeriodRequest(value: unknown): value is StartPeriodRequest {
+  return hasOnlyKeys(value, ['courseId', 'periodId', 'initialLessonId']) &&
+    isNonEmptyString(value.courseId) && isNonEmptyString(value.periodId) &&
+    isNonEmptyString(value.initialLessonId)
+}
+
+export function isConfirmLessonTaughtRequest(value: unknown): value is ConfirmLessonTaughtRequest {
+  return hasOnlyKeys(value, ['courseId', 'lessonId', 'expectedCurrentLessonId', 'decision']) &&
+    isNonEmptyString(value.courseId) && isNonEmptyString(value.lessonId) &&
+    (value.expectedCurrentLessonId === null || isNonEmptyString(value.expectedCurrentLessonId)) &&
+    isCurrentLessonDecision(value.decision)
+}
+
+export function isCourseLessonRequest(value: unknown): value is CourseLessonRequest {
+  return hasOnlyKeys(value, ['courseId', 'lessonId']) &&
+    isNonEmptyString(value.courseId) && isNonEmptyString(value.lessonId)
+}
+
+export function isCourseIdRequest(value: unknown): value is CourseIdRequest {
+  return hasOnlyKeys(value, ['courseId']) && isNonEmptyString(value.courseId)
+}
+
+export function isUpdateLessonScheduleRequest(value: unknown): value is UpdateLessonScheduleRequest {
+  return hasOnlyKeys(value, ['lessonId', 'scheduledAt']) &&
+    isNonEmptyString(value.lessonId) &&
+    (value.scheduledAt === null || isUtcIsoString(value.scheduledAt))
+}
+
+export function isLessonIdRequest(value: unknown): value is LessonIdRequest {
+  return hasOnlyKeys(value, ['lessonId']) && isNonEmptyString(value.lessonId)
+}
+
+export function isSaveLessonAttendanceRequest(value: unknown): value is SaveLessonAttendanceRequest {
+  return hasOnlyKeys(value, ['lessonId', 'entries']) &&
+    isNonEmptyString(value.lessonId) && Array.isArray(value.entries) && value.entries.length > 0 &&
+    value.entries.every((entry) => isRecord(entry) && hasOnlyKeys(entry, ['studentId', 'status']) &&
+      isNonEmptyString(entry.studentId) && isAttendanceStatus(entry.status)) &&
+    new Set(value.entries.map((entry) => entry.studentId)).size === value.entries.length
+}
+
+export function isCurrentLessonDecision(value: unknown): value is CurrentLessonDecision {
+  return isRecord(value) && (
+    (hasOnlyKeys(value, ['type']) && (value.type === 'keep' || value.type === 'clear')) ||
+    (hasOnlyKeys(value, ['type', 'lessonId']) && value.type === 'set' && isNonEmptyString(value.lessonId))
+  )
+}
+
+export function isAttendanceStatus(value: unknown): value is AttendanceStatus {
+  return value === 'present' || value === 'leave' || value === 'absent'
+}
+
+export function isUtcIsoString(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  const parsed = new Date(value)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value
+}
+
+export function getLocalDayUtcRange(year: number, month: number, day: number): LocalDayUtcRange {
+  if (![year, month, day].every(Number.isInteger) || month < 1 || month > 12 || day < 1 || day > 31) {
+    throw new Error('Local calendar day is invalid')
+  }
+  const start = new Date(year, month - 1, day, 0, 0, 0, 0)
+  if (
+    start.getFullYear() !== year ||
+    start.getMonth() !== month - 1 ||
+    start.getDate() !== day
+  ) {
+    throw new Error('Local calendar day is invalid')
+  }
+  const end = new Date(year, month - 1, day + 1, 0, 0, 0, 0)
+  return { startUtc: start.toISOString(), endUtc: end.toISOString() }
 }
 
 export function isCreateNoteRequest(value: unknown): value is CreateNoteRequest {
@@ -277,6 +544,10 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+function isUniqueStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every(isNonEmptyString) && new Set(value).size === value.length
 }
 
 function hasOnlyKeys(

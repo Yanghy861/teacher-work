@@ -77,7 +77,12 @@ describe('L01 core data tree', () => {
         '2028 秋·八上',
       ])
       expect(overview.courseStudentLinks).toEqual([
-        { courseId: course.id, studentId: student.id, createdAt: '2026-08-20T00:00:00.000Z' },
+        {
+          courseId: course.id,
+          studentId: student.id,
+          createdAt: '2026-08-20T00:00:00.000Z',
+          endedAt: null,
+        },
       ])
       expect(overview.notes).toEqual([note])
       expect(service.listStudentsForCourse(course.id)).toEqual([student])

@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto'
 
 import type {
+  CourseMode,
   CourseStudentLink,
   CoreOverview,
   DraftStatus,
+  NodeRecord,
   NoteRecord,
   StudentRecord,
 } from '../../shared/core-contracts'
@@ -16,6 +18,8 @@ import {
 } from '../../shared/draft-contracts'
 import type { SqliteDatabase } from '../db/migrations'
 import { NodeService } from './node-service'
+import { CourseProgressService } from './course-progress-service'
+import { AttendanceService } from './attendance-service'
 
 export type CoreDataErrorCode =
   | 'INVALID_NAME'
@@ -26,6 +30,7 @@ export type CoreDataErrorCode =
   | 'COURSE_DELETED'
   | 'STUDENT_ALREADY_LINKED'
   | 'STUDENT_NOT_LINKED'
+  | 'ONE_TO_ONE_ACTIVE_STUDENT'
   | 'LESSON_NOT_FOUND'
   | 'LESSON_DELETED'
   | 'INVALID_LESSON'
@@ -58,6 +63,7 @@ interface LinkRow {
   readonly course_id: string
   readonly student_id: string
   readonly created_at: string
+  readonly ended_at: string | null
 }
 
 interface NoteRow {
@@ -84,6 +90,8 @@ interface DraftLessonContextRow {
 
 export class CoreDataService {
   readonly nodes: NodeService
+  readonly progress: CourseProgressService
+  readonly attendance: AttendanceService
   private readonly idFactory: () => string
   private readonly now: () => string
 
@@ -94,6 +102,33 @@ export class CoreDataService {
     this.idFactory = options.idFactory ?? randomUUID
     this.now = options.now ?? (() => new Date().toISOString())
     this.nodes = new NodeService(database, options)
+    this.progress = new CourseProgressService(database, options)
+    this.attendance = new AttendanceService(database, options)
+  }
+
+  createCourse(input: {
+    readonly title: string
+    readonly mode: CourseMode
+    readonly studentIds?: readonly string[]
+  }): NodeRecord {
+    const studentIds = [...(input.studentIds ?? [])]
+    if (new Set(studentIds).size !== studentIds.length) {
+      throw new CoreDataError('STUDENT_ALREADY_LINKED', '课程关联学生不能重复。')
+    }
+    if (input.mode === 'one_to_one' && studentIds.length > 1) {
+      throw new CoreDataError('ONE_TO_ONE_ACTIVE_STUDENT', '一对一课程最多关联一位在读学生。')
+    }
+    studentIds.forEach((studentId) => this.requireActiveStudent(studentId))
+    return this.transaction(() => {
+      const course = this.nodes.createCourse(input.title, input.mode)
+      const createdAt = this.now()
+      const insert = this.database.prepare(
+        `INSERT INTO course_students (course_id, student_id, created_at, ended_at)
+         VALUES (?, ?, ?, NULL)`,
+      )
+      studentIds.forEach((studentId) => insert.run(course.id, studentId, createdAt))
+      return course
+    })
   }
 
   createStudent(name: string): StudentRecord {
@@ -115,6 +150,7 @@ export class CoreDataService {
     this.requireActiveCourse(courseId)
     const normalizedName = normalizeName(name)
     return this.transaction(() => {
+      this.assertCourseCanAcceptActiveStudent(courseId)
       const studentId = this.idFactory()
       const now = this.now()
       this.database
@@ -125,8 +161,8 @@ export class CoreDataService {
         .run(studentId, normalizedName, now, now)
       this.database
         .prepare(
-          `INSERT INTO course_students (course_id, student_id, created_at)
-           VALUES (?, ?, ?)`,
+          `INSERT INTO course_students (course_id, student_id, created_at, ended_at)
+           VALUES (?, ?, ?, NULL)`,
         )
         .run(courseId, studentId, now)
       return this.requireStudent(studentId)
@@ -137,12 +173,13 @@ export class CoreDataService {
     this.requireActiveCourse(courseId)
     this.requireActiveStudent(studentId)
     return this.transaction(() => {
+      this.assertCourseCanAcceptActiveStudent(courseId)
       const now = this.now()
       try {
         this.database
           .prepare(
-            `INSERT INTO course_students (course_id, student_id, created_at)
-             VALUES (?, ?, ?)`,
+            `INSERT INTO course_students (course_id, student_id, created_at, ended_at)
+             VALUES (?, ?, ?, NULL)`,
           )
           .run(courseId, studentId, now)
       } catch (error) {
@@ -156,12 +193,44 @@ export class CoreDataService {
   }
 
   unlinkStudentFromCourse(courseId: string, studentId: string): void {
-    const result = this.database
-      .prepare('DELETE FROM course_students WHERE course_id = ? AND student_id = ?')
-      .run(courseId, studentId)
-    if (result.changes === 0) {
-      throw new CoreDataError('STUDENT_NOT_LINKED', '学生尚未关联到该课程。')
-    }
+    this.endCourseStudentLink(courseId, studentId)
+  }
+
+  endCourseStudentLink(courseId: string, studentId: string): CourseStudentLink {
+    this.requireActiveCourse(courseId)
+    this.requireActiveStudent(studentId)
+    return this.transaction(() => {
+      const endedAt = this.now()
+      const result = this.database
+        .prepare(
+          `UPDATE course_students SET ended_at = ?
+            WHERE course_id = ? AND student_id = ? AND ended_at IS NULL`,
+        )
+        .run(endedAt, courseId, studentId)
+      if (result.changes === 0) {
+        throw new CoreDataError('STUDENT_NOT_LINKED', '学生不在该课程的在读名单中。')
+      }
+      return this.requireLink(courseId, studentId)
+    })
+  }
+
+  reactivateCourseStudentLink(courseId: string, studentId: string): CourseStudentLink {
+    this.requireActiveCourse(courseId)
+    this.requireActiveStudent(studentId)
+    return this.transaction(() => {
+      const existing = this.requireLink(courseId, studentId)
+      if (existing.endedAt === null) {
+        throw new CoreDataError('STUDENT_ALREADY_LINKED', '学生已经在该课程中。')
+      }
+      this.assertCourseCanAcceptActiveStudent(courseId)
+      this.database
+        .prepare(
+          `UPDATE course_students SET ended_at = NULL
+            WHERE course_id = ? AND student_id = ?`,
+        )
+        .run(courseId, studentId)
+      return this.requireLink(courseId, studentId)
+    })
   }
 
   createNote(
@@ -348,6 +417,8 @@ export class CoreDataService {
       students: this.listStudents(),
       courseStudentLinks: this.listLinks(),
       notes: this.listNotes(),
+      courseProgress: this.progress.listProgress(),
+      lessonSessions: this.progress.listLessonSessions(),
     }
   }
 
@@ -363,7 +434,10 @@ export class CoreDataService {
     return rows.map(mapStudent)
   }
 
-  listStudentsForCourse(courseId: string): StudentRecord[] {
+  listStudentsForCourse(
+    courseId: string,
+    options: { readonly includeEnded?: boolean } = {},
+  ): StudentRecord[] {
     this.requireActiveCourse(courseId)
     const rows = this.database
       .prepare(
@@ -371,6 +445,7 @@ export class CoreDataService {
            FROM students AS s
            JOIN course_students AS cs ON cs.student_id = s.id
           WHERE cs.course_id = ?
+            ${options.includeEnded ? '' : 'AND cs.ended_at IS NULL'}
             AND s.deleted_at IS NULL
           ORDER BY s.created_at, s.id`,
       )
@@ -400,7 +475,7 @@ export class CoreDataService {
   private listLinks(): CourseStudentLink[] {
     const rows = this.database
       .prepare(
-        `SELECT course_id, student_id, created_at
+        `SELECT course_id, student_id, created_at, ended_at
            FROM course_students
           ORDER BY created_at, course_id, student_id`,
       )
@@ -488,7 +563,7 @@ export class CoreDataService {
   private requireLink(courseId: string, studentId: string): CourseStudentLink {
     const row = this.database
       .prepare(
-        `SELECT course_id, student_id, created_at
+        `SELECT course_id, student_id, created_at, ended_at
            FROM course_students
           WHERE course_id = ? AND student_id = ?`,
       )
@@ -520,6 +595,24 @@ export class CoreDataService {
       throw new CoreDataError('INVALID_NOTE', '记录已删除。')
     }
     return note
+  }
+
+  private assertCourseCanAcceptActiveStudent(courseId: string): void {
+    const course = this.nodes.getNode(courseId)
+    if (course?.kind !== 'course') {
+      throw new CoreDataError('COURSE_NOT_FOUND', '课程不存在。')
+    }
+    if (course.courseMode !== 'one_to_one') return
+    const row = this.database
+      .prepare(
+        `SELECT COUNT(*) AS count
+           FROM course_students
+          WHERE course_id = ? AND ended_at IS NULL`,
+      )
+      .get(courseId) as { count: number }
+    if (row.count >= 1) {
+      throw new CoreDataError('ONE_TO_ONE_ACTIVE_STUDENT', '一对一课程最多关联一位在读学生。')
+    }
   }
 
   private transaction<T>(callback: () => T): T {
@@ -556,6 +649,7 @@ function mapLink(row: LinkRow): CourseStudentLink {
     courseId: row.course_id,
     studentId: row.student_id,
     createdAt: row.created_at,
+    endedAt: row.ended_at,
   }
 }
 

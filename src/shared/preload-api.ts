@@ -44,6 +44,9 @@ import {
   type SearchHit,
 } from './search-contracts'
 import {
+  isConfirmLessonResult,
+  isCourseProgressRecord,
+  isCourseStudentLink,
   isCoreOverview,
   isCreateCourseRequest,
   isCreateLessonRequest,
@@ -58,7 +61,15 @@ import {
   isRenameNodeRequest,
   isStudentRecord,
   isUpdateNoteRequest,
+  type ClearCurrentLessonRequest,
+  type ConfirmLessonResult,
+  type ConfirmLessonTaughtRequest,
   type CoreOverview,
+  type CourseIdRequest,
+  type CourseLessonRequest,
+  type CourseProgressRecord,
+  type CourseStudentLink,
+  type CourseStudentRequest,
   type CreateCourseRequest,
   type CreateLessonRequest,
   type CreateNoteRequest,
@@ -70,8 +81,18 @@ import {
   type NoteRecord,
   type ReorderNodeRequest,
   type RenameNodeRequest,
+  type SetCurrentLessonRequest,
+  type StartPeriodRequest,
   type StudentRecord,
   type UpdateNoteRequest,
+  isLessonAttendanceRecord,
+  isLessonIdRequest,
+  isSaveLessonAttendanceRequest,
+  isUpdateLessonScheduleRequest,
+  type LessonAttendanceRecord,
+  type LessonIdRequest,
+  type SaveLessonAttendanceRequest,
+  type UpdateLessonScheduleRequest,
 } from './core-contracts'
 import {
   isCopyFileToLessonRequest,
@@ -116,11 +137,19 @@ import {
   type UpdateSkillRequest,
 } from './skill-contracts'
 
-export { AI_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS, SKILL_IPC_CHANNELS } from './ipc-contracts'
+export { AI_IPC_CHANNELS, ATTENDANCE_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS, SKILL_IPC_CHANNELS } from './ipc-contracts'
 export type { BackupSummary, IpcChannel, RestoreSummary, WorkspaceInfo } from './ipc-contracts'
 export { isBackupSummary, isRestoreSummary } from './ipc-contracts'
 export type {
   CoreOverview,
+  ClearCurrentLessonRequest,
+  ConfirmLessonResult,
+  ConfirmLessonTaughtRequest,
+  CourseIdRequest,
+  CourseLessonRequest,
+  CourseProgressRecord,
+  CourseStudentLink,
+  CourseStudentRequest,
   CreateCourseRequest,
   CreateLessonRequest,
   CreateNoteRequest,
@@ -132,8 +161,14 @@ export type {
   NoteRecord,
   ReorderNodeRequest,
   RenameNodeRequest,
+  SetCurrentLessonRequest,
+  StartPeriodRequest,
   StudentRecord,
   UpdateNoteRequest,
+  LessonAttendanceRecord,
+  LessonIdRequest,
+  SaveLessonAttendanceRequest,
+  UpdateLessonScheduleRequest,
 } from './core-contracts'
 export type {
   CopyFileToLessonRequest,
@@ -171,6 +206,9 @@ export interface TeacherWorkbenchApi {
     createPeriod: (request: CreatePeriodRequest) => Promise<NodeRecord>
     createLesson: (request: CreateLessonRequest) => Promise<NodeRecord>
     createStudent: (request: CreateStudentRequest) => Promise<StudentRecord>
+    linkStudentToCourse: (request: CourseStudentRequest) => Promise<CourseStudentLink>
+    endCourseStudentLink: (request: CourseStudentRequest) => Promise<CourseStudentLink>
+    reactivateCourseStudentLink: (request: CourseStudentRequest) => Promise<CourseStudentLink>
     createNote: (request: CreateNoteRequest) => Promise<NoteRecord>
     updateNote: (request: UpdateNoteRequest) => Promise<NoteRecord>
     renameNode: (request: RenameNodeRequest) => Promise<NodeRecord>
@@ -178,6 +216,18 @@ export interface TeacherWorkbenchApi {
     reorderNode: (request: ReorderNodeRequest) => Promise<NodeRecord>
     softDeleteNode: (request: NodeIdRequest) => Promise<NodeRecord>
     restoreNode: (request: NodeIdRequest) => Promise<NodeRecord>
+    setCurrentLesson: (request: SetCurrentLessonRequest) => Promise<CourseProgressRecord>
+    clearCurrentLesson: (request: ClearCurrentLessonRequest) => Promise<CourseProgressRecord>
+    startPeriod: (request: StartPeriodRequest) => Promise<CourseProgressRecord>
+    confirmLessonTaught: (request: ConfirmLessonTaughtRequest) => Promise<ConfirmLessonResult>
+    undoLessonTaught: (request: CourseLessonRequest) => Promise<void>
+    endCourse: (request: CourseIdRequest) => Promise<CourseProgressRecord>
+    reopenCourse: (request: CourseIdRequest) => Promise<CourseProgressRecord>
+  }
+  attendance: {
+    updateSchedule: (request: UpdateLessonScheduleRequest) => Promise<LessonAttendanceRecord>
+    getLesson: (request: LessonIdRequest) => Promise<LessonAttendanceRecord>
+    saveLesson: (request: SaveLessonAttendanceRequest) => Promise<LessonAttendanceRecord>
   }
   files: {
     getOverview: () => Promise<ManagedFileOverview>
@@ -234,6 +284,9 @@ export {
   isAppVersion,
   isCoreOverview,
   isCreateCourseRequest,
+  isConfirmLessonResult,
+  isCourseProgressRecord,
+  isCourseStudentLink,
   isCreateLessonRequest,
   isCreateNoteRequest,
   isCreatePeriodRequest,
@@ -269,6 +322,10 @@ export {
   isAiRequestIdRequest,
   isUpdateAiSettingsRequest,
   isUpdateNoteRequest,
+  isLessonAttendanceRecord,
+  isLessonIdRequest,
+  isSaveLessonAttendanceRequest,
+  isUpdateLessonScheduleRequest,
   isDraftNoteMetadata,
   isDraftIdRequest,
   isGenerateDraftRequest,
