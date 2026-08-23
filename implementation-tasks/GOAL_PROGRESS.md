@@ -603,3 +603,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 持久化与完整性：关闭并重启后课程、学生关系、已上、点名和阶段边界均保留；schema v12、`integrity_check=ok`、foreign_key_check 0。隔离应用正常关闭，测试目录和数据已删除。
 - 安全边界：安装目录子树内的测试工作区被路径保护拒绝，改用 Windows 临时目录后通过；未接触正式工作区、真实资料或 Key。
 - Git 边界：本次只记录复核证据，不运行 portable/installer，不 push；仍等待产品负责人明确最终体验确认，因此不创建 `checkpoint-V1.2-pass`。
+
+## 2026-08-24 · V1.2 最终体验确认 · PASS
+
+- 产品负责人确认当前 V1.2 没有问题，构成冻结协议要求的最终体验确认。
+- 最终证据：全量 42 files / 133 tests、V1.2 专项 6 files / 19 tests、typecheck、lint、production build、diff check、代表性 Windows production 流程和安全回归均为 PASS。
+- 版本动作：在最终确认提交创建 annotated tag `checkpoint-V1.2-pass`；用户明确授权把 `main` 与该标签上传到现有 GitHub `origin`。
+- 发布边界：不修改远程，不生成 portable/installer，不提交真实资料、运行数据库、Key 或临时文件。
