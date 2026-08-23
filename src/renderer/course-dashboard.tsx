@@ -17,16 +17,21 @@ import Modal from './modal'
 type CourseFilter = 'active' | 'ended'
 
 export default function CourseDashboard({
+  selectedCourseId,
   onStartPrep,
   onOpenDraft,
   onOpenDraftInbox,
+  onSelectCourse,
+  onOpenStudent,
 }: {
+  readonly selectedCourseId: string
   readonly onStartPrep: (context: LessonPrepContext) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
   readonly onOpenDraftInbox: () => void
+  readonly onSelectCourse: (courseId: string) => void
+  readonly onOpenStudent: (studentId: string) => void
 }): React.JSX.Element {
   const [overview, setOverview] = useState<CoreOverview | null>(null)
-  const [selectedCourseId, setSelectedCourseId] = useState('')
   const [viewedLessonId, setViewedLessonId] = useState('')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<CourseFilter>('active')
@@ -61,10 +66,15 @@ export default function CourseDashboard({
   useEffect(() => { void reload() }, [])
 
   useEffect(() => {
-    if (!visibleSummaries.some((summary) => summary.course.id === selectedCourseId)) {
-      setSelectedCourseId(visibleSummaries[0]?.course.id ?? '')
+    const target = summaries.find((summary) => summary.course.id === selectedCourseId)
+    if (target !== undefined && target.ended !== (filter === 'ended')) {
+      setFilter(target.ended ? 'ended' : 'active')
+      return
     }
-  }, [selectedCourseId, visibleSummaries])
+    if (!visibleSummaries.some((summary) => summary.course.id === selectedCourseId)) {
+      onSelectCourse(visibleSummaries[0]?.course.id ?? '')
+    }
+  }, [filter, onSelectCourse, selectedCourseId, summaries, visibleSummaries])
 
   async function reload(): Promise<void> {
     setLoading(true)
@@ -99,7 +109,7 @@ export default function CourseDashboard({
   }
 
   function selectCourse(courseId: string): void {
-    setSelectedCourseId(courseId)
+    onSelectCourse(courseId)
     const summary = summaries.find((candidate) => candidate.course.id === courseId)
     setViewedLessonId(summary?.currentLesson?.id ?? summary?.lessons[0]?.id ?? '')
   }
@@ -127,7 +137,7 @@ export default function CourseDashboard({
 
   function openTodayAttendance(courseId: string, lessonId: string): void {
     setFilter('active')
-    setSelectedCourseId(courseId)
+    onSelectCourse(courseId)
     setViewedLessonId(lessonId)
     setAttendanceLessonId(lessonId)
   }
@@ -210,6 +220,7 @@ export default function CourseDashboard({
             onStartPrep={onStartPrep}
             onOpenAttendance={setAttendanceLessonId}
             onConfirmTaught={setConfirmLessonId}
+            onOpenStudent={onOpenStudent}
             onAction={runAction}
           />
         )}
@@ -223,7 +234,7 @@ export default function CourseDashboard({
           onCreated={(courseId) => {
             setFilter('active')
             setSearch('')
-            setSelectedCourseId(courseId)
+            onSelectCourse(courseId)
             setViewedLessonId('')
           }}
           onAction={runAction}

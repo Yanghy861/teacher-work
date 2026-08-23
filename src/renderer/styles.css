@@ -1572,10 +1572,49 @@ button:disabled {
 .course-student-list { display: grid; gap: 6px; }
 .course-student-row { border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 11px; background: #f8fafc; }
 .course-student-row strong { flex: 1; color: #334155; font-size: 13px; }
+.student-name-button { flex: 1; border: 0; padding: 0; color: #3730a3; background: transparent; cursor: pointer; font-size: 13px; font-weight: 700; text-align: left; }
+.student-name-button:hover { text-decoration: underline; }
 .course-student-row span { color: #64748b; font-size: 11px; }
 .historical-students { margin-top: 14px; color: #64748b; font-size: 12px; }
 .historical-students summary { margin-bottom: 8px; cursor: pointer; font-weight: 700; }
 .course-materials-placeholder { display: grid; min-height: 300px; place-items: center; align-content: center; gap: 10px; text-align: center; }
+
+.students-page { display: grid; width: 100%; gap: 12px; margin: 0; }
+.students-page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; background: #fff; }
+.students-page-header > div { display: grid; gap: 3px; }
+.students-page-header strong { color: #1e293b; font-size: 14px; }
+.students-page-header span { color: #64748b; font-size: 11px; }
+.students-workspace-layout { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr); align-items: start; gap: 12px; min-height: 560px; }
+.student-list-column,
+.student-detail-pane { min-width: 0; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+.student-list-column { overflow: hidden; }
+.student-list-search { border-bottom: 1px solid #e2e8f0; padding: 12px; }
+.student-list-search input { padding: 8px 10px; }
+.student-summary-list { display: grid; gap: 7px; max-height: calc(100vh - 166px); overflow-y: auto; padding: 10px; }
+.student-summary-card { display: grid; gap: 6px; border: 1px solid #e2e8f0; border-radius: 9px; padding: 11px; color: #64748b; background: #fff; cursor: pointer; text-align: left; }
+.student-summary-card:hover { background: #f8fafc; }
+.student-summary-card.is-selected { border-color: #818cf8; background: #f5f7ff; box-shadow: 0 0 0 2px rgb(99 102 241 / 10%); }
+.student-summary-card strong { color: #172554; font-size: 14px; }
+.student-summary-card span { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.student-summary-card small { display: -webkit-box; overflow: hidden; color: #475569; font-size: 11px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.student-list-empty { padding: 32px 14px; color: #94a3b8; font-size: 12px; text-align: center; }
+.student-detail-pane { display: grid; gap: 14px; padding: 15px; }
+.student-detail-empty { min-height: 520px; place-items: center; align-content: center; color: #64748b; text-align: center; }
+.student-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 13px; }
+.student-detail-header span { color: #6366f1; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+.student-detail-header h2 { margin: 3px 0 0; color: #172554; font-size: 20px; }
+.student-detail-section { border-top: 1px solid #f1f5f9; padding-top: 2px; }
+.student-detail-section:first-of-type { border-top: 0; }
+.student-detail-section h4 { margin: 12px 0 7px; color: #64748b; font-size: 11px; letter-spacing: .04em; }
+.student-course-list,
+.learning-record-list { display: grid; gap: 7px; }
+.student-course-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 11px; background: #f8fafc; }
+.student-course-row > div { display: grid; gap: 3px; min-width: 0; }
+.student-course-row strong { overflow: hidden; color: #334155; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.student-course-row span { color: #64748b; font-size: 10px; }
+.learning-record-card { border: 1px solid #e2e8f0; border-radius: 9px; padding: 11px 12px; background: #f8fafc; }
+.learning-record-card p { margin: 0 0 7px; color: #334155; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+.learning-record-card small { color: #64748b; font-size: 10px; }
 
 .modal-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(15 23 42 / 44%); }
 .modal-card { width: min(520px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; background: #fff; box-shadow: 0 24px 80px rgb(15 23 42 / 25%); }
@@ -1611,6 +1650,7 @@ button:disabled {
   .search-hero { align-items: flex-start; flex-direction: column; }
   .search-result { flex-direction: column; }
   .course-workspace-layout { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr); }
+  .students-workspace-layout { grid-template-columns: minmax(230px, 270px) minmax(0, 1fr); }
   .course-detail-header,
   .viewed-lesson-panel { flex-direction: column; }
   .course-detail-actions,

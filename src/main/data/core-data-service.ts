@@ -245,6 +245,7 @@ export class CoreDataService {
     this.requireActiveStudent(studentId)
     if (lessonId !== undefined) {
       this.requireActiveLesson(lessonId)
+      this.requireStudentLinkedToLessonCourse(lessonId, studentId)
     }
     return this.transaction(() => {
       const id = this.idFactory()

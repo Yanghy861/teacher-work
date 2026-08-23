@@ -9,6 +9,7 @@ import DraftPanel from './draft-panel'
 import ExternalLibraryPanel from './external-library-panel'
 import MaterialPickerPanel from './material-picker-panel'
 import type { LessonPrepContext } from './lesson-prep-context'
+import StudentsPage from './students-page'
 
 const navigationItems = [
   { label: '我的课程', icon: 'courses' },
@@ -31,6 +32,8 @@ export default function App(): React.JSX.Element {
   const [prepDraftId, setPrepDraftId] = useState<string | null>(null)
   const [externalPickerOpen, setExternalPickerOpen] = useState(false)
   const [materialPickerOpen, setMaterialPickerOpen] = useState(false)
+  const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [selectedStudentId, setSelectedStudentId] = useState('')
 
   useEffect(() => {
     void window.teacherWorkbench.workspace.getInfo()
@@ -75,6 +78,16 @@ export default function App(): React.JSX.Element {
     setActiveItem('备课')
   }
 
+  function openCourse(courseId: string): void {
+    setSelectedCourseId(courseId)
+    setActiveItem('我的课程')
+  }
+
+  function openStudent(studentId: string): void {
+    setSelectedStudentId(studentId)
+    setActiveItem('学生')
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="主导航">
@@ -101,9 +114,12 @@ export default function App(): React.JSX.Element {
           <SearchPanel />
         ) : activeItem === '我的课程' ? (
           <CourseDashboard
+            selectedCourseId={selectedCourseId}
             onStartPrep={startPrep}
             onOpenDraft={openDraft}
             onOpenDraftInbox={() => navigate('备课')}
+            onSelectCourse={setSelectedCourseId}
+            onOpenStudent={openStudent}
           />
         ) : activeItem === '素材库' ? (
           materialPickerOpen && prepContext !== null ? (
@@ -121,7 +137,11 @@ export default function App(): React.JSX.Element {
             onAddedToLesson={returnToPrep}
           />
         ) : activeItem === '学生' ? (
-          <ManagedFilesPanel heading="学生资料" />
+          <StudentsPage
+            selectedStudentId={selectedStudentId}
+            onSelectStudent={setSelectedStudentId}
+            onOpenCourse={openCourse}
+          />
         ) : activeItem === '设置' ? (
           <SettingsPanel />
         ) : activeItem === '备课' ? (

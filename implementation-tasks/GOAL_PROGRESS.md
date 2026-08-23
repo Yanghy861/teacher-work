@@ -548,3 +548,19 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动验收：25 项 V12-02 相关测试通过；`npm test` 36 files / 119 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。未运行 portable/installer packaging。
 - Windows smoke：当前 production build 使用 Windows 临时目录中的隔离 schema v12 工作区启动；验证 1264px 窗口中课程列表 320px/详情 804px、课程/阶段/三课创建、第一课初始化、Viewed/Current 分离、关联隔离学生、今日 18:30 排课、1/1 点名、非 Current 保持、Current 推进到同阶段第 3 课、结束筛选与重开恢复。数据库 `integrity_check=ok`、foreign_key_check 0；隔离目录随后已删除。
 - 范围：资料分区只保留 Viewed Lesson 边界提示，实际课次资料留给 V12-04；学生全局页留给 V12-03。未扩展日历、提醒、统计分析、学生文件 UI、复杂 enrollment、多 session 或新 AI 工作流。
+
+## 2026-08-23 · V12-03 · IN_PROGRESS
+
+- 前置：V12-02 已 `DONE`，自动门、production build 与隔离 Electron smoke 通过，本地里程碑提交为 `9ff4be7`。
+- 当前唯一实现范围：学生列表/搜索/新建、学生详情的在读/历史课程、manual 学习记录和可选关联课次、课程与学生详情之间的 ID 导航目标。
+- 安全与 Later：Main/Service 验证人工记录关联课次和学生课程关系；前端不显示 student_files、附件、成绩、画像、文件统计，也不提前实现 V12-04 课次资料。
+
+## 2026-08-23 · V12-03 · DONE
+
+- 学生信息架构：全局“学生”替换旧学生文件面板，采用学生列表/学生详情；支持姓名搜索和独立新建。列表只显示姓名、在读课程、最近一条 manual 记录。
+- 学生详情：纵向展示在读课程、已退出/课程已结束的历史关系和最近 manual 学习记录；明确过滤 lecture/example/homework，不显示文件、附件、成绩、画像或统计。
+- 学习记录：新增记录只填写正文和可选课次；Renderer 只列当前或历史关联课程中的有效课次，CoreDataService/Main 再次验证学生与课次所属课程存在关系，无关课次返回 CORE_DATA_ERROR 且不写入。
+- 双向导航：App 仅提升 selectedCourseId/selectedStudentId；课程学生姓名进入唯一 StudentsPage 详情，学生课程行返回唯一 CourseDashboard 详情，没有复制页面或数据。
+- 自动验收：22 项 V12-03 相关测试通过；`npm test` 38 files / 127 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main/Preload/Renderer）；`git diff --check` ✅。未运行 portable/installer packaging。
+- Windows smoke：当前 production build 使用新的 Windows 临时隔离工作区启动；验证学生页新建/搜索、课程创建时事务关联、课程→学生与学生→课程跳转、关联课次 manual 记录、退出后归入历史且仍可为历史课次补录。隔离库 schema v12、`integrity_check=ok`、foreign_key_check 0，1 位学生/1 条 ended 关系/2 条 manual 记录；目录随后已删除。
+- 范围：保留既有 student_files/copyToStudent 数据与后端兼容能力，但 V1.2 UI 不暴露入口；未实现学生文件、成绩、画像、附件、复杂 enrollment 或 V12-04 资料视图。

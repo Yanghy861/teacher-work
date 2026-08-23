@@ -23,6 +23,7 @@ export default function CourseDetail({
   onStartPrep,
   onOpenAttendance,
   onConfirmTaught,
+  onOpenStudent,
   onAction,
 }: {
   readonly overview: CoreOverview
@@ -33,6 +34,7 @@ export default function CourseDetail({
   readonly onStartPrep: (context: LessonPrepContext) => void
   readonly onOpenAttendance: (lessonId: string) => void
   readonly onConfirmTaught: (lessonId: string) => void
+  readonly onOpenStudent: (studentId: string) => void
   readonly onAction: (action: () => Promise<void>, successMessage: string) => Promise<boolean>
 }): React.JSX.Element {
   const [tab, setTab] = useState<CourseTab>('lessons')
@@ -134,7 +136,13 @@ export default function CourseDetail({
           onAction={onAction}
         />
       ) : tab === 'students' ? (
-        <CourseStudentsSection overview={overview} summary={summary} busy={busy} onAction={onAction} />
+        <CourseStudentsSection
+          overview={overview}
+          summary={summary}
+          busy={busy}
+          onOpenStudent={onOpenStudent}
+          onAction={onAction}
+        />
       ) : (
         <div className="course-materials-placeholder">
           <h3>{viewedLesson === null ? '课次资料' : `${viewedPeriod?.title ?? ''} · ${viewedLesson.title}`}</h3>
@@ -307,10 +315,11 @@ function LessonsSection({
   )
 }
 
-function CourseStudentsSection({ overview, summary, busy, onAction }: {
+function CourseStudentsSection({ overview, summary, busy, onOpenStudent, onAction }: {
   readonly overview: CoreOverview
   readonly summary: CourseSummary
   readonly busy: boolean
+  readonly onOpenStudent: (studentId: string) => void
   readonly onAction: (action: () => Promise<void>, successMessage: string) => Promise<boolean>
 }): React.JSX.Element {
   const [studentId, setStudentId] = useState('')
@@ -337,7 +346,7 @@ function CourseStudentsSection({ overview, summary, busy, onAction }: {
       <div className="course-student-list">
         {summary.activeStudents.map((student) => (
           <div className="course-student-row" key={student.id}>
-            <strong>{student.name}</strong><span>在读</span>
+            <button className="student-name-button" type="button" onClick={() => onOpenStudent(student.id)}>{student.name}</button><span>在读</span>
             <button className="danger-button" type="button" disabled={busy || summary.ended} onClick={() => void onAction(
               async () => {
                 await window.teacherWorkbench.core.endCourseStudentLink({
@@ -356,7 +365,7 @@ function CourseStudentsSection({ overview, summary, busy, onAction }: {
           <summary>已退出学生（{summary.historicalStudents.length}）</summary>
           {summary.historicalStudents.map((student) => (
             <div className="course-student-row" key={student.id}>
-              <strong>{student.name}</strong><span>已退出</span>
+              <button className="student-name-button" type="button" onClick={() => onOpenStudent(student.id)}>{student.name}</button><span>已退出</span>
               <button className="link-button" type="button" disabled={busy || summary.ended} onClick={() => void onAction(
                 async () => {
                   await window.teacherWorkbench.core.reactivateCourseStudentLink({

@@ -139,4 +139,28 @@ describe('L01 typed core IPC', () => {
       database.close()
     }
   })
+
+  it('rejects a manual record lesson outside the student current or historical courses', async () => {
+    const { database, dependencies } = createDependencies()
+    try {
+      const core = dependencies.getCoreData()
+      const student = core.createStudent('学生甲')
+      const unrelatedCourse = core.createCourse({ title: '无关课程', mode: 'class' })
+      const period = core.nodes.createPeriod(unrelatedCourse.id, '阶段')
+      const lesson = core.nodes.createLesson(period.id, '课次')
+      const response = await dispatchCoreIpc(
+        CORE_IPC_CHANNELS.createNote,
+        { studentId: student.id, lessonId: lesson.id, bodyMd: '不应保存' },
+        dependencies,
+        new TestLogger(),
+      )
+      expect(response).toMatchObject({
+        ok: false,
+        error: { code: IPC_ERROR_CODES.CORE_DATA_ERROR },
+      })
+      expect(core.getOverview().notes).toEqual([])
+    } finally {
+      database.close()
+    }
+  })
 })

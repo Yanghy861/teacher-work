@@ -44,6 +44,7 @@ describe('responsive workspace layout', () => {
       '.material-picker-panel',
       '.draft-inbox-panel',
       '.external-library-panel',
+      '.students-page',
     ]) {
       expect(declarations(selector), selector).toContain('width: 100%')
       expect(declarations(selector), selector).not.toContain('max-width')

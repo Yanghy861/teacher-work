@@ -92,6 +92,30 @@ describe('L01 core data tree', () => {
     }
   })
 
+  it('allows manual records for current or historical course relations and rejects unrelated lessons', () => {
+    const { database, service } = createService()
+    try {
+      const student = service.createStudent('学生甲')
+      const relatedCourse = service.createCourse({ title: '关联课程', mode: 'class', studentIds: [student.id] })
+      const relatedPeriod = service.nodes.createPeriod(relatedCourse.id, '关联阶段')
+      const relatedLesson = service.nodes.createLesson(relatedPeriod.id, '关联课次')
+      const unrelatedCourse = service.createCourse({ title: '无关课程', mode: 'class' })
+      const unrelatedPeriod = service.nodes.createPeriod(unrelatedCourse.id, '无关阶段')
+      const unrelatedLesson = service.nodes.createLesson(unrelatedPeriod.id, '无关课次')
+
+      service.endCourseStudentLink(relatedCourse.id, student.id)
+      expect(service.createNote(student.id, '历史课程记录', relatedLesson.id)).toMatchObject({
+        lessonId: relatedLesson.id,
+      })
+      expect(() => service.createNote(student.id, '不应保存', unrelatedLesson.id)).toThrowError(
+        expect.objectContaining({ code: 'STUDENT_NOT_LINKED' }),
+      )
+      expect(service.getOverview().notes.map((note) => note.bodyMd)).toEqual(['历史课程记录'])
+    } finally {
+      database.close()
+    }
+  })
+
   it('renames and reorders siblings through transactional writes', () => {
     const { database, service } = createService()
     try {
