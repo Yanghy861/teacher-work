@@ -491,3 +491,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 重启说明：Renderer 可以热更新，但 Electron Main/Preload 新增能力必须完整重启开发进程。产品负责人遇到的 `permanentlyDeleteFile is not a function` 是旧 Preload 与新 Renderer 混用，调用在 IPC 发出前失败，没有删除资料。使用新按钮前需关闭旧窗口和开发终端，再运行 `start-dev.bat`。
 - 文档：修复内容、彻底删除边界、开发版重启步骤和验证范围汇总于 `docs/v1.1-post-test-fixes.md`。
 - 验证：相关测试 `4 files / 18 tests`、`npm run typecheck`、`npm run lint` 与 `git diff --check` 通过；按个人开发阶段约定不运行 production build 或 portable packaging。
+
+## 2026-08-23 · V1.1 最终门禁重验 · AWAITING_PRODUCT_CONFIRMATION
+
+- 候选基线：重验前代码 HEAD 为 `16aff174298b49a14acfd60d3954931bd9019b53`（`fix(V1.1): repair local dev startup`）；V11-01–V11-05、测试后小修复和开发启动修复均已提交。冻结的 V1.2 方案仍是未跟踪文件，本轮未把它纳入提交，也未进入 V12-01。
+- 自动质量门：`npm test` ✅（32 files / 101 tests）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`npm run package:portable` ✅；`git diff --check` ✅。
+- 当前 package：重新生成修复后的 `release-l12/win-unpacked/教师工作台.exe`；exe `235,534,336` bytes，`resources/app.asar` `107,328,552` bytes。asar 共 996 个文件，文件名审计未发现 `.env`、数据库/索引、日志、证书、Key、备份或工作区数据。
+- Windows packaged smoke：使用仓库 `tmp/` 下被忽略的隔离 app-data 与 `user-data-dir` 启动当前候选；唯一窗口标题正确，默认菜单隐藏，主工作区自适应撑满，内容滚动后 104px 全局导航仍固定；随后正常关闭，目标窗口数归零。隔离 SQLite 为 schema v11，`integrity_check=ok`。
+- 安全边界：未读取正式工作区、真实教学资料或真实 API Key；`out/`、`release-l12/` 与 `tmp/` 均继续被 `.gitignore` 排除。
+- 当前门禁：自动质量门、当前 package 和代表性 Windows 启动体验证据已齐全；根据 V1.1 产品规格与版本控制协议，仍须产品负责人明确确认一次真实但不敏感的完整备课体验后，才创建 `checkpoint-V1.1-pass` 并开始 V1.2。
