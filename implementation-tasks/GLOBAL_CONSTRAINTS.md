@@ -1,6 +1,6 @@
-# 教师工作台 V1 / V1.1 全局实施约束
+# 教师工作台 V1 / V1.1 / V1.2 全局实施约束
 
-Lean V1 已在 `checkpoint-L12-pass` 完成。本文件中的安全边界继续适用于 V1.1；V1.1 的新增产品范围与简单化裁决以 `V1_1_DECISIONS.md` 为准。
+Lean V1 已在 `checkpoint-L12-pass` 完成，V1.1 已在 `checkpoint-V1.1-pass` 完成。本文件中的安全边界继续适用于 V1.2；V1.2 的新增产品范围与简单化裁决以冻结的 V1.2 产品方案和 `V1_2_DECISIONS.md` 为准。
 
 ## 1. 产品目标
 
@@ -54,7 +54,7 @@ V1 只证明三条核心流程：
 
 ## 6. 完成与阻塞规则
 
-历史 Lxx 的验证规则保持不变。V11-01–V11-04 运行相关测试、typecheck、lint；V11-05 额外运行全量测试、production build、portable packaging 和代表性 Windows smoke。V1.1 不建立多层企业审核链。
+历史 Lxx 与 V11-xx 的验证记录保持不变。V12-01–V12-04 运行相关测试、typecheck、lint，并按风险补充 build 或本地 smoke；V12-05 运行全量测试、typecheck、lint、production build、`git diff --check` 和代表性本地 Windows 流程。V1.2 及后续小版本不运行 portable/installer packaging，不创建对外交付包。V1.2 不建立多层企业审核链。
 
 只有以下情况可以标记 `BLOCKED`：
 

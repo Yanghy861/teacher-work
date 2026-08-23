@@ -507,3 +507,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动质量门、当前 package、代表性 Windows packaged smoke、安全审计和最终人工体验现已全部齐全。
 - 本确认与验收状态写入最终 V1.1 审计提交；`checkpoint-V1.1-pass` 创建在该提交上，不 push、不移动既有标签。
 - V1.1 在此冻结。下一步按冻结方案建立 V1.2 decisions、V12-01–V12-05、状态记录与活动索引，然后从 V12-01 顺序实施。
+
+## 2026-08-23 · V1.2 · PLAN_FROZEN
+
+- 基线：`checkpoint-V1.1-pass` 已创建；Lean V1 与 V1.1 全部历史里程碑保持 `DONE` 并冻结。
+- 产品真相：纳入根目录冻结的 `教师工作台_V1_2_课程与学生信息架构重构_产品与实施方案.md`；课程树表达计划，点名和 taught confirmation 表达事实，Current Lesson 只给默认下一步。
+- 实施链：建立 `v1.2-tasks/V12-01`–`V12-05`，严格顺序执行且同一时刻最多一个 `IN_PROGRESS`。
+- 复用与 Later：复用 Node/Core/ManagedFile/Draft/LessonPrep/Search/Parser/AI/Backup，不重做 V1.1 备课内核；日历、提醒、成绩分析、学生文件 UI、复杂 enrollment、多 session、共享和新 AI 工作流继续 Later。
+- 验收：V12-01–V12-04 各跑相关测试、typecheck、lint并按风险补 smoke/build；V12-05 跑全量测试、typecheck、lint、build、diff check 和代表性本地 Windows 流程。V1.2 不运行 portable/installer packaging。
+- Git：方案与活动链使用独立 `plan(V1.2)` 本地提交；里程碑使用 `v1.2(V12-XX)`；最终体验确认前不创建 `checkpoint-V1.2-pass`，不 push。

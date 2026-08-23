@@ -1,19 +1,21 @@
-# 教师工作台 V1 / V1.1：实现代理约束
+# 教师工作台 V1 / V1.1 / V1.2：实现代理约束
 
-Lean V1 的 T01–T08 与 L01–L12 已全部完成，稳定基线为 `checkpoint-L12-pass`。旧 `tasks/T09-*` 至 `tasks/T42-*` 已退役，只保留历史参考，不得继续执行；已完成 L01–L12 保持 `DONE`，不得因 V1.1 重新实现或改写审核状态。
+Lean V1 的 T01–T08 与 L01–L12 已全部完成，稳定基线为 `checkpoint-L12-pass`；V1.1 的 V11-01–V11-05 及测试后修复也已完成，稳定基线为 `checkpoint-V1.1-pass`。旧 `tasks/T09-*` 至 `tasks/T42-*` 已退役，只保留历史参考；已完成的 Lxx 与 V11-xx 状态保持 `DONE`，不得因 V1.2 重新实现或改写审核状态。
 
-当前活动版本是 V1.1。产品主规格是 `教师工作台_V1_1_产品与实施方案.md`，实施决策是 `implementation-tasks/V1_1_DECISIONS.md`，唯一活动链为 `implementation-tasks/v1.1-tasks/` 中的 V11-01–V11-05。参考图只用于布局和交互关系；与文字冲突时以文字为准。
+当前活动版本是 V1.2。产品主规格是 `教师工作台_V1_2_课程与学生信息架构重构_产品与实施方案.md`，实施决策是 `implementation-tasks/V1_2_DECISIONS.md`，唯一活动链为 `implementation-tasks/v1.2-tasks/` 中的 V12-01–V12-05。参考图只用于布局和交互关系；与冻结文字方案冲突时以文字为准。
 
 当用户指定当前实现任务时：
 
-1. 先阅读 `教师工作台_V1_1_产品与实施方案.md`、`implementation-tasks/GLOBAL_CONSTRAINTS.md`、`implementation-tasks/V1_1_DECISIONS.md`、`implementation-tasks/VERSION_CONTROL.md`、当前 V11-xx 任务文件及其明确列出的前置产物；
-2. 只完成当前任务，不提前实现后续任务；同一时刻最多一个 V11-xx 为 `IN_PROGRESS`；
-3. 解析、搜索和文件刷新继续服从 `docs/spike-results.md` 的有效证据；V1.1 新增范围以 V1.1 产品方案与决策为准；
-4. 把 V1.1 当作个人 Windows 桌面小项目，默认选择完成主流程的最简单可靠实现；不得顺手加入 Workflow、Agent、复杂状态机、外部目录全盘扫描/监听、草稿版本树或企业级验证矩阵；
-5. V11-01–V11-04 运行相关测试、typecheck 与 lint；只有 V11-05 运行全量测试、production build、portable packaging 和代表性 Windows smoke；
-6. 完成后更新 `STATUS.md` 与 `GOAL_PROGRESS.md`，并按版本控制协议创建当前里程碑的本地提交；
-7. V1.1 只有 V11-05 一个最终验收点；未完成任务验收或未获得产品负责人的最终流程确认时，不得创建 `checkpoint-V1.1-pass`；
-8. 只有核心 happy path 无法实现、存在资料损坏/路径越界/Key 泄漏风险、缺少必需权限或凭据、或需要产品负责人改变方向时，才可标为 `BLOCKED`。
+1. 先阅读 V1.2 产品主规格、`implementation-tasks/GLOBAL_CONSTRAINTS.md`、`implementation-tasks/V1_2_DECISIONS.md`、`implementation-tasks/VERSION_CONTROL.md`、当前 V12-xx 任务文件及其明确列出的前置产物；
+2. 只完成当前任务，不提前实现后续任务；同一时刻最多一个 V12-xx 为 `IN_PROGRESS`；
+3. 解析、搜索和文件刷新继续服从 `docs/spike-results.md` 的有效证据；V1.2 新增范围以冻结的 V1.2 方案与 decisions 为准；
+4. 把 V1.2 当作个人 Windows 桌面小项目，优先复用 NodeService、CoreDataService、ManagedFileService、DraftService、LessonPrepContext、Search、Parser、AI 与 Backup；不得重做 V1.1 备课内核；
+5. 不得顺手加入日历、提醒、成绩分析、学生文件 UI、复杂 enrollment 历史、多 session、文件共享、新 AI 工作流、Workflow/Agent 或企业级验证矩阵；
+6. V12-01–V12-04 分别运行相关测试、typecheck、lint，并按风险补充必要 build 或本地 smoke；只有 V12-05 运行全量测试、production build、`git diff --check` 和代表性本地 Windows 流程；
+7. V1.2 及后续小版本不运行 `package:portable`，不生成 portable、installer 或对外交付包；
+8. 完成每个节点后更新 `STATUS.md` 与 `GOAL_PROGRESS.md`，并按版本控制协议创建当前里程碑的本地提交；
+9. V1.2 只有 V12-05 一个最终验收点；未完成任务验收或未获得产品负责人的最终体验确认时，不得创建 `checkpoint-V1.2-pass`；
+10. 只有核心 happy path 无法实现、存在资料损坏/路径越界/Key 泄漏风险、缺少必需权限或凭据、或需要产品负责人改变方向时，才可标为 `BLOCKED`。
 
 Git 硬规则：只允许按 `implementation-tasks/VERSION_CONTROL.md` 创建可审计的本地方案、里程碑提交和通过标签；不得自动 push、添加远程、提交秘密或真实教学资料，不得用破坏性 Git 命令丢弃现有成果。
 

@@ -34,7 +34,7 @@
 | L11 空闲态备份与恢复 | DONE | Main 侧外部编辑器确认与空闲闸门、SQLite backup API、managed 文件与元数据 manifest、staging 原子发布、新空目录恢复、SQLite/schema/路径/数量/大小/元数据校验、恢复后搜索索引重建与 Key 排除完成；24 files / 70 tests、typecheck、lint、diff check 通过 |
 | L12 Windows 交付总闸门 | DONE | 选择 unpacked Windows portable 目录交付；`npm test` 24 files / 70 tests、typecheck、lint、production build、electron-builder `dir` packaging 与 `git diff --check` 通过；四条 smoke、Windows 启动/工作区创建/退出/重开与 Renderer/包内容安全审计记录于 `docs/v1-acceptance.md`；Sol PASS，`checkpoint-L12-pass` 已创建 |
 
-## V1.1 活动里程碑
+## V1.1 已完成里程碑
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
@@ -45,3 +45,13 @@
 | V11-05 V1.1 回归与 Windows 交付 | DONE | 自动主流程、96 项全量测试、typecheck、lint、production build、portable 打包、安全审计和隔离 Windows 启动/本地 fake AI smoke 已通过；最终通过标签等待产品负责人完成测试后确认 |
 | V1.1 测试后小修复 | DONE | Bug 1–5 已完成：隐藏 Windows 默认菜单、工作区自适应撑满、整体紧凑化、白色图标导航、已移除资料二次确认后彻底删除；开发版 Main/Preload 重启要求已记录于 `docs/v1.1-post-test-fixes.md` |
 | V1.1 当前候选重验 | DONE | 当前 HEAD 的 32 files / 101 tests、typecheck、lint、build、portable、diff check、包内容审计及隔离 Windows 启动/滚动/正常退出均通过；产品负责人已确认最终体验，`checkpoint-V1.1-pass` 创建于最终确认记录提交 |
+
+## V1.2 活动里程碑
+
+| 里程碑 | 状态 | 完成/阻塞记录 |
+|---|---|---|
+| V12-01 Core、课程生命周期与点名持久化 | TODO | 等待开始 |
+| V12-02 我的课程、软推进与点名交互 | TODO | 等待 V12-01 |
+| V12-03 真正的学生页 | TODO | 等待 V12-02 |
+| V12-04 课次资料与 V1.1 备课接入 | TODO | 等待 V12-03 |
+| V12-05 V1.2 全量回归与版本验收 | TODO | 等待 V12-01–V12-04；最终标签还需产品负责人体验确认 |
