@@ -581,3 +581,17 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动验收：35 项 V12-04 相关测试通过；`npm test` 40 files / 131 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 44 / Preload 10 / Renderer 53 modules）；`git diff --check` ✅。未运行 portable/installer packaging。
 - Windows smoke：当前 production build 在新的 Windows 临时隔离工作区通过本机 DevTools 启动；实际 Preload/Main 创建班课、阶段和两课，保持第 8 课为 Current，查看第 9 课资料并进入“本次备课课次”；备课后 Current 仍为第 8 课，素材库无学生文件动作。隔离库 schema v12、`integrity_check=ok`、foreign_key_check 0；目录随后已删除。
 - 范围：V1.1 外部资料、素材、Skill、三类 AI 动作、草稿箱、同区预览编辑、保存、Parser、Search、Backup 继续复用；未新增文件共享、学生文件 UI 或新 AI 工作流。
+
+## 2026-08-23 · V12-05 · IN_PROGRESS
+
+- 前置：V12-01–V12-04 全部 `DONE`，本地里程碑提交依次为 `5ec6c89`、`9ff4be7`、`b64922f`、`728c5dd`。
+- 当前唯一范围：执行 V1.2 全量测试、typecheck、lint、production build、diff check、安全审计和代表性本地 Windows 流程，并形成 `docs/v1.2-acceptance.md`。
+- 标签边界：不运行 portable/installer；完成 V12-05 候选提交后只请求一次 V1.2 最终产品体验确认，确认前不创建 `checkpoint-V1.2-pass`。
+
+## 2026-08-23 · V12-05 · DONE · AWAITING_PRODUCT_CONFIRMATION
+
+- 一体化验收：新增 `tests/v1.2-acceptance.test.ts`，在同一隔离工作区贯通课程/学生创建、本地跨午夜排课、点名名单冲突、非顺序上课、提前备课、Current 软推进、阶段边界重启、手工下一阶段、学生退出、课程结束/重开、managed 独立副本、AI saved 草稿、manual 记录、Search 和 Backup/Restore。
+- 自动质量门：首次全量并行回归暴露 Backup restore staging rename 的瞬时 Windows `EPERM`；已增加仅针对 `EPERM/EBUSY/EACCES`、最多 5 次的异步递增等待和专门回归测试。修复后 `npm test` 42 files / 133 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 44 / Preload 10 / Renderer 53 modules）；`git diff --check` ✅。
+- Windows production 流程：新的隔离 app-data/user-data-dir 中通过真实 Renderer/Preload/Main/SQLite 验证三位学生、两阶段四课、23:55/次日 00:05 日界、旧点名名单拒绝、保存/修改点名、第 9 课先上、非 Current Prep、阶段末暂停及重启、手工春季、学生退出历史、结束/重开和 StudentsPage 历史展示。最终 schema v12、integrity ok、FK 0；临时目录已删除。
+- 安全与兼容：Renderer 边界、严格 IPC、路径/Key/原件保护、Parser/Search/AI/Backup 全量回归通过；student_files 后端与备份恢复保留但 UI 无入口；未运行 portable/installer，未生成 V1.2 对外交付包。
+- 验收报告：`docs/v1.2-acceptance.md` 已形成。V12-01–V12-05 均已完成；`checkpoint-V1.2-pass` 仍等待产品负责人明确回复“V1.2 最终体验通过”，确认前不创建标签。

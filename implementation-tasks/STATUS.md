@@ -54,4 +54,4 @@
 | V12-02 我的课程、软推进与点名交互 | DONE | 课程列表/详情三栏、活动/已结束筛选、今日点名、Current/Viewed 分离、局部创建 Modal、软推进和点名交互已完成；25 项相关、119 项全量测试、typecheck、lint、build、隔离 Electron smoke 通过 |
 | V12-03 真正的学生页 | DONE | 学生列表/详情、搜索/新建、在读/历史课程、manual 记录和课程双向导航已完成；22 项相关、127 项全量测试、typecheck、lint、build、隔离 Electron smoke 通过 |
 | V12-04 课次资料与 V1.1 备课接入 | DONE | Viewed Lesson 的 lesson_files、任意课次开始/继续备课、Prep 文案和学生文件 UI 收口已完成；35 项相关、131 项全量测试、typecheck、lint、build、隔离 Electron smoke 通过 |
-| V12-05 V1.2 全量回归与版本验收 | TODO | 等待 V12-01–V12-04；最终标签还需产品负责人体验确认 |
+| V12-05 V1.2 全量回归与版本验收 | DONE | 42 files / 133 tests、typecheck、lint、production build、diff check、安全审计与代表性隔离 Windows 流程通过；Windows staging 瞬时锁已补有限异步重试，最终标签等待产品负责人体验确认 |

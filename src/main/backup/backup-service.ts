@@ -15,6 +15,8 @@ import {
 } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { rename } from 'node:fs/promises'
+import { setTimeout as wait } from 'node:timers/promises'
 
 import { getSchemaVersion, type SqliteDatabase } from '../db/migrations'
 import { openSearchDatabase } from '../search/search-database'
@@ -135,7 +137,7 @@ export class BackupRestoreService {
         try {
           const manifest = await this.writeBackupStaging(staging)
           validateBackupStaging(staging, manifest, this.maxFiles, this.maxTotalBytes)
-          publishStaging(staging, target)
+          await publishStaging(staging, target)
           return { backupPath: target, manifest }
         } catch (error) {
           rmSync(staging, { recursive: true, force: true })
@@ -163,7 +165,7 @@ export class BackupRestoreService {
         validateRestoredDatabase(restoredWorkspace.database.raw, manifest)
         const indexResult = await rebuildRestoredSearch(restoredWorkspace)
         restoredWorkspace.close()
-        publishStaging(staging, target)
+        await publishStaging(staging, target)
         return {
           workspacePath: target,
           manifest,
@@ -525,14 +527,32 @@ function resolveInside(root: string, relativePath: string): string {
   return resolved
 }
 
-function publishStaging(staging: string, target: string): void {
+async function publishStaging(staging: string, target: string): Promise<void> {
   if (existsSync(target)) {
     if (readdirSync(target).length > 0) {
       throw new BackupRestoreError('RESTORE_TARGET_INVALID', '发布目标必须为空。')
     }
     rmSync(target, { recursive: true, force: true })
   }
-  renameSync(staging, target)
+  await renameWithTransientLockRetry(staging, target)
+}
+
+async function renameWithTransientLockRetry(source: string, target: string): Promise<void> {
+  const maxAttempts = 5
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await rename(source, target)
+      return
+    } catch (error) {
+      if (!isTransientFileLock(error) || attempt === maxAttempts) throw error
+      await wait(attempt * 50)
+    }
+  }
+}
+
+function isTransientFileLock(error: unknown): boolean {
+  if (error === null || typeof error !== 'object' || !('code' in error)) return false
+  return error.code === 'EPERM' || error.code === 'EBUSY' || error.code === 'EACCES'
 }
 
 function writeJsonAtomic(path: string, value: unknown): void {
