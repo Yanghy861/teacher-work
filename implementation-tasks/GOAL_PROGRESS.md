@@ -700,3 +700,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 安全审计：Renderer 无 SQLite / Node / 任意路径 / 环境变量能力；新增能力仍为运行时校验的白名单 IPC；未跟踪或提交数据库、索引、备份、日志、Key、真实资料、构建产物和测试目录。
 - 清理与发布边界：最终 production 隔离测试目录已按精确路径删除；未运行 portable / installer，未生成对外交付包，未 push 或改变远程。
 - 当前状态：V13-05 技术验收 PASS，等待产品负责人最终体验确认；确认前不创建或移动 `checkpoint-V1.3-pass`。
+
+## 2026-08-24 · V1.3 最终体验确认 · PASS
+
+- 产品负责人明确确认当前 V1.3 可以通过，构成冻结协议要求的最终体验确认。
+- 最终证据：全量 47 files / 164 tests、typecheck、lint、production build、diff check、安全审计、三种排课、原子失败重试和 production 重启持久化流程均为 PASS。
+- 版本动作：在本确认记录提交创建 annotated tag `checkpoint-V1.3-pass`；用户明确授权把 `main` 与该标签上传到现有 GitHub `origin`。
+- 发布边界：不修改远程配置，不运行 portable / installer，不提交真实资料、运行数据库、Key、日志或临时文件。
