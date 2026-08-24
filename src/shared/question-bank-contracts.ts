@@ -22,13 +22,16 @@ export interface QuestionBankSummary {
   readonly difficultyMax: number | null
 }
 
+export type QuestionBankTagMode = 'include' | 'exclude'
+
 export interface QuestionBankSearchRequest {
   readonly text?: string
   readonly grade?: string
   readonly year?: number
-  readonly month?: number
+  readonly month?: number | null
   readonly type?: string
-  readonly tag?: string
+  readonly tags?: readonly string[]
+  readonly tagMode?: QuestionBankTagMode
   readonly difficultyMin?: number
   readonly difficultyMax?: number
   readonly limit?: number
@@ -131,12 +134,13 @@ export function isQuestionBankSummary(value: unknown): value is QuestionBankSumm
 
 export function isQuestionBankSearchRequest(value: unknown): value is QuestionBankSearchRequest {
   if (!isRecord(value) || !hasOnlyOptionalKeys(value, [
-    'text', 'grade', 'year', 'month', 'type', 'tag', 'difficultyMin',
+    'text', 'grade', 'year', 'month', 'type', 'tags', 'tagMode', 'difficultyMin',
     'difficultyMax', 'limit', 'offset',
   ])) return false
   return optionalString(value.text, 256) && optionalString(value.grade, 64) &&
-    optionalInteger(value.year, 1900, 2200) && optionalInteger(value.month, 1, 12) &&
-    optionalString(value.type, 64) && optionalString(value.tag, 128) &&
+    optionalInteger(value.year, 1900, 2200) && optionalNullableInteger(value.month, 1, 12) &&
+    optionalString(value.type, 64) && optionalUniqueStringArray(value.tags, 20, 128) &&
+    (value.tagMode === undefined || value.tagMode === 'include' || value.tagMode === 'exclude') &&
     optionalInteger(value.difficultyMin, 0, 100) &&
     optionalInteger(value.difficultyMax, 0, 100) &&
     optionalInteger(value.limit, 1, 100) && optionalInteger(value.offset, 0, 1_000_000)
@@ -234,6 +238,17 @@ function optionalString(value: unknown, maximum: number): boolean {
 
 function optionalInteger(value: unknown, minimum: number, maximum: number): boolean {
   return value === undefined || isIntegerBetween(value, minimum, maximum)
+}
+
+function optionalNullableInteger(value: unknown, minimum: number, maximum: number): boolean {
+  return value === undefined || value === null || isIntegerBetween(value, minimum, maximum)
+}
+
+function optionalUniqueStringArray(value: unknown, maximumItems: number, maximumLength: number): boolean {
+  if (value === undefined) return true
+  if (!isStringArray(value, maximumItems, maximumLength)) return false
+  const normalized = value.map((item) => item.trim())
+  return new Set(normalized).size === normalized.length
 }
 
 function isNullableInteger(value: unknown): value is number | null {

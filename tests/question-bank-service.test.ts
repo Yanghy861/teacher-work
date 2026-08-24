@@ -77,7 +77,15 @@ describe('question bank snapshot service', () => {
       difficultyMax: 35,
     })
     expect(summary.grades.map((facet) => facet.value)).toEqual(['七年级', '九年级'])
-    expect(summary.tags.map((facet) => facet.value)).toEqual(['二次函数', '有理数'])
+    expect(summary.months).toEqual([
+      { value: '6', label: '6月', count: 1 },
+      { value: 'none', label: '无', count: 1 },
+    ])
+    expect(summary.types).toEqual([
+      { value: 'single', label: '选择题', count: 1 },
+      { value: 'fill', label: '填空题', count: 1 },
+    ])
+    expect(summary.tags.map((facet) => facet.value)).toEqual(['二次函数', '函数', '有理数'])
     expect(isQuestionBankSummary(summary)).toBe(true)
     expect({
       hash: sha256(fixture.snapshotPath),
@@ -90,9 +98,12 @@ describe('question bank snapshot service', () => {
       total: 1,
       items: [{ id: 'question-1', grade: '九年级', difficulty: 35 }],
     })
-    expect(fixture.service.search({ text: '函数', grade: '九年级', year: 2024, tag: '二次函数' }).total).toBe(1)
+    expect(fixture.service.search({ text: '函数', grade: '九年级', year: 2024, tags: ['二次函数', '函数'] }).total).toBe(1)
+    expect(fixture.service.search({ tags: ['二次函数', '有理数'] }).total).toBe(0)
+    expect(fixture.service.search({ tags: ['有理数'], tagMode: 'exclude' }).items.map((item) => item.id)).toEqual(['question-1'])
     expect(fixture.service.search({ type: 'fill', difficultyMax: 20 }).items.map((item) => item.id)).toEqual(['question-2'])
     expect(fixture.service.search({ month: 6 }).items.map((item) => item.id)).toEqual(['question-2'])
+    expect(fixture.service.search({ month: null }).items.map((item) => item.id)).toEqual(['question-1'])
   })
 
   it('returns normal question detail with options and embedded images', async () => {
@@ -105,7 +116,7 @@ describe('question bank snapshot service', () => {
       id: 'question-1',
       typeLabel: '选择题',
       paperTitle: '2024 年九年级期末卷',
-      tags: ['二次函数'],
+      tags: ['二次函数', '函数'],
       options: [{ key: 'A', text: '(0, 1)' }, { key: 'B', text: '(1, 0)' }],
       assets: [{ id: 1, role: 'stem', mimeType: 'image/png' }],
     })
@@ -146,7 +157,11 @@ describe('question bank snapshot service', () => {
 
   it('strictly validates search and copy requests', () => {
     expect(isQuestionBankSearchRequest({ text: '函数', limit: 50, offset: 0 })).toBe(true)
+    expect(isQuestionBankSearchRequest({ month: null, tags: ['函数', '二次函数'], tagMode: 'include' })).toBe(true)
     expect(isQuestionBankSearchRequest({ text: '函数', path: 'E:\\Wss_Tiku' })).toBe(false)
+    expect(isQuestionBankSearchRequest({ month: 0 })).toBe(false)
+    expect(isQuestionBankSearchRequest({ tags: ['函数', '函数'] })).toBe(false)
+    expect(isQuestionBankSearchRequest({ tag: '函数' })).toBe(false)
     expect(isQuestionBankSearchRequest({ difficultyMin: -1 })).toBe(false)
     expect(isQuestionBankLessonCopyRequest({ questionId: 'question-1', lessonId: 'lesson-1' })).toBe(true)
     expect(isQuestionBankLessonCopyRequest({ questionId: 'question-1', lessonId: 'lesson-1', sourcePath: 'x' })).toBe(false)
@@ -199,7 +214,7 @@ function createQuestionBankSnapshot(path: string): void {
       .run('paper-2', 2, '2023 年七年级月考卷', '数学', '七年级', 2023, 6, '上海', '月考', 'complete_paper', '下学期')
     const insertQuestion = database.prepare('INSERT INTO questions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     insertQuestion.run(
-      'question-1', 1, 'paper-1', '1', 'single', '选择题', '数学', '九年级', '选择题',
+      'question-1', 1, 'paper-1', '1', 'single', '一、选择题（本大题共 6 题，每题 3 分）', '数学', '九年级', '选择题',
       '二次函数 y=x²+1 的顶点坐标是？\n![](/assets/legacy.png)',
       JSON.stringify({ A: '(0, 1)', B: '(1, 0)' }), 'A', '由顶点式可得。', 35, 4, 'hash-1',
       '2026-08-24', '2026-08-24',
@@ -210,6 +225,7 @@ function createQuestionBankSnapshot(path: string): void {
       '2026-08-24', '2026-08-24',
     )
     database.prepare('INSERT INTO question_tags VALUES (?, ?)').run('question-1', '二次函数')
+    database.prepare('INSERT INTO question_tags VALUES (?, ?)').run('question-1', '函数')
     database.prepare('INSERT INTO question_tags VALUES (?, ?)').run('question-2', '有理数')
     const image = Buffer.from('89504e470d0a1a0a', 'hex')
     database.prepare('INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?)')

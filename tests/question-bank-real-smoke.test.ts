@@ -20,9 +20,17 @@ describe.skipIf(realSnapshotPath === '')('real question bank snapshot smoke', ()
       const summary = await service.importSnapshot(realSnapshotPath)
       expect(summary.questionCount).toBeGreaterThan(20_000)
       expect(summary.assetCount).toBeGreaterThan(10_000)
+      expect(summary.types.map((facet) => facet.label)).toEqual(['选择题', '填空题', '解答题', '其他'])
+      expect(summary.months.some((facet) => facet.label === '0月')).toBe(false)
+      expect(summary.months).toContainEqual(expect.objectContaining({ value: 'none', label: '无' }))
+      expect(summary.tags.length).toBeGreaterThan(40)
+
+      const tagResult = service.search({ tags: [summary.tags[0]!.value], limit: 1 })
+      expect(tagResult.total).toBeGreaterThan(0)
 
       const result = service.search({ text: '二次函数', grade: '九年级', limit: 10 })
       expect(result.total).toBeGreaterThan(0)
+      expect(result.items.every((item) => ['选择题', '填空题', '解答题', '其他'].includes(item.typeLabel))).toBe(true)
       const first = result.items[0]
       expect(first).toBeDefined()
       const detail = service.getQuestion(first!.id)

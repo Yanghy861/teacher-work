@@ -763,3 +763,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 安全审计：V1.4 验收未写入 `E:\Wss_Tiku`；未跟踪快照、运行数据库、Key、日志、临时目录、依赖或构建产物；Renderer 未获得路径、SQLite、Node 或任意文件系统能力。
 - 版本审计：候选历史从 `checkpoint-V1.3-pass` 线性前进，V1.3 标签与远程锚点未移动；未运行 portable / installer，未 push。完整证据见 `docs/v1.4-acceptance.md`。
 - 当前状态：V14-03 技术验收 PASS；按协议等待产品负责人实际体验确认，确认前不创建 `checkpoint-V1.4-pass`。
+
+## 2026-08-24 · V1.4 测试后筛选修复 · DONE
+
+- 问题定位：快照已有稳定 `single / fill / essay / raw` 类型，但摘要错误按 `type + type_raw` 分组，导致题型下拉出现大量试卷分栏长标题；来源月份缺失值以 `0` 保存并被直接渲染。
+- 题型修复：服务对现有快照按稳定 `type` 聚合并统一输出“选择题 / 填空题 / 解答题 / 其他”，结果卡、详情和独立 Markdown 副本同样使用规范名称；未来导出不再写入原始分栏标题。
+- 月份修复：仅月考且数值为 1–12 时显示具体月份，其余统一归为“无”；搜索契约用 `month: null` 表达“无”，未来导出把非月考月份写为 `NULL`。
+- 标签修复：移除单选下拉，新增默认收起的知识点标签面板；支持展开 / 收起、按钮多选、包含 / 不包含、已选数量和清空标签。“包含”采用 AND 语义，“不包含”排除含任一已选标签的题目。
+- 兼容性：修复直接适配当前 380 MB 快照，不要求重新导入或重新导出；`E:\Wss_Tiku` 未被读取或写入，导出器仅修改代码。
+- 验证：题库 service / IPC / UI 3 files / 9 tests ✅；普通全量 50 files / 173 tests ✅；真实快照 1 file / 1 test ✅，断言 4 类题型、无“0月”、存在“无”和 40+ 标签；`typecheck` ✅；`lint` ✅；production build ✅；`node --check scripts/export-question-bank.mjs` ✅；`git diff --check` ✅。
+- 发布边界：继续保留 `checkpoint-V1.3-pass`；不运行 portable / installer，不自动 push，仍等待产品负责人最终体验确认后再创建 `checkpoint-V1.4-pass`。

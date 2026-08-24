@@ -101,6 +101,9 @@ describe('question bank IPC boundary', () => {
     const deps = dependencies()
     for (const payload of [
       { text: '函数', path: 'E:\\Wss_Tiku' },
+      { tag: '函数' },
+      { tags: ['函数', '函数'] },
+      { month: 0 },
       { limit: 101 },
       { offset: -1 },
     ]) {

@@ -229,7 +229,7 @@ function exportPapers(source, target) {
         subject: cleanNullableText(row.subject) ?? '未分类',
         grade: cleanNullableText(row.grade),
         year: safeIntegerOrNull(row.year),
-        month: safeIntegerOrNull(row.exam_month),
+        month: normalizeExamMonth(row.exam_month, row.exam_type),
         region: cleanNullableText(row.region),
         exam_type: cleanNullableText(row.exam_type),
         paper_kind: cleanNullableText(row.paper_kind),
@@ -258,7 +258,7 @@ function exportQuestions(source, target, tagsByQuestion, paperUidById) {
     'INSERT INTO question_search (question_uid, searchable) VALUES (?, ?)',
   )
   const rows = source.prepare(`
-    SELECT q.id, q.source_uid, q.source_paper_id, q.question_no, q.type, q.type_raw,
+    SELECT q.id, q.source_uid, q.source_paper_id, q.question_no, q.type,
            q.subject, q.grade, q.section, q.content, q.options, q.answer, q.analysis,
            COALESCE(
              (SELECT qda.difficulty_score
@@ -290,7 +290,7 @@ function exportQuestions(source, target, tagsByQuestion, paperUidById) {
       paper_uid: paperUidById.get(row.source_paper_id) ?? null,
       question_no: cleanNullableText(row.question_no),
       type,
-      type_label: cleanNullableText(row.type_raw) ?? typeLabel(type),
+      type_label: typeLabel(type),
       subject: cleanNullableText(row.subject) ?? '未分类',
       grade: cleanNullableText(row.grade),
       section: cleanNullableText(row.section),
@@ -509,8 +509,15 @@ function safeDifficulty(value) {
   return number !== null && number >= 0 && number <= 100 ? number : null
 }
 
+function normalizeExamMonth(value, examType) {
+  const month = safeIntegerOrNull(value)
+  return cleanNullableText(examType) === '月考' && month !== null && month >= 1 && month <= 12
+    ? month
+    : null
+}
+
 function typeLabel(type) {
-  return ({ single: '选择题', fill: '填空题', essay: '解答题', raw: '题目' })[type] ?? type
+  return ({ single: '选择题', fill: '填空题', essay: '解答题', raw: '其他' })[type] ?? type
 }
 
 function mimeTypeForPath(path) {

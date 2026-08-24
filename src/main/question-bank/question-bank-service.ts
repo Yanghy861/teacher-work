@@ -205,8 +205,10 @@ export class QuestionBankService {
       conditions.push('p.year = @year')
       parameters.year = request.year
     }
-    if (request.month !== undefined) {
-      conditions.push('p.month = @month')
+    if (request.month === null) {
+      conditions.push("(p.exam_type IS NULL OR TRIM(p.exam_type) <> '月考' OR p.month IS NULL OR p.month < 1 OR p.month > 12)")
+    } else if (request.month !== undefined) {
+      conditions.push("TRIM(p.exam_type) = '月考' AND p.month = @month")
       parameters.month = request.month
     }
     if (request.difficultyMin !== undefined) {
@@ -217,12 +219,16 @@ export class QuestionBankService {
       conditions.push('q.difficulty <= @difficultyMax')
       parameters.difficultyMax = request.difficultyMax
     }
-    if (request.tag?.trim()) {
-      conditions.push(`EXISTS (
-        SELECT 1 FROM question_tags AS selected_tag
-         WHERE selected_tag.question_uid = q.source_uid AND selected_tag.tag = @tag
+    const selectedTags = [...new Set((request.tags ?? []).map((tag) => tag.trim()).filter(Boolean))]
+    for (const [index, tag] of selectedTags.entries()) {
+      const parameter = `selectedTag${index}`
+      const operator = request.tagMode === 'exclude' ? 'NOT EXISTS' : 'EXISTS'
+      conditions.push(`${operator} (
+        SELECT 1 FROM question_tags AS selected_tag_${index}
+         WHERE selected_tag_${index}.question_uid = q.source_uid
+           AND selected_tag_${index}.tag = @${parameter}
       )`)
-      parameters.tag = request.tag.trim()
+      parameters[parameter] = tag
     }
 
     const from = `
@@ -247,7 +253,7 @@ export class QuestionBankService {
       id: row.source_uid,
       questionNo: row.question_no,
       type: row.type,
-      typeLabel: row.type_label,
+      typeLabel: questionTypeLabel(row.type),
       subject: row.subject,
       grade: row.grade,
       contentPreview: previewText(row.content),
@@ -284,7 +290,7 @@ export class QuestionBankService {
       id: row.source_uid,
       questionNo: row.question_no,
       type: row.type,
-      typeLabel: row.type_label,
+      typeLabel: questionTypeLabel(row.type),
       subject: row.subject,
       grade: row.grade,
       section: row.section,
@@ -432,13 +438,26 @@ export class QuestionBankService {
          WHERE p.year IS NOT NULL GROUP BY p.year ORDER BY p.year DESC
       `),
       months: readFacets(database, `
-        SELECT CAST(p.month AS TEXT) AS value, CAST(p.month AS TEXT) || '月' AS label, COUNT(*) AS count
+        SELECT CASE WHEN TRIM(p.exam_type) = '月考' AND p.month BETWEEN 1 AND 12 THEN CAST(p.month AS TEXT) ELSE 'none' END AS value,
+               CASE WHEN TRIM(p.exam_type) = '月考' AND p.month BETWEEN 1 AND 12 THEN CAST(p.month AS TEXT) || '月' ELSE '无' END AS label,
+               COUNT(*) AS count
           FROM questions q JOIN source_papers p ON p.source_uid = q.paper_uid
-         WHERE p.month IS NOT NULL GROUP BY p.month ORDER BY p.month
+         GROUP BY CASE WHEN TRIM(p.exam_type) = '月考' AND p.month BETWEEN 1 AND 12 THEN p.month ELSE 0 END
+         ORDER BY CASE WHEN TRIM(p.exam_type) = '月考' AND p.month BETWEEN 1 AND 12 THEN p.month ELSE 13 END
       `),
       types: readFacets(database, `
-        SELECT type AS value, type_label AS label, COUNT(*) AS count
-          FROM questions GROUP BY type, type_label ORDER BY count DESC, type
+        SELECT type AS value,
+               CASE type
+                 WHEN 'single' THEN '选择题'
+                 WHEN 'fill' THEN '填空题'
+                 WHEN 'essay' THEN '解答题'
+                 WHEN 'raw' THEN '其他'
+                 ELSE type
+               END AS label,
+               COUNT(*) AS count
+          FROM questions
+         GROUP BY type
+         ORDER BY CASE type WHEN 'single' THEN 1 WHEN 'fill' THEN 2 WHEN 'essay' THEN 3 ELSE 4 END, type
       `),
       tags: readFacets(database, `
         SELECT tag AS value, tag AS label, COUNT(*) AS count
@@ -555,6 +574,12 @@ function count(database: SqliteDatabase, table: 'questions' | 'source_papers' | 
 function readFacets(database: SqliteDatabase, sql: string): QuestionBankFacetValue[] {
   return (database.prepare(sql).all() as { value: string; label: string; count: number }[])
     .map((row) => ({ value: row.value, label: row.label, count: row.count }))
+}
+
+function questionTypeLabel(type: string): string {
+  return ({ single: '选择题', fill: '填空题', essay: '解答题', raw: '其他' } as const)[
+    type as 'single' | 'fill' | 'essay' | 'raw'
+  ] ?? type
 }
 
 function addTextFilter(

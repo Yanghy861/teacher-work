@@ -9,6 +9,7 @@ import type {
   QuestionBankSearchRequest,
   QuestionBankSearchResult,
   QuestionBankSummary,
+  QuestionBankTagMode,
 } from '../shared/question-bank-contracts'
 import Modal from './modal'
 import './question-bank.css'
@@ -19,7 +20,8 @@ interface FilterState {
   readonly year: string
   readonly month: string
   readonly type: string
-  readonly tag: string
+  readonly tags: readonly string[]
+  readonly tagMode: QuestionBankTagMode
   readonly difficultyMin: string
   readonly difficultyMax: string
 }
@@ -30,7 +32,8 @@ const EMPTY_FILTERS: FilterState = {
   year: '',
   month: '',
   type: '',
-  tag: '',
+  tags: [],
+  tagMode: 'include',
   difficultyMin: '',
   difficultyMax: '',
 }
@@ -50,6 +53,7 @@ export default function QuestionBankPage(): React.JSX.Element {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [copyModalOpen, setCopyModalOpen] = useState(false)
+  const [tagsExpanded, setTagsExpanded] = useState(false)
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [selectedLessonId, setSelectedLessonId] = useState('')
 
@@ -147,6 +151,16 @@ export default function QuestionBankPage(): React.JSX.Element {
 
   function updateFilter<Key extends keyof FilterState>(key: Key, value: FilterState[Key]): void {
     setFilters((current) => ({ ...current, [key]: value }))
+    setOffset(0)
+  }
+
+  function toggleTag(tag: string): void {
+    setFilters((current) => ({
+      ...current,
+      tags: current.tags.includes(tag)
+        ? current.tags.filter((selected) => selected !== tag)
+        : [...current.tags, tag],
+    }))
     setOffset(0)
   }
 
@@ -264,7 +278,6 @@ export default function QuestionBankPage(): React.JSX.Element {
             <FacetSelect label="年份" value={filters.year} options={summary.years} onChange={(value) => updateFilter('year', value)} />
             <FacetSelect label="月份" value={filters.month} options={summary.months} onChange={(value) => updateFilter('month', value)} />
             <FacetSelect label="题型" value={filters.type} options={summary.types} onChange={(value) => updateFilter('type', value)} />
-            <FacetSelect label="标签" value={filters.tag} options={summary.tags} onChange={(value) => updateFilter('tag', value)} />
             <label className="question-bank-difficulty">
               <span>难度</span>
               <input type="number" min="0" max="100" value={filters.difficultyMin} placeholder="最低" onChange={(event) => updateFilter('difficultyMin', event.target.value)} />
@@ -275,6 +288,61 @@ export default function QuestionBankPage(): React.JSX.Element {
               清除筛选
             </button>
           </div>
+
+          <section className="question-bank-tag-filter">
+            <button
+              className="question-bank-tag-toggle"
+              type="button"
+              aria-expanded={tagsExpanded}
+              onClick={() => setTagsExpanded((expanded) => !expanded)}
+            >
+              <span>
+                知识点标签
+                {filters.tags.length > 0 && <b>已选 {filters.tags.length}</b>}
+              </span>
+              <span>{tagsExpanded ? '收起' : '展开'} <i aria-hidden="true">{tagsExpanded ? '▴' : '▾'}</i></span>
+            </button>
+            {tagsExpanded && (
+              <div className="question-bank-tag-panel">
+                <div className="question-bank-tag-mode">
+                  <span>筛选模式</span>
+                  {(['include', 'exclude'] as const).map((mode) => (
+                    <button
+                      className={filters.tagMode === mode ? 'is-active' : ''}
+                      type="button"
+                      key={mode}
+                      aria-pressed={filters.tagMode === mode}
+                      onClick={() => updateFilter('tagMode', mode)}
+                    >
+                      {mode === 'include' ? '包含' : '不包含'}
+                    </button>
+                  ))}
+                  <small>{filters.tagMode === 'include' ? '多个标签需同时满足' : '排除含任一已选标签的题目'}</small>
+                  {filters.tags.length > 0 && (
+                    <button className="question-bank-tag-clear" type="button" onClick={() => updateFilter('tags', [])}>
+                      清空标签
+                    </button>
+                  )}
+                </div>
+                <div className="question-bank-tag-options" role="group" aria-label="知识点标签">
+                  {summary.tags.map((tag) => {
+                    const selected = filters.tags.includes(tag.value)
+                    return (
+                      <button
+                        className={selected ? 'is-selected' : ''}
+                        type="button"
+                        key={tag.value}
+                        aria-pressed={selected}
+                        onClick={() => toggleTag(tag.value)}
+                      >
+                        {tag.label} <span>{tag.count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
 
           <div className="question-bank-results-heading">
             <strong>{result?.total.toLocaleString('zh-CN') ?? '—'} 道题</strong>
@@ -475,7 +543,7 @@ function QuestionDetailView({
         <strong>{detail.paperTitle ?? '来源未注明'}</strong>
         <span>{[
           detail.year === null ? null : `${detail.year} 年`,
-          detail.month === null ? null : `${detail.month} 月`,
+          formatMonth(detail.month, detail.examType),
           detail.region,
           detail.examType,
           detail.semester,
@@ -595,14 +663,20 @@ function toSearchRequest(filters: FilterState, offset: number): QuestionBankSear
     ...(filters.text.trim() === '' ? {} : { text: filters.text.trim() }),
     ...(filters.grade === '' ? {} : { grade: filters.grade }),
     ...(filters.year === '' ? {} : { year: Number(filters.year) }),
-    ...(filters.month === '' ? {} : { month: Number(filters.month) }),
+    ...(filters.month === '' ? {} : { month: filters.month === 'none' ? null : Number(filters.month) }),
     ...(filters.type === '' ? {} : { type: filters.type }),
-    ...(filters.tag === '' ? {} : { tag: filters.tag }),
+    ...(filters.tags.length === 0 ? {} : { tags: filters.tags, tagMode: filters.tagMode }),
     ...(filters.difficultyMin === '' ? {} : { difficultyMin: clampDifficulty(filters.difficultyMin) }),
     ...(filters.difficultyMax === '' ? {} : { difficultyMax: clampDifficulty(filters.difficultyMax) }),
     limit: 50,
     offset,
   }
+}
+
+function formatMonth(month: number | null, examType: string | null): string | null {
+  return examType?.trim() === '月考' && month !== null && month >= 1 && month <= 12
+    ? `${month} 月`
+    : null
 }
 
 function clampDifficulty(value: string): number {
