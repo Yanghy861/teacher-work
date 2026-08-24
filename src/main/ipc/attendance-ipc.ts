@@ -70,6 +70,7 @@ export async function dispatchAttendanceIpc(
         return ensureResponse(service.updateLessonSchedule(
           (payload as UpdateLessonScheduleRequest).lessonId,
           (payload as UpdateLessonScheduleRequest).scheduledAt,
+          (payload as UpdateLessonScheduleRequest).durationMinutes,
         ), isLessonAttendanceRecord)
       case ATTENDANCE_IPC_CHANNELS.getLesson:
         assertRequest(payload, isLessonIdRequest)

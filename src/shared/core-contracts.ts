@@ -52,6 +52,7 @@ export interface CourseProgressRecord {
 export interface LessonSessionSummary {
   readonly lessonId: string
   readonly scheduledAt: string | null
+  readonly durationMinutes: number | null
   readonly taughtConfirmedAt: string | null
   readonly attendanceRecordedAt: string | null
   readonly presentCount: number
@@ -69,6 +70,7 @@ export interface AttendanceStudentEntry {
 export interface LessonAttendanceRecord {
   readonly lessonId: string
   readonly scheduledAt: string | null
+  readonly durationMinutes: number | null
   readonly taughtConfirmedAt: string | null
   readonly attendanceRecordedAt: string | null
   readonly students: readonly AttendanceStudentEntry[]
@@ -114,6 +116,34 @@ export interface CreateCourseRequest {
   readonly title: string
   readonly mode: CourseMode
   readonly studentIds?: readonly string[]
+}
+
+export type CreateCourseSetupStudent =
+  | { readonly type: 'existing'; readonly studentId: string }
+  | { readonly type: 'new'; readonly name: string }
+
+export interface CreateCourseSetupLesson {
+  readonly title: string
+  readonly scheduledAt: string | null
+  readonly durationMinutes: number | null
+}
+
+export interface CreateCourseSetupRequest {
+  readonly title: string
+  readonly mode: CourseMode
+  readonly students: readonly CreateCourseSetupStudent[]
+  readonly periodTitle: string
+  readonly lessons: readonly CreateCourseSetupLesson[]
+}
+
+export interface CreateCourseSetupResult {
+  readonly course: NodeRecord
+  readonly students: readonly StudentRecord[]
+  readonly courseStudentLinks: readonly CourseStudentLink[]
+  readonly period: NodeRecord
+  readonly lessons: readonly NodeRecord[]
+  readonly lessonSessions: readonly LessonSessionSummary[]
+  readonly progress: CourseProgressRecord
 }
 
 export interface CreatePeriodRequest {
@@ -172,6 +202,7 @@ export interface CourseIdRequest {
 export interface UpdateLessonScheduleRequest {
   readonly lessonId: string
   readonly scheduledAt: string | null
+  readonly durationMinutes?: number | null
 }
 
 export interface LessonIdRequest {
@@ -274,6 +305,7 @@ export function isLessonSessionSummary(value: unknown): value is LessonSessionSu
     isRecord(value) &&
     isNonEmptyString(value.lessonId) &&
     (value.scheduledAt === null || isUtcIsoString(value.scheduledAt)) &&
+    (value.durationMinutes === null || isPositiveInteger(value.durationMinutes)) &&
     (value.taughtConfirmedAt === null || isUtcIsoString(value.taughtConfirmedAt)) &&
     (value.attendanceRecordedAt === null || isUtcIsoString(value.attendanceRecordedAt)) &&
     isNonNegativeInteger(value.presentCount) &&
@@ -289,6 +321,7 @@ export function isLessonAttendanceRecord(value: unknown): value is LessonAttenda
     isRecord(value) &&
     isNonEmptyString(value.lessonId) &&
     (value.scheduledAt === null || isUtcIsoString(value.scheduledAt)) &&
+    (value.durationMinutes === null || isPositiveInteger(value.durationMinutes)) &&
     (value.taughtConfirmedAt === null || isUtcIsoString(value.taughtConfirmedAt)) &&
     (value.attendanceRecordedAt === null || isUtcIsoString(value.attendanceRecordedAt)) &&
     Array.isArray(value.students) &&
@@ -365,6 +398,40 @@ export function isCreateCourseRequest(value: unknown): value is CreateCourseRequ
   )
 }
 
+export function isCreateCourseSetupRequest(value: unknown): value is CreateCourseSetupRequest {
+  return (
+    hasOnlyKeys(value, ['title', 'mode', 'students', 'periodTitle', 'lessons']) &&
+    isNonEmptyString(value.title) &&
+    isCourseMode(value.mode) &&
+    Array.isArray(value.students) &&
+    value.students.every(isCreateCourseSetupStudent) &&
+    isNonEmptyString(value.periodTitle) &&
+    Array.isArray(value.lessons) &&
+    value.lessons.length >= 1 &&
+    value.lessons.length <= 100 &&
+    value.lessons.every(isCreateCourseSetupLesson)
+  )
+}
+
+export function isCreateCourseSetupResult(value: unknown): value is CreateCourseSetupResult {
+  return (
+    isRecord(value) &&
+    isNodeRecord(value.course) &&
+    Array.isArray(value.students) &&
+    value.students.every(isStudentRecord) &&
+    Array.isArray(value.courseStudentLinks) &&
+    value.courseStudentLinks.every(isCourseStudentLink) &&
+    isNodeRecord(value.period) &&
+    Array.isArray(value.lessons) &&
+    value.lessons.length >= 1 &&
+    value.lessons.length <= 100 &&
+    value.lessons.every(isNodeRecord) &&
+    Array.isArray(value.lessonSessions) &&
+    value.lessonSessions.every(isLessonSessionSummary) &&
+    isCourseProgressRecord(value.progress)
+  )
+}
+
 export function isCreatePeriodRequest(value: unknown): value is CreatePeriodRequest {
   return (
     hasOnlyKeys(value, ['courseId', 'title']) &&
@@ -429,9 +496,11 @@ export function isCourseIdRequest(value: unknown): value is CourseIdRequest {
 }
 
 export function isUpdateLessonScheduleRequest(value: unknown): value is UpdateLessonScheduleRequest {
-  return hasOnlyKeys(value, ['lessonId', 'scheduledAt']) &&
+  return hasOnlyKeys(value, ['lessonId', 'scheduledAt'], ['durationMinutes']) &&
     isNonEmptyString(value.lessonId) &&
-    (value.scheduledAt === null || isUtcIsoString(value.scheduledAt))
+    (value.scheduledAt === null || isUtcIsoString(value.scheduledAt)) &&
+    (value.durationMinutes === undefined || value.durationMinutes === null ||
+      isPositiveInteger(value.durationMinutes))
 }
 
 export function isLessonIdRequest(value: unknown): value is LessonIdRequest {
@@ -544,6 +613,27 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0
+}
+
+function isCreateCourseSetupStudent(value: unknown): value is CreateCourseSetupStudent {
+  return isRecord(value) && (
+    (hasOnlyKeys(value, ['type', 'studentId']) && value.type === 'existing' &&
+      isNonEmptyString(value.studentId)) ||
+    (hasOnlyKeys(value, ['type', 'name']) && value.type === 'new' &&
+      isNonEmptyString(value.name) && Array.from(value.name.trim()).length <= 100)
+  )
+}
+
+function isCreateCourseSetupLesson(value: unknown): value is CreateCourseSetupLesson {
+  return isRecord(value) &&
+    hasOnlyKeys(value, ['title', 'scheduledAt', 'durationMinutes']) &&
+    isNonEmptyString(value.title) &&
+    (value.scheduledAt === null || isUtcIsoString(value.scheduledAt)) &&
+    (value.durationMinutes === null || isPositiveInteger(value.durationMinutes))
 }
 
 function isUniqueStringArray(value: unknown): value is readonly string[] {

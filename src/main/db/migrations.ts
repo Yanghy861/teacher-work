@@ -353,6 +353,17 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 13,
+    name: 'add_lesson_session_duration',
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE lesson_sessions
+          ADD COLUMN duration_minutes INTEGER
+          CHECK (duration_minutes IS NULL OR duration_minutes > 0);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

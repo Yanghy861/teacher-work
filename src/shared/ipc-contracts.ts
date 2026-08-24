@@ -6,6 +6,7 @@ export const IPC_CHANNELS = {
 export const CORE_IPC_CHANNELS = {
   getCoreOverview: 'core:get-overview',
   createCourse: 'core:create-course',
+  createCourseSetup: 'core:create-course-setup',
   createPeriod: 'core:create-period',
   createLesson: 'core:create-lesson',
   createStudent: 'core:create-student',

@@ -65,6 +65,7 @@ function fixture(): CoreOverview {
     lessonSessions: [{
       lessonId: 'lesson-2',
       scheduledAt: null,
+      durationMinutes: null,
       taughtConfirmedAt: null,
       attendanceRecordedAt: null,
       presentCount: 0,

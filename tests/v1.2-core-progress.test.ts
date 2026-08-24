@@ -54,8 +54,8 @@ describe('V12-01 course progress and attendance core', () => {
          VALUES ('course-old', 'student-old', '2026-08-22T00:00:00.000Z')`,
       ).run()
 
-      expect(runMigrations(database)).toBe(12)
-      expect(getAppliedMigrationVersions(database)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+      expect(runMigrations(database)).toBe(13)
+      expect(getAppliedMigrationVersions(database)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
       expect(database.prepare(
         `SELECT course_id, student_id, ended_at FROM course_students`,
       ).get()).toEqual({ course_id: 'course-old', student_id: 'student-old', ended_at: null })
@@ -68,6 +68,8 @@ describe('V12-01 course progress and attendance core', () => {
         { name: 'lesson_attendance' },
         { name: 'lesson_sessions' },
       ])
+      expect(database.prepare("SELECT name FROM pragma_table_info('lesson_sessions') WHERE name = 'duration_minutes'").get())
+        .toEqual({ name: 'duration_minutes' })
     } finally {
       database.close()
     }
@@ -278,6 +280,9 @@ describe('V12-01 course progress and attendance core', () => {
         .toThrowError(expect.objectContaining({ code: 'INVALID_SCHEDULE' }))
       const scheduledAt = '2026-08-23T10:30:00.000Z'
       expect(core.attendance.updateLessonSchedule(lesson8.id, scheduledAt).scheduledAt).toBe(scheduledAt)
+      expect(core.attendance.updateLessonSchedule(lesson8.id, scheduledAt, 90).durationMinutes).toBe(90)
+      expect(core.attendance.updateLessonSchedule(lesson8.id, null).durationMinutes).toBe(90)
+      expect(core.attendance.updateLessonSchedule(lesson8.id, null, null).durationMinutes).toBeNull()
       const range = getLocalDayUtcRange(2026, 8, 23)
       expect(range).toEqual({
         startUtc: new Date(2026, 7, 23, 0, 0, 0, 0).toISOString(),

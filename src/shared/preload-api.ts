@@ -48,6 +48,7 @@ import {
   isCourseProgressRecord,
   isCourseStudentLink,
   isCoreOverview,
+  isCreateCourseSetupResult,
   isCreateCourseRequest,
   isCreateLessonRequest,
   isCreateNoteRequest,
@@ -71,6 +72,8 @@ import {
   type CourseStudentLink,
   type CourseStudentRequest,
   type CreateCourseRequest,
+  type CreateCourseSetupRequest,
+  type CreateCourseSetupResult,
   type CreateLessonRequest,
   type CreateNoteRequest,
   type CreatePeriodRequest,
@@ -151,6 +154,8 @@ export type {
   CourseStudentLink,
   CourseStudentRequest,
   CreateCourseRequest,
+  CreateCourseSetupRequest,
+  CreateCourseSetupResult,
   CreateLessonRequest,
   CreateNoteRequest,
   CreatePeriodRequest,
@@ -203,6 +208,7 @@ export interface TeacherWorkbenchApi {
   core: {
     getOverview: () => Promise<CoreOverview>
     createCourse: (request: CreateCourseRequest) => Promise<NodeRecord>
+    createCourseSetup: (request: CreateCourseSetupRequest) => Promise<CreateCourseSetupResult>
     createPeriod: (request: CreatePeriodRequest) => Promise<NodeRecord>
     createLesson: (request: CreateLessonRequest) => Promise<NodeRecord>
     createStudent: (request: CreateStudentRequest) => Promise<StudentRecord>
@@ -283,6 +289,7 @@ export interface TeacherWorkbenchApi {
 export {
   isAppVersion,
   isCoreOverview,
+  isCreateCourseSetupResult,
   isCreateCourseRequest,
   isConfirmLessonResult,
   isCourseProgressRecord,

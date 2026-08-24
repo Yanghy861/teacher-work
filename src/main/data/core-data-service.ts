@@ -3,13 +3,15 @@ import { randomUUID } from 'node:crypto'
 import type {
   CourseMode,
   CourseStudentLink,
+  CreateCourseSetupRequest,
+  CreateCourseSetupResult,
   CoreOverview,
   DraftStatus,
   NodeRecord,
   NoteRecord,
   StudentRecord,
 } from '../../shared/core-contracts'
-import { isDraftStatus } from '../../shared/core-contracts'
+import { isCourseMode, isDraftStatus, isUtcIsoString } from '../../shared/core-contracts'
 import {
   isDraftNoteMetadata,
   type DraftKind,
@@ -35,6 +37,7 @@ export type CoreDataErrorCode =
   | 'LESSON_DELETED'
   | 'INVALID_LESSON'
   | 'INVALID_DRAFT'
+  | 'INVALID_COURSE_SETUP'
 
 export class CoreDataError extends Error {
   readonly code: CoreDataErrorCode
@@ -128,6 +131,62 @@ export class CoreDataService {
       )
       studentIds.forEach((studentId) => insert.run(course.id, studentId, createdAt))
       return course
+    })
+  }
+
+  createCourseSetup(input: CreateCourseSetupRequest): CreateCourseSetupResult {
+    return this.transaction(() => {
+      const normalized = normalizeCourseSetup(input)
+      const students = normalized.students.map((student) =>
+        student.type === 'existing'
+          ? this.requireActiveStudent(student.studentId)
+          : this.createStudent(student.name),
+      )
+      const course = this.createCourse({
+        title: normalized.title,
+        mode: normalized.mode,
+        studentIds: students.map((student) => student.id),
+      })
+      const period = this.nodes.createPeriod(course.id, normalized.periodTitle)
+      const lessons = normalized.lessons.map((lesson) =>
+        this.nodes.createLesson(period.id, lesson.title),
+      )
+      const upsertSession = this.database.prepare(
+        `INSERT INTO lesson_sessions
+           (lesson_id, scheduled_at, duration_minutes, taught_confirmed_at,
+            attendance_recorded_at, updated_at)
+         VALUES (?, ?, ?, NULL, NULL, ?)
+         ON CONFLICT(lesson_id) DO UPDATE SET
+           scheduled_at = excluded.scheduled_at,
+           duration_minutes = excluded.duration_minutes,
+           updated_at = excluded.updated_at`,
+      )
+      normalized.lessons.forEach((lesson, index) => {
+        if (lesson.scheduledAt !== null || lesson.durationMinutes !== null) {
+          upsertSession.run(
+            lessons[index]!.id,
+            lesson.scheduledAt,
+            lesson.durationMinutes,
+            this.now(),
+          )
+        }
+      })
+      const progress = this.progress.startPeriod(course.id, period.id, lessons[0]!.id)
+      const sessionByLessonId = new Map(
+        this.progress.listLessonSessions().map((session) => [session.lessonId, session]),
+      )
+      return {
+        course,
+        students,
+        courseStudentLinks: students.map((student) => this.requireLink(course.id, student.id)),
+        period,
+        lessons,
+        lessonSessions: lessons.flatMap((lesson) => {
+          const session = sessionByLessonId.get(lesson.id)
+          return session === undefined ? [] : [session]
+        }),
+        progress,
+      }
     })
   }
 
@@ -626,6 +685,108 @@ function normalizeName(name: string): string {
     throw new CoreDataError('INVALID_NAME', '学生姓名不能为空。')
   }
   return name.trim()
+}
+
+interface NormalizedCourseSetup {
+  readonly title: string
+  readonly mode: CourseMode
+  readonly students: readonly (
+    | { readonly type: 'existing'; readonly studentId: string }
+    | { readonly type: 'new'; readonly name: string }
+  )[]
+  readonly periodTitle: string
+  readonly lessons: readonly {
+    readonly title: string
+    readonly scheduledAt: string | null
+    readonly durationMinutes: number | null
+  }[]
+}
+
+function normalizeCourseSetup(input: CreateCourseSetupRequest): NormalizedCourseSetup {
+  if (input === null || typeof input !== 'object') {
+    throw new CoreDataError('INVALID_COURSE_SETUP', '快速建课请求无效。')
+  }
+  const title = normalizeSetupText(input.title, '课程名称不能为空。')
+  if (!isCourseMode(input.mode)) {
+    throw new CoreDataError('INVALID_COURSE_SETUP', '课程类型无效。')
+  }
+  const periodTitle = normalizeSetupText(input.periodTitle, '阶段名称不能为空。')
+  if (!Array.isArray(input.students)) {
+    throw new CoreDataError('INVALID_COURSE_SETUP', '学生名单无效。')
+  }
+
+  const existingIds = new Set<string>()
+  const newNames = new Set<string>()
+  const students: NormalizedCourseSetup['students'][number][] = []
+  input.students.forEach((student) => {
+    if (student === null || typeof student !== 'object') {
+      throw new CoreDataError('INVALID_COURSE_SETUP', '学生名单无效。')
+    }
+    if (student.type === 'existing') {
+      const studentId = normalizeSetupText(student.studentId, '已有学生 ID 无效。')
+      if (existingIds.has(studentId)) {
+        throw new CoreDataError('STUDENT_ALREADY_LINKED', '课程关联学生不能重复。')
+      }
+      existingIds.add(studentId)
+      students.push({ type: 'existing', studentId })
+      return
+    }
+    if (student.type !== 'new') {
+      throw new CoreDataError('INVALID_COURSE_SETUP', '学生名单无效。')
+    }
+    const name = normalizeSetupText(student.name, '学生姓名不能为空。')
+    if (Array.from(name).length > 100) {
+      throw new CoreDataError('INVALID_NAME', '学生姓名最多 100 个字符。')
+    }
+    if (!newNames.has(name)) {
+      newNames.add(name)
+      students.push({ type: 'new', name })
+    }
+  })
+  if (input.mode === 'one_to_one' && students.length > 1) {
+    throw new CoreDataError('ONE_TO_ONE_ACTIVE_STUDENT', '一对一课程最多关联一位在读学生。')
+  }
+
+  if (!Array.isArray(input.lessons) || input.lessons.length < 1) {
+    throw new CoreDataError('INVALID_COURSE_SETUP', '快速建课至少需要一节课。')
+  }
+  if (input.lessons.length > 100) {
+    throw new CoreDataError(
+      'INVALID_COURSE_SETUP',
+      '一次最多创建 100 节课，请拆分阶段。',
+    )
+  }
+  const lessons = input.lessons.map((lesson) => {
+    if (lesson === null || typeof lesson !== 'object') {
+      throw new CoreDataError('INVALID_COURSE_SETUP', '课次信息无效。')
+    }
+    const lessonTitle = normalizeSetupText(lesson.title, '课次名称不能为空。')
+    if (lesson.scheduledAt !== null && !isUtcIsoString(lesson.scheduledAt)) {
+      throw new CoreDataError(
+        'INVALID_COURSE_SETUP',
+        '上课时间必须是 UTC ISO 8601 时间。',
+      )
+    }
+    if (
+      lesson.durationMinutes !== null &&
+      (!Number.isInteger(lesson.durationMinutes) || lesson.durationMinutes <= 0)
+    ) {
+      throw new CoreDataError('INVALID_COURSE_SETUP', '课程时长必须是正整数分钟。')
+    }
+    return {
+      title: lessonTitle,
+      scheduledAt: lesson.scheduledAt,
+      durationMinutes: lesson.durationMinutes,
+    }
+  })
+  return { title, mode: input.mode, students, periodTitle, lessons }
+}
+
+function normalizeSetupText(value: unknown, message: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new CoreDataError('INVALID_COURSE_SETUP', message)
+  }
+  return value.trim()
 }
 
 function normalizeNoteBody(bodyMd: string): string {

@@ -60,7 +60,7 @@
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
-| V13-01 快速建课数据契约与原子编排服务 | TODO | 等待从 `checkpoint-V1.2-pass` 开始实施 schema v13、时长、单事务 Service 与安全 IPC |
+| V13-01 快速建课数据契约与原子编排服务 | DONE | schema v13、`duration_minutes`、session 时长读写、`createCourseSetup` 单事务、Core IPC / Preload 和 Main 二次校验完成；43 files / 140 tests、typecheck、lint、build、diff check 通过 |
 | V13-02 向导领域模型、名单与排课预览 | TODO | 等待 V13-01 |
 | V13-03 快速建课前两步 UI | TODO | 等待 V13-02 |
 | V13-04 排课、确认页与课程页完整接入 | TODO | 等待 V13-03 |

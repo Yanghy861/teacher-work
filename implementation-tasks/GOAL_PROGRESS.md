@@ -619,3 +619,20 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 实施链：V13-01 数据契约与原子编排服务 → V13-02 向导领域模型 → V13-03 前两步 UI → V13-04 排课 / 确认 / 完整接入 → V13-05 最终门禁。
 - 计划产物：`教师工作台_V1_3_快速建课_产品与实施方案.md`、`implementation-tasks/V1_3_DECISIONS.md`、`implementation-tasks/v1.3-tasks/V13-01`–`V13-05` 与 `docs/v1.3-fast-course-design/` 图集。
 - Git 边界：方案由 `plan(V1.3): freeze quick course setup` 本地提交冻结；不自动 push，不运行 portable/installer，不创建通过标签。
+
+## 2026-08-24 · V13-01 · IN_PROGRESS
+
+- 前置基线：`checkpoint-V1.2-pass`；V1.3 方案提交 `170c6cf`。
+- 当前唯一范围：schema v13 `duration_minutes`、session 时长读写、`CreateCourseSetupRequest` 共享契约、单事务编排服务与唯一安全 IPC / Preload 暴露。
+- 明确不做：向导 view model、名单 / 日历 UI、课程页入口和后续 V13-02–V13-04 交互。
+- 验收目标：相关迁移 / Service / IPC / Preload 测试、typecheck、lint、风险 build 和 diff check 全部通过后，才把 V13-01 标为 `DONE` 并创建本地里程碑提交。
+
+## 2026-08-24 · V13-01 · DONE
+
+- 关键改动：schema v13 为 `lesson_sessions` 增加正整数或空的 `duration_minutes`；课次 session 摘要、点名读取和现有排课更新支持时长，旧调用不传时长时保持原值。
+- 原子编排：新增唯一 `core:create-course-setup` 契约、Preload 方法和 `CoreDataService.createCourseSetup()`；新 / 旧学生、课程、关系、阶段、1–100 课次、日期 / 时长 session 与 Active / Current 在一个事务内创建，失败整笔回滚。
+- Main 校验：重新 trim 和检查新学生姓名 1–100 Unicode 字符、existing 学生仍活动、重复 ID、一对一人数、课次 1–100、非空标题、严格 UTC 与正整数时长；重复 new name 按 trim 后精确值去重。
+- 边界证据：覆盖 schema v12→v13 无损迁移、日期或时长任一非空即建 session、两者均空不建扩展行、空一对一课程、100/101 节、软删除学生、非法时间 / 时长、Current 初始化、无已上 / 点名状态和中途唯一键失败全回滚。
+- 自动验收：V13-01 相关 5 files / 29 tests ✅；全量 `npm test` 43 files / 140 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 44 / Preload 10 / Renderer 53 modules）；`git diff --check` ✅。
+- 范围：未实现向导 view model 或 UI，未新增 recurrence、多 session、日历页或 AI 变化；下一任务可依赖 `CreateCourseSetupRequest/Result`、`createCourseSetup()`、`durationMinutes` 与 schema v13。
+- Git 任务提交：由 `v1.3(V13-01): add atomic course setup core` 本地提交收束；不 push。

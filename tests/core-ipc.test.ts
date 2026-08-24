@@ -105,6 +105,42 @@ describe('L01 typed core IPC', () => {
     }
   })
 
+  it('creates a complete course setup through the single core IPC transaction', async () => {
+    const { database, dependencies } = createDependencies()
+    try {
+      const response = await dispatchCoreIpc(
+        CORE_IPC_CHANNELS.createCourseSetup,
+        {
+          title: 'IPC 快速建课',
+          mode: 'class',
+          students: [{ type: 'new', name: '新学生' }],
+          periodTitle: '2026 秋季',
+          lessons: [
+            {
+              title: '第一课',
+              scheduledAt: null,
+              durationMinutes: 90,
+            },
+          ],
+        },
+        dependencies,
+        new TestLogger(),
+      )
+      expect(response).toMatchObject({
+        ok: true,
+        data: {
+          course: { title: 'IPC 快速建课' },
+          students: [{ name: '新学生' }],
+          lessons: [{ title: '第一课' }],
+          lessonSessions: [{ scheduledAt: null, durationMinutes: 90 }],
+          progress: { activePeriodId: expect.any(String), currentLessonId: expect.any(String) },
+        },
+      })
+    } finally {
+      database.close()
+    }
+  })
+
   it('updates an existing note without dropping its AI metadata', async () => {
     const { database, dependencies } = createDependencies()
     try {

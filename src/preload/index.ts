@@ -19,6 +19,7 @@ import {
   isNullableManagedFileRecord,
   isAppVersion,
   isCoreOverview,
+  isCreateCourseSetupResult,
   isConfirmLessonResult,
   isCourseProgressRecord,
   isCourseStudentLink,
@@ -44,6 +45,7 @@ import {
   parseIpcResponse,
   TeacherWorkbenchError,
   type CreateCourseRequest,
+  type CreateCourseSetupRequest,
   type CreateLessonRequest,
   type CreateNoteRequest,
   type UpdateNoteRequest,
@@ -107,6 +109,7 @@ const api = Object.freeze({
   core: Object.freeze({
     getOverview: () => invoke(CORE_IPC_CHANNELS.getCoreOverview, {}, isCoreOverview),
     createCourse: (request: CreateCourseRequest) => invoke(CORE_IPC_CHANNELS.createCourse, request, isNodeRecord),
+    createCourseSetup: (request: CreateCourseSetupRequest) => invoke(CORE_IPC_CHANNELS.createCourseSetup, request, isCreateCourseSetupResult),
     createPeriod: (request: CreatePeriodRequest) => invoke(CORE_IPC_CHANNELS.createPeriod, request, isNodeRecord),
     createLesson: (request: CreateLessonRequest) => invoke(CORE_IPC_CHANNELS.createLesson, request, isNodeRecord),
     createStudent: (request: CreateStudentRequest) => invoke(CORE_IPC_CHANNELS.createStudent, request, isStudentRecord),

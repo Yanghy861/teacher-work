@@ -14,6 +14,7 @@ import type {
   CourseLessonRequest,
   CourseStudentRequest,
   CreateCourseRequest,
+  CreateCourseSetupRequest,
   CreateLessonRequest,
   CreateNoteRequest,
   CreatePeriodRequest,
@@ -37,6 +38,8 @@ import {
   isCourseStudentLink,
   isCourseStudentRequest,
   isCreateCourseRequest,
+  isCreateCourseSetupRequest,
+  isCreateCourseSetupResult,
   isCreateLessonRequest,
   isCreateNoteRequest,
   isCreatePeriodRequest,
@@ -118,6 +121,12 @@ export async function dispatchCoreIpc(
         return ensureResponse(
           coreData.createCourse(payload as CreateCourseRequest),
           isNodeRecord,
+        )
+      case CORE_IPC_CHANNELS.createCourseSetup:
+        assertRequest(payload, isCreateCourseSetupRequest)
+        return ensureResponse(
+          coreData.createCourseSetup(payload as CreateCourseSetupRequest),
+          isCreateCourseSetupResult,
         )
       case CORE_IPC_CHANNELS.createPeriod:
         assertRequest(payload, isCreatePeriodRequest)

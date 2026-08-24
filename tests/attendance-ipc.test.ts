@@ -77,9 +77,12 @@ describe('V12-01 attendance IPC', () => {
 
       const scheduleResponse = await ipcMain.handlers.get(ATTENDANCE_IPC_CHANNELS.updateSchedule)!(
         {},
-        { lessonId: lesson.id, scheduledAt },
+        { lessonId: lesson.id, scheduledAt, durationMinutes: 90 },
       )
-      expect(scheduleResponse).toMatchObject({ ok: true, data: { lessonId: lesson.id, scheduledAt } })
+      expect(scheduleResponse).toMatchObject({
+        ok: true,
+        data: { lessonId: lesson.id, scheduledAt, durationMinutes: 90 },
+      })
 
       const saveResponse = await ipcMain.handlers.get(ATTENDANCE_IPC_CHANNELS.saveLesson)!(
         {},

@@ -33,6 +33,7 @@ interface LessonContextRow {
 
 interface SessionStateRow {
   readonly scheduled_at: string | null
+  readonly duration_minutes: number | null
   readonly taught_confirmed_at: string | null
   readonly attendance_recorded_at: string | null
 }
@@ -53,9 +54,20 @@ export class AttendanceService {
     this.now = options.now ?? (() => new Date().toISOString())
   }
 
-  updateLessonSchedule(lessonId: string, scheduledAt: string | null): LessonAttendanceRecord {
+  updateLessonSchedule(
+    lessonId: string,
+    scheduledAt: string | null,
+    durationMinutes?: number | null,
+  ): LessonAttendanceRecord {
     if (scheduledAt !== null && !isUtcIsoString(scheduledAt)) {
       throw new AttendanceError('INVALID_SCHEDULE', '上课时间必须是 UTC ISO 8601 时间。')
+    }
+    if (
+      durationMinutes !== undefined &&
+      durationMinutes !== null &&
+      (!Number.isInteger(durationMinutes) || durationMinutes <= 0)
+    ) {
+      throw new AttendanceError('INVALID_SCHEDULE', '课程时长必须是正整数分钟。')
     }
     return this.transaction(() => {
       this.requireLessonContext(lessonId)
@@ -64,10 +76,12 @@ export class AttendanceService {
       this.database
         .prepare(
           `UPDATE lesson_sessions
-              SET scheduled_at = ?, updated_at = ?
+              SET scheduled_at = ?,
+                  duration_minutes = CASE WHEN ? = 1 THEN ? ELSE duration_minutes END,
+                  updated_at = ?
             WHERE lesson_id = ?`,
         )
-        .run(scheduledAt, updatedAt, lessonId)
+        .run(scheduledAt, durationMinutes === undefined ? 0 : 1, durationMinutes ?? null, updatedAt, lessonId)
       return this.getLessonAttendance(lessonId)
     })
   }
@@ -81,6 +95,7 @@ export class AttendanceService {
     return {
       lessonId,
       scheduledAt: session?.scheduled_at ?? null,
+      durationMinutes: session?.duration_minutes ?? null,
       taughtConfirmedAt: session?.taught_confirmed_at ?? null,
       attendanceRecordedAt: session?.attendance_recorded_at ?? null,
       students: rows.map((row) => ({
@@ -196,7 +211,7 @@ export class AttendanceService {
   private findSession(lessonId: string): SessionStateRow | undefined {
     return this.database
       .prepare(
-        `SELECT scheduled_at, taught_confirmed_at, attendance_recorded_at
+        `SELECT scheduled_at, duration_minutes, taught_confirmed_at, attendance_recorded_at
            FROM lesson_sessions WHERE lesson_id = ?`,
       )
       .get(lessonId) as SessionStateRow | undefined

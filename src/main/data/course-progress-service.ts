@@ -45,6 +45,7 @@ interface LessonContextRow {
 interface SessionRow {
   readonly lesson_id: string
   readonly scheduled_at: string | null
+  readonly duration_minutes: number | null
   readonly taught_confirmed_at: string | null
   readonly attendance_recorded_at: string | null
   readonly present_count: number
@@ -82,7 +83,8 @@ export class CourseProgressService {
   listLessonSessions(): LessonSessionSummary[] {
     const rows = this.database
       .prepare(
-        `SELECT session.lesson_id, session.scheduled_at, session.taught_confirmed_at,
+        `SELECT session.lesson_id, session.scheduled_at, session.duration_minutes,
+                session.taught_confirmed_at,
                 session.attendance_recorded_at,
                 SUM(CASE WHEN attendance.status = 'present' THEN 1 ELSE 0 END) AS present_count,
                 SUM(CASE WHEN attendance.status = 'leave' THEN 1 ELSE 0 END) AS leave_count,
@@ -110,6 +112,7 @@ export class CourseProgressService {
     return rows.map((row) => ({
       lessonId: row.lesson_id,
       scheduledAt: row.scheduled_at,
+      durationMinutes: row.duration_minutes,
       taughtConfirmedAt: row.taught_confirmed_at,
       attendanceRecordedAt: row.attendance_recorded_at,
       presentCount: row.present_count,
