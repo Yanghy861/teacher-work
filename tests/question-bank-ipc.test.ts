@@ -55,7 +55,7 @@ function dependencies(): QuestionBankIpcDependencies {
       questionCount: 0,
       paperCount: 0,
       assetCount: 0,
-      grades: [], years: [], months: [], types: [], tags: [],
+      grades: [], years: [], months: [], types: [], examTypes: [], tags: [],
       difficultyMin: null,
       difficultyMax: null,
     })),
@@ -104,6 +104,9 @@ describe('question bank IPC boundary', () => {
       { tag: '函数' },
       { tags: ['函数', '函数'] },
       { month: 0 },
+      { questionNumbers: [1, 1] },
+      { questionNumbers: [0] },
+      { questionNumbers: Array.from({ length: 201 }, (_, index) => index + 1) },
       { limit: 101 },
       { offset: -1 },
     ]) {

@@ -201,6 +201,7 @@ export class QuestionBankService {
     }
     addTextFilter(conditions, parameters, 'q.grade', 'grade', request.grade)
     addTextFilter(conditions, parameters, 'q.type', 'type', request.type)
+    addTextFilter(conditions, parameters, 'TRIM(p.exam_type)', 'examType', request.examType)
     if (request.year !== undefined) {
       conditions.push('p.year = @year')
       parameters.year = request.year
@@ -210,6 +211,18 @@ export class QuestionBankService {
     } else if (request.month !== undefined) {
       conditions.push("TRIM(p.exam_type) = '月考' AND p.month = @month")
       parameters.month = request.month
+    }
+    if (request.questionNumbers !== undefined && request.questionNumbers.length > 0) {
+      const placeholders = request.questionNumbers.map((questionNumber, index) => {
+        const parameter = `questionNumber${index}`
+        parameters[parameter] = questionNumber
+        return `@${parameter}`
+      })
+      conditions.push(`(
+        q.question_no IS NOT NULL AND TRIM(q.question_no) <> '' AND
+        TRIM(q.question_no) NOT GLOB '*[^0-9]*' AND
+        CAST(TRIM(q.question_no) AS INTEGER) IN (${placeholders.join(', ')})
+      )`)
     }
     if (request.difficultyMin !== undefined) {
       conditions.push('q.difficulty >= @difficultyMin')
@@ -459,6 +472,13 @@ export class QuestionBankService {
          GROUP BY type
          ORDER BY CASE type WHEN 'single' THEN 1 WHEN 'fill' THEN 2 WHEN 'essay' THEN 3 ELSE 4 END, type
       `),
+      examTypes: readFacets(database, `
+        SELECT TRIM(p.exam_type) AS value, TRIM(p.exam_type) AS label, COUNT(*) AS count
+          FROM questions q JOIN source_papers p ON p.source_uid = q.paper_uid
+         WHERE p.exam_type IS NOT NULL AND TRIM(p.exam_type) <> ''
+         GROUP BY TRIM(p.exam_type)
+         ORDER BY count DESC, TRIM(p.exam_type)
+      `),
       tags: readFacets(database, `
         SELECT tag AS value, tag AS label, COUNT(*) AS count
           FROM question_tags GROUP BY tag ORDER BY count DESC, tag
@@ -554,6 +574,7 @@ function emptySummary(): QuestionBankSummary {
     years: [],
     months: [],
     types: [],
+    examTypes: [],
     tags: [],
     difficultyMin: null,
     difficultyMax: null,
@@ -613,7 +634,7 @@ function previewText(content: string): string {
   const text = stripLegacyAssetLinks(content)
     .replace(/\s+/gu, ' ')
     .trim()
-  return text.length <= 280 ? text : `${text.slice(0, 279)}…`
+  return text.length <= 2_000 ? text : `${text.slice(0, 1_999)}…`
 }
 
 function stripLegacyAssetLinks(content: string): string {

@@ -773,3 +773,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 兼容性：修复直接适配当前 380 MB 快照，不要求重新导入或重新导出；`E:\Wss_Tiku` 未被读取或写入，导出器仅修改代码。
 - 验证：题库 service / IPC / UI 3 files / 9 tests ✅；普通全量 50 files / 173 tests ✅；真实快照 1 file / 1 test ✅，断言 4 类题型、无“0月”、存在“无”和 40+ 标签；`typecheck` ✅；`lint` ✅；production build ✅；`node --check scripts/export-question-bank.mjs` ✅；`git diff --check` ✅。
 - 发布边界：继续保留 `checkpoint-V1.3-pass`；不运行 portable / installer，不自动 push，仍等待产品负责人最终体验确认后再创建 `checkpoint-V1.4-pass`。
+
+## 2026-08-24 · V1.4 高信息密度与组合筛选增强 · DONE
+
+- 产品确认：先按题号、考试类型、年份、公式与信息密度需求制作概念图；产品负责人确认后才开始修改正式代码。删除容易歧义的“试卷来源”主筛选概念，题号格式提示与标题保持同一行。
+- 数据契约：`QuestionBankSummary` 新增考试类型 facet；`QuestionBankSearchRequest` 新增 `examType` 与最多 200 个唯一正整数 `questionNumbers`，Preload / IPC 继续使用严格运行时 guard。
+- 题号表达式：支持 `1-10`、`1,2,13-15`、中文标点和常见横线，拒绝倒序、越界、非法字符与过大集合；Main 对纯数字 `question_no` 使用参数化 `IN` 条件。真实快照 25,370 道题全部为纯数字题号，最大 40。
+- 界面与公式：筛选区压缩为两行，标签默认展开且仍可收起，结果卡保持两列并直接渲染 KaTeX；CSP 允许 KaTeX 的本地 / data 字体，普通 Markdown 转义符在文字段正确去除。
+- 自动验收：题库专项 3 files / 10 tests ✅；普通全量 50 files / 174 tests ✅；真实快照 1 file / 1 test ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 47 / Preload 11 / Renderer 61 modules）；`git diff --check` ✅。
+- 实机验收：隔离 production Electron 工作区筛选 `2025 + 期中 + 1,2,13-15`，总数 255，首批 50 张结果卡含 105 个 KaTeX 节点，Markdown 残留转义 0；题号帮助同排，右侧详情无页面级横向溢出。
+- 安全与发布：只使用既有 `.tqbank` 快照，未读取或修改 `E:\Wss_Tiku`；未运行 portable / installer。产品负责人明确授权把本轮普通提交推送到既有 GitHub `origin/main`，但未授权创建 `checkpoint-V1.4-pass`。

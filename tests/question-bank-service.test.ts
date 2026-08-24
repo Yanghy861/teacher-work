@@ -14,6 +14,7 @@ import {
   isQuestionBankLessonCopyRequest,
   isQuestionBankSearchRequest,
   isQuestionBankSummary,
+  parseQuestionNumberExpression,
 } from '../src/shared/question-bank-contracts'
 
 interface Fixture {
@@ -85,6 +86,10 @@ describe('question bank snapshot service', () => {
       { value: 'single', label: '选择题', count: 1 },
       { value: 'fill', label: '填空题', count: 1 },
     ])
+    expect(summary.examTypes).toEqual(expect.arrayContaining([
+      { value: '期末', label: '期末', count: 1 },
+      { value: '月考', label: '月考', count: 1 },
+    ]))
     expect(summary.tags.map((facet) => facet.value)).toEqual(['二次函数', '函数', '有理数'])
     expect(isQuestionBankSummary(summary)).toBe(true)
     expect({
@@ -102,6 +107,8 @@ describe('question bank snapshot service', () => {
     expect(fixture.service.search({ tags: ['二次函数', '有理数'] }).total).toBe(0)
     expect(fixture.service.search({ tags: ['有理数'], tagMode: 'exclude' }).items.map((item) => item.id)).toEqual(['question-1'])
     expect(fixture.service.search({ type: 'fill', difficultyMax: 20 }).items.map((item) => item.id)).toEqual(['question-2'])
+    expect(fixture.service.search({ examType: '期末', questionNumbers: [1] }).items.map((item) => item.id)).toEqual(['question-1'])
+    expect(fixture.service.search({ questionNumbers: [2, 13, 14, 15] }).items.map((item) => item.id)).toEqual(['question-2'])
     expect(fixture.service.search({ month: 6 }).items.map((item) => item.id)).toEqual(['question-2'])
     expect(fixture.service.search({ month: null }).items.map((item) => item.id)).toEqual(['question-1'])
   })
@@ -158,13 +165,31 @@ describe('question bank snapshot service', () => {
   it('strictly validates search and copy requests', () => {
     expect(isQuestionBankSearchRequest({ text: '函数', limit: 50, offset: 0 })).toBe(true)
     expect(isQuestionBankSearchRequest({ month: null, tags: ['函数', '二次函数'], tagMode: 'include' })).toBe(true)
+    expect(isQuestionBankSearchRequest({ examType: '期末', questionNumbers: [1, 2, 13, 14, 15] })).toBe(true)
     expect(isQuestionBankSearchRequest({ text: '函数', path: 'E:\\Wss_Tiku' })).toBe(false)
     expect(isQuestionBankSearchRequest({ month: 0 })).toBe(false)
     expect(isQuestionBankSearchRequest({ tags: ['函数', '函数'] })).toBe(false)
     expect(isQuestionBankSearchRequest({ tag: '函数' })).toBe(false)
     expect(isQuestionBankSearchRequest({ difficultyMin: -1 })).toBe(false)
+    expect(isQuestionBankSearchRequest({ questionNumbers: [1, 1] })).toBe(false)
+    expect(isQuestionBankSearchRequest({ questionNumbers: [0] })).toBe(false)
+    expect(isQuestionBankSearchRequest({ questionNumbers: Array.from({ length: 201 }, (_, index) => index + 1) })).toBe(false)
     expect(isQuestionBankLessonCopyRequest({ questionId: 'question-1', lessonId: 'lesson-1' })).toBe(true)
     expect(isQuestionBankLessonCopyRequest({ questionId: 'question-1', lessonId: 'lesson-1', sourcePath: 'x' })).toBe(false)
+  })
+
+  it('parses flexible question-number expressions into a safe unique selection', () => {
+    expect(parseQuestionNumberExpression('1-10')).toEqual({
+      numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      error: null,
+    })
+    expect(parseQuestionNumberExpression('1,2,13-15，2')).toEqual({
+      numbers: [1, 2, 13, 14, 15],
+      error: null,
+    })
+    expect(parseQuestionNumberExpression('15—13').error).not.toBeNull()
+    expect(parseQuestionNumberExpression('1-a').error).not.toBeNull()
+    expect(parseQuestionNumberExpression('1-500').error).not.toBeNull()
   })
 })
 

@@ -23,10 +23,20 @@ describe.skipIf(realSnapshotPath === '')('real question bank snapshot smoke', ()
       expect(summary.types.map((facet) => facet.label)).toEqual(['选择题', '填空题', '解答题', '其他'])
       expect(summary.months.some((facet) => facet.label === '0月')).toBe(false)
       expect(summary.months).toContainEqual(expect.objectContaining({ value: 'none', label: '无' }))
+      expect(summary.examTypes.map((facet) => facet.value)).toContain('期中')
       expect(summary.tags.length).toBeGreaterThan(40)
 
       const tagResult = service.search({ tags: [summary.tags[0]!.value], limit: 1 })
       expect(tagResult.total).toBeGreaterThan(0)
+
+      const numberResult = service.search({
+        examType: '期中',
+        questionNumbers: [1, 2, 13, 14, 15],
+        limit: 10,
+      })
+      expect(numberResult.total).toBeGreaterThan(0)
+      expect(numberResult.items.every((item) => ['1', '2', '13', '14', '15'].includes(item.questionNo ?? ''))).toBe(true)
+      expect(numberResult.items.every((item) => item.examType === '期中')).toBe(true)
 
       const result = service.search({ text: '二次函数', grade: '九年级', limit: 10 })
       expect(result.total).toBeGreaterThan(0)

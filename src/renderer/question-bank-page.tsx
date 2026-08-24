@@ -11,6 +11,7 @@ import type {
   QuestionBankSummary,
   QuestionBankTagMode,
 } from '../shared/question-bank-contracts'
+import { parseQuestionNumberExpression } from '../shared/question-bank-contracts'
 import Modal from './modal'
 import './question-bank.css'
 
@@ -20,6 +21,8 @@ interface FilterState {
   readonly year: string
   readonly month: string
   readonly type: string
+  readonly examType: string
+  readonly questionNumberExpression: string
   readonly tags: readonly string[]
   readonly tagMode: QuestionBankTagMode
   readonly difficultyMin: string
@@ -32,6 +35,8 @@ const EMPTY_FILTERS: FilterState = {
   year: '',
   month: '',
   type: '',
+  examType: '',
+  questionNumberExpression: '',
   tags: [],
   tagMode: 'include',
   difficultyMin: '',
@@ -53,12 +58,20 @@ export default function QuestionBankPage(): React.JSX.Element {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [copyModalOpen, setCopyModalOpen] = useState(false)
-  const [tagsExpanded, setTagsExpanded] = useState(false)
+  const [tagsExpanded, setTagsExpanded] = useState(true)
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [selectedLessonId, setSelectedLessonId] = useState('')
 
   const courseTargets = useMemo(() => buildCourseTargets(coreOverview), [coreOverview])
   const selectedCourse = courseTargets.find((target) => target.course.id === selectedCourseId) ?? null
+  const questionNumberSelection = useMemo(
+    () => parseQuestionNumberExpression(filters.questionNumberExpression),
+    [filters.questionNumberExpression],
+  )
+  const activeFilterLabels = useMemo(
+    () => buildActiveFilterLabels(filters),
+    [filters],
+  )
 
   useEffect(() => {
     let active = true
@@ -80,10 +93,16 @@ export default function QuestionBankPage(): React.JSX.Element {
 
   useEffect(() => {
     if (summary?.installed !== true) return
+    if (questionNumberSelection.error !== null) {
+      setSearching(false)
+      return
+    }
     let active = true
     const timer = window.setTimeout(() => {
       setSearching(true)
-      void window.teacherWorkbench.questionBank.search(toSearchRequest(filters, offset))
+      void window.teacherWorkbench.questionBank.search(
+        toSearchRequest(filters, offset, questionNumberSelection.numbers),
+      )
         .then((nextResult) => {
           if (!active) return
           setResult(nextResult)
@@ -105,7 +124,7 @@ export default function QuestionBankPage(): React.JSX.Element {
       active = false
       window.clearTimeout(timer)
     }
-  }, [summary?.packageId, filters, offset])
+  }, [summary?.packageId, filters, offset, questionNumberSelection])
 
   useEffect(() => {
     if (selectedQuestionId === '') {
@@ -262,31 +281,56 @@ export default function QuestionBankPage(): React.JSX.Element {
 
       <div className={`question-bank-workspace${selectedQuestionId === '' ? '' : ' is-detail-open'}`}>
         <aside className="question-bank-browser">
-          <div className="question-bank-searchbox">
-            <span aria-hidden="true">⌕</span>
-            <input
-              type="search"
-              value={filters.text}
-              onChange={(event) => updateFilter('text', event.target.value)}
-              placeholder="搜索题干、答案、解析或试卷名"
-              aria-label="搜索题库"
-            />
-            {searching && <small>搜索中</small>}
-          </div>
-          <div className="question-bank-filters">
-            <FacetSelect label="年级" value={filters.grade} options={summary.grades} onChange={(value) => updateFilter('grade', value)} />
-            <FacetSelect label="年份" value={filters.year} options={summary.years} onChange={(value) => updateFilter('year', value)} />
-            <FacetSelect label="月份" value={filters.month} options={summary.months} onChange={(value) => updateFilter('month', value)} />
-            <FacetSelect label="题型" value={filters.type} options={summary.types} onChange={(value) => updateFilter('type', value)} />
-            <label className="question-bank-difficulty">
-              <span>难度</span>
-              <input type="number" min="0" max="100" value={filters.difficultyMin} placeholder="最低" onChange={(event) => updateFilter('difficultyMin', event.target.value)} />
-              <b>—</b>
-              <input type="number" min="0" max="100" value={filters.difficultyMax} placeholder="最高" onChange={(event) => updateFilter('difficultyMax', event.target.value)} />
-            </label>
-            <button className="question-bank-clear" type="button" onClick={() => { setFilters(EMPTY_FILTERS); setOffset(0) }}>
-              清除筛选
-            </button>
+          <div className="question-bank-filter-shell">
+            <div className="question-bank-primary-filters">
+              <label className="question-bank-keyword">
+                <span>关键词</span>
+                <span className="question-bank-searchbox">
+                  <span aria-hidden="true">⌕</span>
+                  <input
+                    type="search"
+                    value={filters.text}
+                    onChange={(event) => updateFilter('text', event.target.value)}
+                    placeholder="搜索题干、答案、解析或试卷名"
+                    aria-label="搜索题库"
+                  />
+                  {searching && <small>搜索中</small>}
+                </span>
+              </label>
+              <FacetSelect label="年级" value={filters.grade} options={summary.grades} onChange={(value) => updateFilter('grade', value)} />
+              <FacetSelect label="题型" value={filters.type} options={summary.types} onChange={(value) => updateFilter('type', value)} />
+              <FacetSelect label="年份" value={filters.year} options={summary.years} onChange={(value) => updateFilter('year', value)} />
+              <FacetSelect label="考试类型" value={filters.examType} options={summary.examTypes} onChange={(value) => updateFilter('examType', value)} />
+            </div>
+            <div className="question-bank-secondary-filters">
+              <label className={`question-bank-number${questionNumberSelection.error === null ? '' : ' has-error'}`}>
+                <span className="question-bank-field-title">
+                  题号
+                  <small id="question-number-help" role={questionNumberSelection.error === null ? undefined : 'alert'}>
+                    {questionNumberSelection.error ?? '支持 1-10、1,2,13-15'}
+                  </small>
+                </span>
+                <input
+                  type="text"
+                  value={filters.questionNumberExpression}
+                  placeholder="例如 1,2,13-15"
+                  aria-label="题号"
+                  aria-describedby="question-number-help"
+                  aria-invalid={questionNumberSelection.error !== null}
+                  onChange={(event) => updateFilter('questionNumberExpression', event.target.value)}
+                />
+              </label>
+              <label className="question-bank-difficulty">
+                <span>难度</span>
+                <input type="number" min="0" max="100" value={filters.difficultyMin} placeholder="最低" onChange={(event) => updateFilter('difficultyMin', event.target.value)} />
+                <b>—</b>
+                <input type="number" min="0" max="100" value={filters.difficultyMax} placeholder="最高" onChange={(event) => updateFilter('difficultyMax', event.target.value)} />
+              </label>
+              <FacetSelect label="月份" value={filters.month} options={summary.months} onChange={(value) => updateFilter('month', value)} />
+              <button className="question-bank-clear" type="button" onClick={() => { setFilters(EMPTY_FILTERS); setOffset(0) }}>
+                清除筛选
+              </button>
+            </div>
           </div>
 
           <section className="question-bank-tag-filter">
@@ -346,7 +390,13 @@ export default function QuestionBankPage(): React.JSX.Element {
 
           <div className="question-bank-results-heading">
             <strong>{result?.total.toLocaleString('zh-CN') ?? '—'} 道题</strong>
-            <span>点击题目查看详情</span>
+            {activeFilterLabels.length === 0 ? (
+              <span>点击题目查看详情</span>
+            ) : (
+              <span className="question-bank-active-filters">
+                {activeFilterLabels.map((label) => <i key={label}>{label}</i>)}
+              </span>
+            )}
           </div>
           <div className="question-bank-results">
             {result?.items.map((item) => (
@@ -463,7 +513,7 @@ function QuestionResultCard({
         {item.difficulty !== null && <em>难度 {item.difficulty}</em>}
         {item.hasAssets && <em>含图</em>}
       </span>
-      <span className="question-result-content">{item.contentPreview || '（题干为空）'}</span>
+      <QuestionText text={item.contentPreview || '（题干为空）'} compact />
       <span className="question-result-source">
         {item.paperTitle ?? '来源未注明'}{item.questionNo === null ? '' : ` · 第 ${item.questionNo} 题`}
       </span>
@@ -554,30 +604,35 @@ function QuestionDetailView({
   )
 }
 
-function QuestionText({ text }: { readonly text: string }): React.JSX.Element {
+function QuestionText({
+  text,
+  compact = false,
+}: {
+  readonly text: string
+  readonly compact?: boolean
+}): React.JSX.Element {
   const parts = splitMathText(text || '（内容为空）')
-  return (
-    <div className="question-rich-text">
-      {parts.map((part, index) => part.formula === null ? (
-        <span key={index}>{part.text}</span>
-      ) : (
-        <span
-          className={part.displayMode ? 'question-math-display' : 'question-math-inline'}
-          // KaTeX escapes source text and trust stays disabled, so imported questions cannot inject HTML.
-          dangerouslySetInnerHTML={{
-            __html: katex.renderToString(part.formula, {
-              displayMode: part.displayMode,
-              throwOnError: false,
-              strict: false,
-              trust: false,
-              output: 'htmlAndMathml',
-            }),
-          }}
-          key={index}
-        />
-      ))}
-    </div>
-  )
+  const content = parts.map((part, index) => part.formula === null ? (
+    <span key={index}>{formatPlainMarkdownText(part.text)}</span>
+  ) : (
+    <span
+      className={part.displayMode ? 'question-math-display' : 'question-math-inline'}
+      // KaTeX escapes source text and trust stays disabled, so imported questions cannot inject HTML.
+      dangerouslySetInnerHTML={{
+        __html: katex.renderToString(part.formula, {
+          displayMode: part.displayMode,
+          throwOnError: false,
+          strict: false,
+          trust: false,
+          output: 'htmlAndMathml',
+        }),
+      }}
+      key={index}
+    />
+  ))
+  return compact
+    ? <span className="question-rich-text question-rich-text-compact">{content}</span>
+    : <div className="question-rich-text">{content}</div>
 }
 
 interface MathTextPart {
@@ -658,13 +713,42 @@ function sortNodes(left: NodeRecord, right: NodeRecord): number {
   return left.sortOrder - right.sortOrder || left.id.localeCompare(right.id)
 }
 
-function toSearchRequest(filters: FilterState, offset: number): QuestionBankSearchRequest {
+function buildActiveFilterLabels(filters: FilterState): string[] {
+  const labels: string[] = []
+  if (filters.questionNumberExpression.trim() !== '') labels.push(`题号 ${filters.questionNumberExpression.trim()}`)
+  if (filters.grade !== '') labels.push(filters.grade)
+  if (filters.year !== '') labels.push(filters.year)
+  if (filters.examType !== '') labels.push(filters.examType)
+  if (filters.type !== '') labels.push(({
+    single: '选择题',
+    fill: '填空题',
+    essay: '解答题',
+    raw: '其他',
+  } as Record<string, string>)[filters.type] ?? filters.type)
+  if (filters.difficultyMin !== '' || filters.difficultyMax !== '') {
+    labels.push(`难度 ${filters.difficultyMin || '0'}–${filters.difficultyMax || '100'}`)
+  }
+  if (filters.tags.length > 0) labels.push(`标签 ${filters.tags.length}`)
+  return labels
+}
+
+function formatPlainMarkdownText(text: string): string {
+  return text.replace(/\\([\\`*_[\]{}()#+.!-])/gu, '$1')
+}
+
+function toSearchRequest(
+  filters: FilterState,
+  offset: number,
+  questionNumbers: readonly number[],
+): QuestionBankSearchRequest {
   return {
     ...(filters.text.trim() === '' ? {} : { text: filters.text.trim() }),
     ...(filters.grade === '' ? {} : { grade: filters.grade }),
     ...(filters.year === '' ? {} : { year: Number(filters.year) }),
     ...(filters.month === '' ? {} : { month: filters.month === 'none' ? null : Number(filters.month) }),
     ...(filters.type === '' ? {} : { type: filters.type }),
+    ...(filters.examType === '' ? {} : { examType: filters.examType }),
+    ...(questionNumbers.length === 0 ? {} : { questionNumbers }),
     ...(filters.tags.length === 0 ? {} : { tags: filters.tags, tagMode: filters.tagMode }),
     ...(filters.difficultyMin === '' ? {} : { difficultyMin: clampDifficulty(filters.difficultyMin) }),
     ...(filters.difficultyMax === '' ? {} : { difficultyMax: clampDifficulty(filters.difficultyMax) }),

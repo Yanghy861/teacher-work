@@ -17,6 +17,7 @@ export interface QuestionBankSummary {
   readonly years: readonly QuestionBankFacetValue[]
   readonly months: readonly QuestionBankFacetValue[]
   readonly types: readonly QuestionBankFacetValue[]
+  readonly examTypes: readonly QuestionBankFacetValue[]
   readonly tags: readonly QuestionBankFacetValue[]
   readonly difficultyMin: number | null
   readonly difficultyMax: number | null
@@ -30,6 +31,8 @@ export interface QuestionBankSearchRequest {
   readonly year?: number
   readonly month?: number | null
   readonly type?: string
+  readonly examType?: string
+  readonly questionNumbers?: readonly number[]
   readonly tags?: readonly string[]
   readonly tagMode?: QuestionBankTagMode
   readonly difficultyMin?: number
@@ -108,6 +111,49 @@ export interface QuestionBankLessonCopyRequest extends QuestionBankQuestionReque
   readonly lessonId: string
 }
 
+export interface QuestionNumberExpressionResult {
+  readonly numbers: readonly number[]
+  readonly error: string | null
+}
+
+export function parseQuestionNumberExpression(value: string): QuestionNumberExpressionResult {
+  const normalized = value.trim()
+    .replace(/[，、；;]/gu, ',')
+    .replace(/[‐‑‒–—－~～]/gu, '-')
+  if (normalized === '') return { numbers: [], error: null }
+  if (/[^0-9,\s-]/u.test(normalized)) {
+    return { numbers: [], error: '题号只能使用数字、逗号和区间横线' }
+  }
+
+  const selected = new Set<number>()
+  for (const rawToken of normalized.split(',')) {
+    const token = rawToken.trim()
+    if (token === '') continue
+    const single = /^(\d+)$/u.exec(token)
+    const range = /^(\d+)\s*-\s*(\d+)$/u.exec(token)
+    if (single !== null) {
+      const number = Number(single[1])
+      if (!addQuestionNumber(selected, number)) {
+        return { numbers: [], error: '题号需在 1–9999 之间' }
+      }
+    } else if (range !== null) {
+      const start = Number(range[1])
+      const end = Number(range[2])
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end > 9_999) {
+        return { numbers: [], error: '题号需在 1–9999 之间' }
+      }
+      if (start > end) return { numbers: [], error: '题号区间的起点不能大于终点' }
+      if (end - start + 1 > 200) return { numbers: [], error: '一次最多选择 200 个题号' }
+      for (let number = start; number <= end; number += 1) selected.add(number)
+    } else {
+      return { numbers: [], error: '请按 1-10 或 1,2,13-15 的格式输入' }
+    }
+    if (selected.size > 200) return { numbers: [], error: '一次最多选择 200 个题号' }
+  }
+  if (selected.size === 0) return { numbers: [], error: '请输入有效题号' }
+  return { numbers: [...selected].sort((left, right) => left - right), error: null }
+}
+
 export function isQuestionBankFacetValue(value: unknown): value is QuestionBankFacetValue {
   return isRecord(value) && hasOnlyKeys(value, ['value', 'label', 'count']) &&
     isBoundedString(value.value, 256, false) &&
@@ -118,7 +164,7 @@ export function isQuestionBankFacetValue(value: unknown): value is QuestionBankF
 export function isQuestionBankSummary(value: unknown): value is QuestionBankSummary {
   return isRecord(value) && hasOnlyKeys(value, [
     'installed', 'packageId', 'sourceName', 'exportedAt', 'questionCount', 'paperCount',
-    'assetCount', 'grades', 'years', 'months', 'types', 'tags', 'difficultyMin',
+    'assetCount', 'grades', 'years', 'months', 'types', 'examTypes', 'tags', 'difficultyMin',
     'difficultyMax',
   ]) && typeof value.installed === 'boolean' &&
     isNullableBoundedString(value.packageId, 256) &&
@@ -128,18 +174,20 @@ export function isQuestionBankSummary(value: unknown): value is QuestionBankSumm
     isNonNegativeInteger(value.paperCount) &&
     isNonNegativeInteger(value.assetCount) &&
     isFacetArray(value.grades) && isFacetArray(value.years) && isFacetArray(value.months) &&
-    isFacetArray(value.types) && isFacetArray(value.tags) &&
+    isFacetArray(value.types) && isFacetArray(value.examTypes) && isFacetArray(value.tags) &&
     isNullableDifficulty(value.difficultyMin) && isNullableDifficulty(value.difficultyMax)
 }
 
 export function isQuestionBankSearchRequest(value: unknown): value is QuestionBankSearchRequest {
   if (!isRecord(value) || !hasOnlyOptionalKeys(value, [
-    'text', 'grade', 'year', 'month', 'type', 'tags', 'tagMode', 'difficultyMin',
+    'text', 'grade', 'year', 'month', 'type', 'examType', 'questionNumbers', 'tags', 'tagMode', 'difficultyMin',
     'difficultyMax', 'limit', 'offset',
   ])) return false
   return optionalString(value.text, 256) && optionalString(value.grade, 64) &&
     optionalInteger(value.year, 1900, 2200) && optionalNullableInteger(value.month, 1, 12) &&
-    optionalString(value.type, 64) && optionalUniqueStringArray(value.tags, 20, 128) &&
+    optionalString(value.type, 64) && optionalString(value.examType, 128) &&
+    optionalUniqueIntegerArray(value.questionNumbers, 200, 1, 9_999) &&
+    optionalUniqueStringArray(value.tags, 20, 128) &&
     (value.tagMode === undefined || value.tagMode === 'include' || value.tagMode === 'exclude') &&
     optionalInteger(value.difficultyMin, 0, 100) &&
     optionalInteger(value.difficultyMax, 0, 100) &&
@@ -240,6 +288,12 @@ function optionalInteger(value: unknown, minimum: number, maximum: number): bool
   return value === undefined || isIntegerBetween(value, minimum, maximum)
 }
 
+function addQuestionNumber(target: Set<number>, value: number): boolean {
+  if (!Number.isSafeInteger(value) || value < 1 || value > 9_999) return false
+  target.add(value)
+  return true
+}
+
 function optionalNullableInteger(value: unknown, minimum: number, maximum: number): boolean {
   return value === undefined || value === null || isIntegerBetween(value, minimum, maximum)
 }
@@ -249,6 +303,18 @@ function optionalUniqueStringArray(value: unknown, maximumItems: number, maximum
   if (!isStringArray(value, maximumItems, maximumLength)) return false
   const normalized = value.map((item) => item.trim())
   return new Set(normalized).size === normalized.length
+}
+
+function optionalUniqueIntegerArray(
+  value: unknown,
+  maximumItems: number,
+  minimum: number,
+  maximum: number,
+): boolean {
+  if (value === undefined) return true
+  if (!Array.isArray(value) || value.length > maximumItems) return false
+  if (!value.every((item) => isIntegerBetween(item, minimum, maximum))) return false
+  return new Set(value).size === value.length
 }
 
 function isNullableInteger(value: unknown): value is number | null {
