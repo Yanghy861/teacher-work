@@ -636,3 +636,18 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动验收：V13-01 相关 5 files / 29 tests ✅；全量 `npm test` 43 files / 140 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 44 / Preload 10 / Renderer 53 modules）；`git diff --check` ✅。
 - 范围：未实现向导 view model 或 UI，未新增 recurrence、多 session、日历页或 AI 变化；下一任务可依赖 `CreateCourseSetupRequest/Result`、`createCourseSetup()`、`durationMinutes` 与 schema v13。
 - Git 任务提交：由 `v1.3(V13-01): add atomic course setup core` 本地提交收束；不 push。
+
+## 2026-08-24 · V13-02 · IN_PROGRESS
+
+- 前置：V13-01 `DONE`，本地里程碑提交 `091ea8f`。
+- 当前唯一范围：Renderer 侧纯向导状态和 helper；名单精确匹配 / 重名待确认、阶段推荐、空课次 / 教学计划、每周 / 每两周本地日历、自由日期映射、例外 / 单节调整、三种确认摘要与最终 `CreateCourseSetupRequest` 转换。
+- 明确不做：向导组件、月历弹层、课程页入口或 Main 新接口；这些分别属于 V13-03 / V13-04。
+
+## 2026-08-24 · V13-02 · DONE
+
+- 关键改动：新增纯 `quick-course-wizard-model`，完整表达四步状态、逐步校验、名单逐行 trim / 去重 / 精确匹配、重名人工 resolution、阶段软推荐、空课次 / 教学计划和固定 100 节上限。
+- 排课逻辑：按本地日历生成每周 / 每两周日期，支持排除后顺延、自由日期排序 / 去重、空课次数量同步裁决、教学计划剩余未排裁决、逐节改时 / 清空和未排课仍保留统一时长。
+- 时间证据：专项测试在 `America/New_York` 跨 2026 夏令时切换，09:00 本地课从 14:00Z 变为 13:00Z，证明实现按本地日历逐周计算而非固定增加 168 UTC 小时。
+- 确认与请求：固定生成全部 / 部分 / 完全未排三种摘要，并在 unresolved 重名、日期映射未刷新或未确认剩余未排时拒绝最终 `CreateCourseSetupRequest`。
+- 自动验收：V13-02 + V13-01 契约专项 2 files / 18 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`git diff --check` ✅。本任务为纯逻辑，无需 production build 或 GUI smoke。
+- Git 任务提交：由 `v1.3(V13-02): add quick course wizard model` 本地提交收束；不 push。
