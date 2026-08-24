@@ -64,4 +64,4 @@
 | V13-02 向导领域模型、名单与排课预览 | DONE | 名单精确匹配 / 重名解析、阶段推荐、1–100 课次、本地规律 / 自由日期排课、DST、例外、部分未排、确认摘要和最终请求转换完成；2 files / 18 tests、typecheck、lint、diff check 通过 |
 | V13-03 快速建课前两步 UI | DONE | 四步容器、课程 / 学生、重名确认、阶段 / 课次、即时预览、100 节上限和返回保留状态完成；2 files / 17 tests、typecheck、lint、build、静态 Renderer smoke、diff check 通过，未提前暴露不完整入口 |
 | V13-04 排课、确认页与课程页完整接入 | DONE | 三种排课、自由日期月历、例外 / 单节调整、全部 / 部分 / 未排确认、唯一事务提交、失败定位 / 重试、课程页主次入口、成功回详情和单节时长维护完成；10 files / 52 tests、typecheck、lint、build、diff check 与两组隔离 Windows Electron smoke 通过 |
-| V13-05 V1.3 全量回归与版本验收 | TODO | 等待 V13-01–V13-04；通过且产品负责人最终确认后才创建 `checkpoint-V1.3-pass` |
+| V13-05 V1.3 全量回归与版本验收 | DONE | 47 files / 164 tests、typecheck、lint、production build、diff check、安全审计、三种模式 / 失败重试 / production 重启 Windows 流程通过；`docs/v1.3-acceptance.md` 已形成，等待产品负责人最终体验确认后创建标签 |

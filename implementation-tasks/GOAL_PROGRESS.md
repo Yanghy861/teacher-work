@@ -684,3 +684,19 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 持久化核对：schema migration v13，`integrity_check=ok`、foreign key 0；三门课的学生 / 课次 / scheduled / duration 计数分别为 `3/3/3/3`、`2/16/16/16`、`0/16/0/16`，证明 `scheduled_at=NULL` 时 duration 仍持久化。
 - 失败重试：第二个隔离工作区在最终提交前软删除所引用已有学生，Main 拒绝并显示“学生已删除，请先恢复”，确认页课程、阶段、1 课、未排课与 90 分钟输入均保留；返回第 1 步改成新学生后重试成功。最终数据库仅 1 门课程 / 1 阶段 / 1 课 / 1 活动关系，证明第一次失败无半套数据。
 - 隔离与清理：两次实机验证均只使用 Windows 临时目录，未接触正式工作区、真实教学资料或 Key；验证后精确核对路径并删除两个测试目录，不运行 portable / installer，不 push。
+
+## 2026-08-24 · V13-05 · IN_PROGRESS
+
+- 前置：V13-01–V13-04 均为 `DONE`，最新里程碑提交 `28e4ec2`，工作树在 V13-05 启动前干净。
+- 当前唯一范围：补 V1.3 端到端 acceptance，执行全量测试、typecheck、lint、production build、diff check、安全 / Git 审计和代表性 Windows 重启持久化流程，形成 `docs/v1.3-acceptance.md`。
+- 发布边界：不运行 `package:portable`，不生成 installer / 对外交付包，不 push；自动门和本地流程完成后只形成候选提交，等待产品负责人最终体验确认再创建 `checkpoint-V1.3-pass`。
+
+## 2026-08-24 · V13-05 · DONE / AWAITING_PRODUCT_CONFIRMATION
+
+- 端到端 acceptance：新增 Renderer 向导模型 → `createCourseSetup()` Service 事务 → SQLite 关闭 / 重开 → V1.2 逐节排课、后关联学生、点名和任意课次备课兼容测试，覆盖三种排课、同名 / 新建 / 已有、部分未排、duration 与 Current 独立性。
+- 全量自动门：`npm test` 47 files / 164 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 44 / Preload 10 / Renderer 56 modules）；`git diff --check` ✅。
+- Production Windows：独立 app-data / user-data 中创建 1 位新学生、1 门课程、2 节每周课和 90 分钟时长；关闭前数据库 schema v13、integrity ok、FK 0，重启 production Electron 后课程、关系、日期、时长、Current 和待点名状态全部保留。
+- 汇总证据：V13-04 的三种排课实机流程、原子失败 / 保留输入 / 重试、单节时长维护，与本任务 production 重启流程共同记录于 `docs/v1.3-acceptance.md`。
+- 安全审计：Renderer 无 SQLite / Node / 任意路径 / 环境变量能力；新增能力仍为运行时校验的白名单 IPC；未跟踪或提交数据库、索引、备份、日志、Key、真实资料、构建产物和测试目录。
+- 清理与发布边界：最终 production 隔离测试目录已按精确路径删除；未运行 portable / installer，未生成对外交付包，未 push 或改变远程。
+- 当前状态：V13-05 技术验收 PASS，等待产品负责人最终体验确认；确认前不创建或移动 `checkpoint-V1.3-pass`。
