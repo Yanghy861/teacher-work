@@ -747,3 +747,19 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - “加入课程”保留原搜索位置，使用现有 Modal 选择 course / lesson；无可用 lesson 时按钮禁用，不创建伪目标。
 - 自动验收：题库 UI / service / IPC 3 files / 9 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 47 / Preload 11 / Renderer 60 modules）；`git diff --check` ✅。
 - UI smoke 使用 `D:\teacher_work\tmp\v1.4-ui-smoke-20260824-1439` 隔离 app-data；临时远程调试开关已从源码移除，未接触正式工作区、未运行 portable / installer、未修改 `main`、未 push。
+
+## 2026-08-24 · V14-03 · IN_PROGRESS
+
+- 前置：V14-01–V14-02 均为 `DONE`，最新里程碑提交 `082a8bc`，工作树在最终门启动前干净。
+- 当前唯一范围：全量测试、typecheck、lint、production build、diff check、真实 380 MB 快照 smoke、安全 / Git 审计、验收报告和安全合并到 `main`。
+- 回退边界：`checkpoint-V1.3-pass` 保持指向 `8a6c8e6`；不 rebase、不改写历史、不覆盖标签、不运行 portable / installer、不自动 push。
+
+## 2026-08-24 · V14-03 · DONE / AWAITING_PRODUCT_CONFIRMATION
+
+- 普通全量自动门：`npm test` 50 files / 173 tests ✅，真实快照 smoke 在无环境变量时按设计跳过；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 47 / Preload 11 / Renderer 60 modules）；`git diff --check` ✅。
+- 真实快照回归：通过环境变量引用既有 380 MB `.tqbank`，单独运行 1 file / 1 test ✅；完成导入、九年级“二次函数”搜索、详情读取和独立素材副本写入，快照未进入 Git。
+- 实机 UI 证据：隔离 Electron 工作台显示 25,370 道题 / 962 份试卷；默认 50 张结果卡且无详情，1264px 点击后左右展开，1050px 使用上下布局，KaTeX / 图片 / 答案和导入素材库正常。
+- 单题去向：自动测试覆盖素材库和有效课次两种独立副本；课程动作沿用现有 course / lesson 数据，并在无有效课次时禁用。
+- 安全审计：V1.4 验收未写入 `E:\Wss_Tiku`；未跟踪快照、运行数据库、Key、日志、临时目录、依赖或构建产物；Renderer 未获得路径、SQLite、Node 或任意文件系统能力。
+- 版本审计：候选历史从 `checkpoint-V1.3-pass` 线性前进，V1.3 标签与远程锚点未移动；未运行 portable / installer，未 push。完整证据见 `docs/v1.4-acceptance.md`。
+- 当前状态：V14-03 技术验收 PASS；按协议等待产品负责人实际体验确认，确认前不创建 `checkpoint-V1.4-pass`。
