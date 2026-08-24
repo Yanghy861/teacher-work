@@ -610,3 +610,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 最终证据：全量 42 files / 133 tests、V1.2 专项 6 files / 19 tests、typecheck、lint、production build、diff check、代表性 Windows production 流程和安全回归均为 PASS。
 - 版本动作：在最终确认提交创建 annotated tag `checkpoint-V1.2-pass`；用户明确授权把 `main` 与该标签上传到现有 GitHub `origin`。
 - 发布边界：不修改远程，不生成 portable/installer，不提交真实资料、运行数据库、Key 或临时文件。
+
+## 2026-08-24 · V1.3 快速建课 · PLAN_FROZEN
+
+- 产品负责人确认按快速建课方案实施；V1.3 固定起点为 `checkpoint-V1.2-pass`。
+- 冻结范围：四步向导一次完成课程、学生、阶段、1–100 课次、规律 / 自由日期 / 暂不排课和最终检查；现有逐项维护入口保留。
+- 核心裁决：学生和课程无强制先后、未解决重名不得继续、无“不重复”、本地日历生成显式 UTC 日期、时长落入 `lesson_sessions.duration_minutes`、最终写入使用单一 `createCourseSetup()` 事务。
+- 实施链：V13-01 数据契约与原子编排服务 → V13-02 向导领域模型 → V13-03 前两步 UI → V13-04 排课 / 确认 / 完整接入 → V13-05 最终门禁。
+- 计划产物：`教师工作台_V1_3_快速建课_产品与实施方案.md`、`implementation-tasks/V1_3_DECISIONS.md`、`implementation-tasks/v1.3-tasks/V13-01`–`V13-05` 与 `docs/v1.3-fast-course-design/` 图集。
+- Git 边界：方案由 `plan(V1.3): freeze quick course setup` 本地提交冻结；不自动 push，不运行 portable/installer，不创建通过标签。

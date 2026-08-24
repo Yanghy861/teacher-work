@@ -46,7 +46,7 @@
 | V1.1 测试后小修复 | DONE | Bug 1–5 已完成：隐藏 Windows 默认菜单、工作区自适应撑满、整体紧凑化、白色图标导航、已移除资料二次确认后彻底删除；开发版 Main/Preload 重启要求已记录于 `docs/v1.1-post-test-fixes.md` |
 | V1.1 当前候选重验 | DONE | 当前 HEAD 的 32 files / 101 tests、typecheck、lint、build、portable、diff check、包内容审计及隔离 Windows 启动/滚动/正常退出均通过；产品负责人已确认最终体验，`checkpoint-V1.1-pass` 创建于最终确认记录提交 |
 
-## V1.2 活动里程碑
+## V1.2 已完成里程碑
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
@@ -55,3 +55,13 @@
 | V12-03 真正的学生页 | DONE | 学生列表/详情、搜索/新建、在读/历史课程、manual 记录和课程双向导航已完成；22 项相关、127 项全量测试、typecheck、lint、build、隔离 Electron smoke 通过 |
 | V12-04 课次资料与 V1.1 备课接入 | DONE | Viewed Lesson 的 lesson_files、任意课次开始/继续备课、Prep 文案和学生文件 UI 收口已完成；35 项相关、131 项全量测试、typecheck、lint、build、隔离 Electron smoke 通过 |
 | V12-05 V1.2 全量回归与版本验收 | DONE | 42 files / 133 tests、typecheck、lint、production build、diff check、安全审计与代表性隔离 Windows 流程通过；产品负责人最终体验确认 PASS，`checkpoint-V1.2-pass` 创建于最终确认提交 |
+
+## V1.3 活动里程碑
+
+| 里程碑 | 状态 | 完成/阻塞记录 |
+|---|---|---|
+| V13-01 快速建课数据契约与原子编排服务 | TODO | 等待从 `checkpoint-V1.2-pass` 开始实施 schema v13、时长、单事务 Service 与安全 IPC |
+| V13-02 向导领域模型、名单与排课预览 | TODO | 等待 V13-01 |
+| V13-03 快速建课前两步 UI | TODO | 等待 V13-02 |
+| V13-04 排课、确认页与课程页完整接入 | TODO | 等待 V13-03 |
+| V13-05 V1.3 全量回归与版本验收 | TODO | 等待 V13-01–V13-04；通过且产品负责人最终确认后才创建 `checkpoint-V1.3-pass` |
