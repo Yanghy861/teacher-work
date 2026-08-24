@@ -12,6 +12,7 @@ import {
   isCopyFileToStudentRequest,
   isFileActionResult,
   isFileIdRequest,
+  isManagedFileContent,
   isManagedFileOverview,
   isManagedFileRecord,
   isNullableManagedFileRecord,
@@ -87,6 +88,12 @@ export async function dispatchFileIpc(
         assertRequest(payload, isEmptyIpcRequest)
         notifyContentChanges(await fileService.refreshAll(), dependencies)
         return ensureResponse(fileService.getOverview(), isManagedFileOverview)
+      case FILE_IPC_CHANNELS.readContent:
+        assertRequest(payload, isFileIdRequest)
+        return ensureResponse(
+          fileService.readContent((payload as FileIdRequest).fileId),
+          isManagedFileContent,
+        )
       case FILE_IPC_CHANNELS.importFromPicker: {
         assertRequest(payload, isEmptyIpcRequest)
         const sourcePath = await dependencies.chooseSourcePath()

@@ -1,9 +1,10 @@
-import { createReadStream, accessSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs'
+import { createReadStream, accessSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
 import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 
 import type {
   ManagedFileLink,
+  ManagedFileContent,
   ManagedFileOverview,
   ManagedFileRefreshResult,
   ManagedFileRecord,
@@ -18,6 +19,7 @@ export type ManagedFileErrorCode =
   | 'FILE_DELETED'
   | 'FILE_NOT_DELETED'
   | 'FILE_OBJECT_MISSING'
+  | 'FILE_CONTENT_TOO_LARGE'
   | 'FILE_COPY_FAILED'
   | 'FILE_REGISTRATION_FAILED'
   | 'FILE_OPEN_FAILED'
@@ -134,6 +136,35 @@ export class ManagedFileService {
 
   showFileInFolder(fileId: string): string {
     return this.openFile(fileId)
+  }
+
+  readContent(fileId: string): ManagedFileContent {
+    const file = this.requireActiveFile(fileId)
+    const contentPath = this.requireReadableObject(file.id)
+    const stats = statSync(contentPath)
+    if (stats.size > MAX_PREVIEW_BYTES) {
+      return {
+        file,
+        kind: 'unsupported',
+        message: `文件较大（${formatFileSize(stats.size)}），请使用系统应用打开。`,
+      }
+    }
+    const content = readFileSync(contentPath)
+    if (file.mimeType.startsWith('image/')) {
+      return {
+        file,
+        kind: 'image',
+        dataUrl: `data:${file.mimeType};base64,${content.toString('base64')}`,
+      }
+    }
+    if (isPreviewableText(file.mimeType)) {
+      return { file, kind: 'text', content: content.toString('utf8') }
+    }
+    return {
+      file,
+      kind: 'unsupported',
+      message: '这种文件适合交给系统应用打开，工作台暂时不直接渲染。',
+    }
   }
 
   softDeleteFile(fileId: string): ManagedFileRecord {
@@ -554,13 +585,29 @@ function mimeTypeForName(name: string): string {
   const knownTypes: Record<string, string> = {
     '.doc': 'application/msword',
     '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.gif': 'image/gif',
+    '.jpeg': 'image/jpeg',
+    '.jpg': 'image/jpeg',
     '.md': 'text/markdown',
     '.pdf': 'application/pdf',
+    '.png': 'image/png',
     '.ppt': 'application/vnd.ms-powerpoint',
     '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     '.txt': 'text/plain',
     '.xls': 'application/vnd.ms-excel',
     '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.webp': 'image/webp',
   }
   return knownTypes[extension] ?? 'application/octet-stream'
+}
+
+const MAX_PREVIEW_BYTES = 12 * 1024 * 1024
+
+function isPreviewableText(mimeType: string): boolean {
+  return mimeType.startsWith('text/') || mimeType === 'application/json'
+}
+
+function formatFileSize(size: number): string {
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }

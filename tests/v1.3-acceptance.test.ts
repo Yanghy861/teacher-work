@@ -141,7 +141,7 @@ describe('V13-05 V1.3 end-to-end acceptance', () => {
       core = new CoreDataService(workspace.database.raw)
 
       const restarted = core.getOverview()
-      expect(workspace.identity.schemaVersion).toBe(13)
+      expect(workspace.identity.schemaVersion).toBe(14)
       expect(core.progress.getProgress(regular.course.id)).toMatchObject({
         activePeriodId: regular.period.id,
         currentLessonId: regular.lessons[0]!.id,

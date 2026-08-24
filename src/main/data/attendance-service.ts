@@ -33,6 +33,7 @@ interface LessonContextRow {
 
 interface SessionStateRow {
   readonly scheduled_at: string | null
+  readonly scheduled_on: string | null
   readonly duration_minutes: number | null
   readonly taught_confirmed_at: string | null
   readonly attendance_recorded_at: string | null
@@ -95,6 +96,7 @@ export class AttendanceService {
     return {
       lessonId,
       scheduledAt: session?.scheduled_at ?? null,
+      ...(session?.scheduled_on === null || session === undefined ? {} : { scheduledOn: session.scheduled_on }),
       durationMinutes: session?.duration_minutes ?? null,
       taughtConfirmedAt: session?.taught_confirmed_at ?? null,
       attendanceRecordedAt: session?.attendance_recorded_at ?? null,
@@ -211,7 +213,7 @@ export class AttendanceService {
   private findSession(lessonId: string): SessionStateRow | undefined {
     return this.database
       .prepare(
-        `SELECT scheduled_at, duration_minutes, taught_confirmed_at, attendance_recorded_at
+        `SELECT scheduled_at, scheduled_on, duration_minutes, taught_confirmed_at, attendance_recorded_at
            FROM lesson_sessions WHERE lesson_id = ?`,
       )
       .get(lessonId) as SessionStateRow | undefined

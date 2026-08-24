@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import type { CoreOverview } from '../shared/core-contracts'
+import type { CoreOverview, NoteRecord } from '../shared/core-contracts'
 import Modal from './modal'
 import {
   buildStudentSummaries,
@@ -183,7 +183,7 @@ function StudentDetail({ overview, summary, busy, onOpenCourse, onCreateRecord }
           {summary.manualNotes.map((note) => (
             <article className="learning-record-card" key={note.id}>
               <p>{note.bodyMd}</p>
-              <small>{formatRecordContext(note.lessonId, nodeById)} · {formatDate(note.updatedAt)}</small>
+              <small>{formatRecordContext(note.lessonId, nodeById)} · {formatRecordDate(note)}</small>
             </article>
           ))}
           {summary.manualNotes.length === 0 && <p className="empty-state">还没有人工学习记录。</p>}
@@ -279,6 +279,11 @@ function formatRecordContext(lessonId: string | null, nodes: ReadonlyMap<string,
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value))
+}
+
+function formatRecordDate(note: NoteRecord): string {
+  if (note.occurredOn !== undefined) return note.occurredOn
+  return formatDate(note.updatedAt)
 }
 
 function toErrorMessage(error: unknown): string {

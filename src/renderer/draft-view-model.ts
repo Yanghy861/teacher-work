@@ -68,6 +68,8 @@ export function createPrepContextFromOverview(
     courseMode,
     lessonId: lesson.id,
     lessonTitle: lesson.title,
+    ...(lesson.lessonLabel === undefined ? {} : { lessonLabel: lesson.lessonLabel }),
+    periodTitle: period.title,
     ...(courseMode === 'one_to_one' && selectedStudent !== undefined
       ? { studentId: selectedStudent.id }
       : {}),

@@ -45,6 +45,7 @@ interface LessonContextRow {
 interface SessionRow {
   readonly lesson_id: string
   readonly scheduled_at: string | null
+  readonly scheduled_on: string | null
   readonly duration_minutes: number | null
   readonly taught_confirmed_at: string | null
   readonly attendance_recorded_at: string | null
@@ -83,7 +84,8 @@ export class CourseProgressService {
   listLessonSessions(): LessonSessionSummary[] {
     const rows = this.database
       .prepare(
-        `SELECT session.lesson_id, session.scheduled_at, session.duration_minutes,
+        `SELECT session.lesson_id, session.scheduled_at, session.scheduled_on,
+                session.duration_minutes,
                 session.taught_confirmed_at,
                 session.attendance_recorded_at,
                 SUM(CASE WHEN attendance.status = 'present' THEN 1 ELSE 0 END) AS present_count,
@@ -106,12 +108,14 @@ export class CourseProgressService {
            LEFT JOIN lesson_attendance AS attendance
              ON attendance.lesson_id = session.lesson_id
           GROUP BY session.lesson_id
-          ORDER BY session.scheduled_at IS NULL, session.scheduled_at, session.lesson_id`,
+          ORDER BY session.scheduled_on IS NULL, session.scheduled_on,
+                    session.scheduled_at IS NULL, session.scheduled_at, session.lesson_id`,
       )
       .all() as SessionRow[]
     return rows.map((row) => ({
       lessonId: row.lesson_id,
       scheduledAt: row.scheduled_at,
+      ...(row.scheduled_on === null ? {} : { scheduledOn: row.scheduled_on }),
       durationMinutes: row.duration_minutes,
       taughtConfirmedAt: row.taught_confirmed_at,
       attendanceRecordedAt: row.attendance_recorded_at,
@@ -449,8 +453,9 @@ export class CourseProgressService {
     this.database
       .prepare(
         `INSERT INTO lesson_sessions
-           (lesson_id, scheduled_at, taught_confirmed_at, attendance_recorded_at, updated_at)
-         VALUES (?, NULL, NULL, NULL, ?)
+           (lesson_id, scheduled_at, scheduled_on, taught_confirmed_at,
+            attendance_recorded_at, updated_at)
+         VALUES (?, NULL, NULL, NULL, NULL, ?)
          ON CONFLICT(lesson_id) DO NOTHING`,
       )
       .run(lessonId, now)

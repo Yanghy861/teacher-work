@@ -11,7 +11,7 @@ import type {
   NoteRecord,
   StudentRecord,
 } from '../../shared/core-contracts'
-import { isCourseMode, isDraftStatus, isUtcIsoString } from '../../shared/core-contracts'
+import { isCourseMode, isDraftStatus, isLocalDateString, isUtcIsoString } from '../../shared/core-contracts'
 import {
   isDraftNoteMetadata,
   type DraftKind,
@@ -77,6 +77,7 @@ interface NoteRow {
   readonly created_at: string
   readonly updated_at: string
   readonly deleted_at: string | null
+  readonly occurred_on: string | null
   readonly note_kind: 'manual' | DraftKind
   readonly ai_metadata_json: string | null
   readonly draft_status: DraftStatus | null
@@ -296,10 +297,17 @@ export class CoreDataService {
     studentId: string,
     bodyMd: string,
     lessonId?: string,
-    metadata?: { readonly noteKind?: 'manual' | DraftKind; readonly aiMetadata?: DraftNoteMetadata },
+    metadata?: {
+      readonly noteKind?: 'manual' | DraftKind
+      readonly aiMetadata?: DraftNoteMetadata
+      readonly occurredOn?: string
+    },
   ): NoteRecord {
     if (typeof bodyMd !== 'string' || bodyMd.trim().length === 0) {
       throw new CoreDataError('INVALID_NOTE', '记录内容不能为空。')
+    }
+    if (metadata?.occurredOn !== undefined && !isLocalDateString(metadata.occurredOn)) {
+      throw new CoreDataError('INVALID_NOTE', '学习记录日期无效。')
     }
     this.requireActiveStudent(studentId)
     if (lessonId !== undefined) {
@@ -312,9 +320,9 @@ export class CoreDataService {
       this.database
         .prepare(
           `INSERT INTO notes
-             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at, occurred_on,
               note_kind, ai_metadata_json, draft_status)
-           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)`,
         )
         .run(
           id,
@@ -323,6 +331,7 @@ export class CoreDataService {
           bodyMd.trim(),
           now,
           now,
+          metadata?.occurredOn ?? null,
           metadata?.noteKind ?? 'manual',
           metadata?.aiMetadata === undefined ? null : JSON.stringify(metadata.aiMetadata),
           metadata?.noteKind === undefined || metadata.noteKind === 'manual' ? null : 'draft',
@@ -350,9 +359,9 @@ export class CoreDataService {
       this.database
         .prepare(
           `INSERT INTO notes
-             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at, occurred_on,
               note_kind, ai_metadata_json, draft_status)
-           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'draft')`,
+           VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, 'draft')`,
         )
         .run(
           id,
@@ -521,7 +530,7 @@ export class CoreDataService {
   private listNotes(studentId?: string): NoteRecord[] {
     const rows = this.database
       .prepare(
-        `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+        `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at, occurred_on,
                 note_kind, ai_metadata_json, draft_status
            FROM notes
           WHERE deleted_at IS NULL
@@ -637,7 +646,7 @@ export class CoreDataService {
   private requireNote(noteId: string): NoteRecord {
     const row = this.database
       .prepare(
-        `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+        `SELECT id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at, occurred_on,
                 note_kind, ai_metadata_json, draft_status
            FROM notes
           WHERE id = ?`,
@@ -836,6 +845,7 @@ function mapNote(row: NoteRow): NoteRecord {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
+    ...(row.occurred_on === null ? {} : { occurredOn: row.occurred_on }),
     ...(row.note_kind === 'manual' ? {} : { noteKind: row.note_kind }),
     ...(row.note_kind === 'manual' ? {} : { draftStatus: row.draft_status as DraftStatus }),
     ...(aiMetadata === undefined ? {} : { aiMetadata }),

@@ -18,6 +18,7 @@ export interface NodeRecord {
   readonly parentId: string | null
   readonly kind: NodeKind
   readonly title: string
+  readonly lessonLabel?: string
   readonly courseMode: CourseMode | null
   readonly sortOrder: number
   readonly contentMd: string
@@ -52,6 +53,7 @@ export interface CourseProgressRecord {
 export interface LessonSessionSummary {
   readonly lessonId: string
   readonly scheduledAt: string | null
+  readonly scheduledOn?: string
   readonly durationMinutes: number | null
   readonly taughtConfirmedAt: string | null
   readonly attendanceRecordedAt: string | null
@@ -70,6 +72,7 @@ export interface AttendanceStudentEntry {
 export interface LessonAttendanceRecord {
   readonly lessonId: string
   readonly scheduledAt: string | null
+  readonly scheduledOn?: string
   readonly durationMinutes: number | null
   readonly taughtConfirmedAt: string | null
   readonly attendanceRecordedAt: string | null
@@ -98,6 +101,7 @@ export interface NoteRecord {
   readonly createdAt: string
   readonly updatedAt: string
   readonly deletedAt: string | null
+  readonly occurredOn?: string
   readonly noteKind?: 'manual' | DraftKind
   readonly draftStatus?: DraftStatus
   readonly aiMetadata?: DraftNoteMetadata
@@ -226,6 +230,7 @@ export interface CreateNoteRequest {
   readonly studentId: string
   readonly bodyMd: string
   readonly lessonId?: string
+  readonly occurredOn?: string
 }
 
 export interface UpdateNoteRequest {
@@ -259,6 +264,7 @@ export function isNodeRecord(value: unknown): value is NodeRecord {
     (value.parentId === null || isNonEmptyString(value.parentId)) &&
     isNodeKind(value.kind) &&
     isNonEmptyString(value.title) &&
+    (value.lessonLabel === undefined || isNonEmptyString(value.lessonLabel)) &&
     (value.courseMode === null || isCourseMode(value.courseMode)) &&
     isNonNegativeInteger(value.sortOrder) &&
     typeof value.contentMd === 'string' &&
@@ -305,6 +311,7 @@ export function isLessonSessionSummary(value: unknown): value is LessonSessionSu
     isRecord(value) &&
     isNonEmptyString(value.lessonId) &&
     (value.scheduledAt === null || isUtcIsoString(value.scheduledAt)) &&
+    (value.scheduledOn === undefined || isLocalDateString(value.scheduledOn)) &&
     (value.durationMinutes === null || isPositiveInteger(value.durationMinutes)) &&
     (value.taughtConfirmedAt === null || isUtcIsoString(value.taughtConfirmedAt)) &&
     (value.attendanceRecordedAt === null || isUtcIsoString(value.attendanceRecordedAt)) &&
@@ -321,6 +328,7 @@ export function isLessonAttendanceRecord(value: unknown): value is LessonAttenda
     isRecord(value) &&
     isNonEmptyString(value.lessonId) &&
     (value.scheduledAt === null || isUtcIsoString(value.scheduledAt)) &&
+    (value.scheduledOn === undefined || isLocalDateString(value.scheduledOn)) &&
     (value.durationMinutes === null || isPositiveInteger(value.durationMinutes)) &&
     (value.taughtConfirmedAt === null || isUtcIsoString(value.taughtConfirmedAt)) &&
     (value.attendanceRecordedAt === null || isUtcIsoString(value.attendanceRecordedAt)) &&
@@ -362,6 +370,7 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
     isNonEmptyString(value.createdAt) &&
     isNonEmptyString(value.updatedAt) &&
     (value.deletedAt === null || isNonEmptyString(value.deletedAt)) &&
+    (value.occurredOn === undefined || isLocalDateString(value.occurredOn)) &&
     (value.noteKind === undefined || value.noteKind === 'manual' || isDraftKind(value.noteKind)) &&
     (value.aiMetadata === undefined || isDraftNoteMetadata(value.aiMetadata))
   )
@@ -532,6 +541,15 @@ export function isUtcIsoString(value: unknown): value is string {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value
 }
 
+export function isLocalDateString(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year!, month! - 1, day!))
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month! - 1 &&
+    date.getUTCDate() === day
+}
+
 export function getLocalDayUtcRange(year: number, month: number, day: number): LocalDayUtcRange {
   if (![year, month, day].every(Number.isInteger) || month < 1 || month > 12 || day < 1 || day > 31) {
     throw new Error('Local calendar day is invalid')
@@ -550,11 +568,12 @@ export function getLocalDayUtcRange(year: number, month: number, day: number): L
 
 export function isCreateNoteRequest(value: unknown): value is CreateNoteRequest {
   return (
-    hasOnlyKeys(value, ['studentId', 'bodyMd'], ['lessonId']) &&
+    hasOnlyKeys(value, ['studentId', 'bodyMd'], ['lessonId', 'occurredOn']) &&
     isNonEmptyString(value.studentId) &&
     typeof value.bodyMd === 'string' &&
     value.bodyMd.trim().length > 0 &&
-    (value.lessonId === undefined || isNonEmptyString(value.lessonId))
+    (value.lessonId === undefined || isNonEmptyString(value.lessonId)) &&
+    (value.occurredOn === undefined || isLocalDateString(value.occurredOn))
   )
 }
 

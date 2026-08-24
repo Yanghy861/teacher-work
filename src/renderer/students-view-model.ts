@@ -96,7 +96,7 @@ export function listStudentLessonOptions(
         lesson,
         period,
         course,
-        label: `${course.title} · ${period.title} · 第 ${getLessonNumber(overview.nodes, period.id, lesson.id)} 课 ${lesson.title}`,
+        label: `${course.title} · ${period.title} · ${lesson.lessonLabel ?? `第 ${getLessonNumber(overview.nodes, period.id, lesson.id)} 课`} ${lesson.title}`,
       }))
   })
 }

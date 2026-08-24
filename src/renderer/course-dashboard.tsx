@@ -121,13 +121,13 @@ export default function CourseDashboard({
     selectCourse(summary.course.id)
     if (summary.primaryAction === 'continue_prep' && summary.currentLesson !== null && summary.currentDraft !== null) {
       onOpenDraft(
-        createLessonPrepContext(summary.course, summary.currentLesson, summary.activeStudents),
+        createLessonPrepContext(summary.course, summary.currentLesson, summary.activeStudents, summary.currentPeriod?.title),
         summary.currentDraft.id,
       )
       return
     }
     if (summary.primaryAction === 'start_prep' && summary.currentLesson !== null) {
-      onStartPrep(createLessonPrepContext(summary.course, summary.currentLesson, summary.activeStudents))
+      onStartPrep(createLessonPrepContext(summary.course, summary.currentLesson, summary.activeStudents, summary.currentPeriod?.title))
       return
     }
     if (summary.primaryAction === 'reopen') {
@@ -174,6 +174,7 @@ export default function CourseDashboard({
                   quickCourseSuccess.course,
                   firstLesson,
                   quickCourseSuccess.students,
+                  quickCourseSuccess.period.title,
                 ))
               }
             }}>进入第 1 课备课</button>

@@ -31,6 +31,7 @@ export const workspaceMigrations: readonly Migration[] = [
           parent_id TEXT REFERENCES nodes(id) ON DELETE RESTRICT,
           kind TEXT NOT NULL CHECK (kind IN ('course', 'period', 'lesson')),
           title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+          lesson_label TEXT,
           course_mode TEXT CHECK (course_mode IN ('class', 'one_to_one') OR course_mode IS NULL),
           sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
           content_md TEXT NOT NULL DEFAULT '',
@@ -69,7 +70,8 @@ export const workspaceMigrations: readonly Migration[] = [
           body_md TEXT NOT NULL CHECK (length(trim(body_md)) > 0),
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          deleted_at TEXT
+          deleted_at TEXT,
+          occurred_on TEXT
         );
 
         CREATE INDEX IF NOT EXISTS idx_notes_student_created
@@ -329,6 +331,7 @@ export const workspaceMigrations: readonly Migration[] = [
           lesson_id TEXT PRIMARY KEY NOT NULL
             REFERENCES nodes(id) ON DELETE CASCADE,
           scheduled_at TEXT,
+          scheduled_on TEXT,
           taught_confirmed_at TEXT,
           attendance_recorded_at TEXT,
           updated_at TEXT NOT NULL
@@ -361,6 +364,21 @@ export const workspaceMigrations: readonly Migration[] = [
         ALTER TABLE lesson_sessions
           ADD COLUMN duration_minutes INTEGER
           CHECK (duration_minutes IS NULL OR duration_minutes > 0);
+      `)
+    },
+  },
+  {
+    version: 14,
+    name: 'add_historical_course_date_metadata',
+    up: (database) => {
+      addColumnIfMissing(database, 'nodes', 'lesson_label', 'TEXT')
+      addColumnIfMissing(database, 'lesson_sessions', 'scheduled_on', 'TEXT')
+      addColumnIfMissing(database, 'notes', 'occurred_on', 'TEXT')
+      database.exec(`
+        CREATE INDEX IF NOT EXISTS idx_lesson_sessions_scheduled_on
+          ON lesson_sessions (scheduled_on);
+        CREATE INDEX IF NOT EXISTS idx_notes_student_occurred
+          ON notes (student_id, occurred_on, id);
       `)
     },
   },
@@ -415,6 +433,20 @@ export function getAppliedMigrationVersions(database: SqliteDatabase): number[] 
     .prepare('SELECT version FROM schema_migrations ORDER BY version')
     .pluck()
     .all() as number[]
+}
+
+function addColumnIfMissing(
+  database: SqliteDatabase,
+  table: string,
+  column: string,
+  definition: string,
+): void {
+  const row = database
+    .prepare(`SELECT 1 AS present FROM pragma_table_info(?) WHERE name = ?`)
+    .get(table, column) as { present: number } | undefined
+  if (row === undefined) {
+    database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+  }
 }
 
 function validateMigrations(migrations: readonly Migration[]): void {

@@ -37,6 +37,7 @@ export const ATTENDANCE_IPC_CHANNELS = {
 
 export const FILE_IPC_CHANNELS = {
   getManagedFileOverview: 'files:get-overview',
+  readContent: 'files:read-content',
   importFromPicker: 'files:import-from-picker',
   openFile: 'files:open',
   showFileInFolder: 'files:show-in-folder',

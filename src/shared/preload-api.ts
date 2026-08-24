@@ -112,6 +112,7 @@ import {
   type FileActionResult,
   type FileIdRequest,
   type ManagedFileOverview,
+  type ManagedFileContent,
   type ManagedFileContentChanged,
   type ManagedFileRecord,
 } from './file-contracts'
@@ -194,11 +195,13 @@ export type {
   CopyFileToStudentRequest,
   FileActionResult,
   FileIdRequest,
+  ManagedFileContent,
   ManagedFileContentChanged,
   ManagedFileOverview,
   ManagedFileRecord,
   ManagedFileRefreshResult,
 } from './file-contracts'
+export { isManagedFileContent } from './file-contracts'
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
 export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
 export type { DraftIdRequest, DraftNoteMetadata, DraftSourceSelection, GenerateDraftRequest, GenerateDraftResult, RegenerateDraftRequest, SaveDraftRequest } from './draft-contracts'
@@ -263,6 +266,7 @@ export interface TeacherWorkbenchApi {
   }
   files: {
     getOverview: () => Promise<ManagedFileOverview>
+    readContent: (request: FileIdRequest) => Promise<ManagedFileContent>
     importFromPicker: () => Promise<ManagedFileRecord | null>
     openFile: (request: FileIdRequest) => Promise<FileActionResult>
     showFileInFolder: (request: FileIdRequest) => Promise<FileActionResult>

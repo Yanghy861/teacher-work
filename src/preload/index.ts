@@ -14,6 +14,7 @@ import {
   SKILL_IPC_CHANNELS,
   QUESTION_BANK_IPC_CHANNELS,
   isFileActionResult,
+  isManagedFileContent,
   isManagedFileContentChanged,
   isManagedFileOverview,
   isManagedFileRecord,
@@ -147,6 +148,7 @@ const api = Object.freeze({
   }),
   files: Object.freeze({
     getOverview: () => invoke(FILE_IPC_CHANNELS.getManagedFileOverview, {}, isManagedFileOverview),
+    readContent: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.readContent, request, isManagedFileContent),
     importFromPicker: () => invoke(FILE_IPC_CHANNELS.importFromPicker, {}, isNullableManagedFileRecord),
     openFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.openFile, request, isFileActionResult),
     showFileInFolder: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.showFileInFolder, request, isFileActionResult),

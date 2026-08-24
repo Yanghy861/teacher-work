@@ -11,11 +11,14 @@ import {
 } from '../shared/draft-contracts'
 import type { SkillRecord } from '../shared/skill-contracts'
 import {
+  isSelectableLessonPrepFile,
+  filterLessonMaterialFiles,
   listLessonPrepFiles,
   reconcileSelectedLessonFileIds,
   type LessonPrepContext,
 } from './lesson-prep-context'
 import { listDraftInbox, listLessonAiResults, type DraftInboxEntry } from './draft-view-model'
+import LessonMaterialReader, { LessonMaterialTree, MarkdownDocument } from './lesson-material-reader'
 
 const kindLabels: Record<DraftKind, string> = {
   lecture: '讲义',
@@ -44,6 +47,7 @@ export default function DraftPanel({
   const [core, setCore] = useState<CoreOverview | null>(null)
   const [skills, setSkills] = useState<readonly SkillRecord[]>([])
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
+  const [previewFileId, setPreviewFileId] = useState('')
   const [selectedSkillId, setSelectedSkillId] = useState('')
   const [requirement, setRequirement] = useState('')
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
@@ -57,10 +61,15 @@ export default function DraftPanel({
 
   const lessonFiles = useMemo(() => {
     if (files === null || context === null) return []
-    return listLessonPrepFiles(files, context.lessonId)
+    return filterLessonMaterialFiles(listLessonPrepFiles(files, context.lessonId), {
+      lessonLabel: context.lessonLabel,
+      periodTitle: context.periodTitle,
+    })
   }, [context, files])
   const lessonFileKey = lessonFiles.map((file) => file.id).join('|')
-  const selectedFiles = lessonFiles.filter((file) => selectedFileIds.includes(file.id))
+  const selectedFiles = lessonFiles.filter((file) =>
+    isSelectableLessonPrepFile(file) && selectedFileIds.includes(file.id),
+  )
   const lessonResults = useMemo(
     () => context === null ? [] : listLessonAiResults(core, context.lessonId),
     [context, core],
@@ -73,6 +82,7 @@ export default function DraftPanel({
   useEffect(() => {
     knownLessonFileIds.current = new Set()
     setSelectedFileIds([])
+    setPreviewFileId('')
     setSelectedSkillId('')
     setRequirement('')
     setSelectedNoteId(initialDraftId)
@@ -118,6 +128,8 @@ export default function DraftPanel({
   }
 
   function toggleFile(fileId: string): void {
+    const file = lessonFiles.find((candidate) => candidate.id === fileId)
+    if (file === undefined || !isSelectableLessonPrepFile(file)) return
     setSelectedFileIds((current) => current.includes(fileId)
       ? current.filter((id) => id !== fileId)
       : [...current, fileId])
@@ -299,7 +311,10 @@ export default function DraftPanel({
       {message !== '' && <div className="inline-notice" role="status">{message}</div>}
       <div className="prep-context-bar">
         <div><p className="section-kicker">本次备课课次</p><h2>{context.courseTitle} / {context.lessonTitle}</h2></div>
-        <span className="selection-label">{formatStudentContext(context)}</span>
+        <div className="prep-context-actions">
+          <span className="selection-label">{formatStudentContext(context)}</span>
+          <button className="secondary-button" type="button" onClick={onBackToCourses} disabled={busyAction !== ''}>返回课程</button>
+        </div>
       </div>
       {showResults ? (
         <ResultWorkspace
@@ -323,6 +338,7 @@ export default function DraftPanel({
           files={files}
           lessonFiles={lessonFiles}
           selectedFileIds={selectedFileIds}
+          previewFileId={previewFileId}
           selectedFilesCount={selectedFiles.length}
           skills={skills}
           selectedSkillId={selectedSkillId}
@@ -330,6 +346,7 @@ export default function DraftPanel({
           resultCount={lessonResults.length}
           busyAction={busyAction}
           onToggleFile={toggleFile}
+          onPreviewFile={setPreviewFileId}
           onBrowseExternal={onBrowseExternal}
           onBrowseMaterials={onBrowseMaterials}
           onSelectSkill={setSelectedSkillId}
@@ -393,10 +410,11 @@ function DraftInboxRow({ entry, busy, onOpenDraft, onDeleteDraft }: {
   )
 }
 
-function PrepSetup({ files, lessonFiles, selectedFileIds, selectedFilesCount, skills, selectedSkillId, requirement, resultCount, busyAction, onToggleFile, onBrowseExternal, onBrowseMaterials, onSelectSkill, onRequirement, onGenerate, onShowResults }: {
+function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selectedFilesCount, skills, selectedSkillId, requirement, resultCount, busyAction, onToggleFile, onPreviewFile, onBrowseExternal, onBrowseMaterials, onSelectSkill, onRequirement, onGenerate, onShowResults }: {
   readonly files: ManagedFileOverview | null
   readonly lessonFiles: ManagedFileOverview['files']
   readonly selectedFileIds: readonly string[]
+  readonly previewFileId: string
   readonly selectedFilesCount: number
   readonly skills: readonly SkillRecord[]
   readonly selectedSkillId: string
@@ -404,6 +422,7 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, selectedFilesCount, sk
   readonly resultCount: number
   readonly busyAction: BusyAction
   readonly onToggleFile: (fileId: string) => void
+  readonly onPreviewFile: (fileId: string) => void
   readonly onBrowseExternal: () => void
   readonly onBrowseMaterials: () => void
   readonly onSelectSkill: (skillId: string) => void
@@ -412,25 +431,33 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, selectedFilesCount, sk
   readonly onShowResults: () => void
 }): React.JSX.Element {
   return (
-    <div className="lesson-prep-layout">
+    <div className="lesson-prep-layout lesson-prep-layout-reader">
       <aside className="workspace-card prep-materials-panel">
-        <div className="card-heading"><div><p className="section-kicker">已复制到本课</p><h2>本次备课资料</h2></div><span className="count-label">{lessonFiles.length} 份</span></div>
-        <ul className="prep-material-list">
-          {lessonFiles.map((file) => (
-            <li key={file.id}><label><input type="checkbox" checked={selectedFileIds.includes(file.id)} onChange={() => onToggleFile(file.id)} /><span><strong>{file.originalName}</strong><small>{file.contentHash === null ? '正在准备文本' : '可用于生成'}</small></span></label></li>
-          ))}
-          {files === null && <li className="empty-state">正在读取本次资料…</li>}
-          {files !== null && lessonFiles.length === 0 && <li className="empty-state">还没有本次备课资料，请从下方添加。</li>}
-        </ul>
-        <div className="prep-source-actions">
-          <button className="secondary-button" type="button" onClick={onBrowseExternal}>从外部资料添加</button>
-          <button className="secondary-button" type="button" onClick={onBrowseMaterials}>从素材库添加</button>
-        </div>
+        <div className="card-heading"><div><p className="section-kicker">资料目录</p><h2>本次备课资料</h2></div><span className="count-label">{lessonFiles.filter(isSelectableLessonPrepFile).length} 份文档</span></div>
+        {files === null ? <div className="material-reader-state">正在读取本次资料…</div> : (
+          <LessonMaterialTree
+            files={lessonFiles}
+            selectedFileId={previewFileId}
+            onSelectFile={onPreviewFile}
+            selectedFileIds={selectedFileIds}
+            onToggleFile={onToggleFile}
+            showHeading={false}
+          />
+        )}
       </aside>
-      <div className="prep-workspace-column">
-        <section className="workspace-card">
-          <div className="card-heading"><div><p className="section-kicker">固定 AI 动作</p><h2>AI 备课</h2></div><span className="selection-label">已选 {selectedFilesCount} 份</span></div>
-          <p className="prep-guidance">本次课次、已勾选资料、可选 Skill 与本次要求会在 Main 中分区组合，再执行固定生成任务。</p>
+      <section className="workspace-card prep-reader-card">
+        <div className="card-heading"><div><p className="section-kicker">正文阅读</p><h2>像笔记一样阅读资料</h2></div><span className="selection-label">先读，再勾选生成</span></div>
+        <LessonMaterialReader
+          files={lessonFiles}
+          selectedFileId={previewFileId}
+          onSelectFile={onPreviewFile}
+          hideTree
+        />
+      </section>
+      <div className="prep-workspace-column prep-ai-column">
+        <section className="workspace-card prep-ai-card">
+          <div className="card-heading"><div><p className="section-kicker">备课动作</p><h2>AI 备课</h2></div><span className="selection-label">已选 {selectedFilesCount} 份文档</span></div>
+          <p className="prep-guidance">图片和其他素材会跟随 Markdown 正文阅读；勾选要作为本次生成依据的文档。</p>
           <div className="prep-input-grid">
             <label>我的 Skill（可选）<select value={selectedSkillId} onChange={(event) => onSelectSkill(event.target.value)} disabled={busyAction !== ''}><option value="">不使用 Skill</option>{skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</select></label>
             <label>本次要求（可选）<textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={4} placeholder="例如：今天少讲理论，多安排基础题，重点讲圆的面积。" disabled={busyAction !== ''} /><small className="field-counter">{requirement.length} / {DRAFT_REQUIREMENT_MAX_CHARS}</small></label>
@@ -441,6 +468,10 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, selectedFilesCount, sk
             ))}
           </div>
         </section>
+        <div className="prep-source-actions prep-ai-sources">
+          <button className="secondary-button" type="button" onClick={onBrowseExternal}>从外部资料添加</button>
+          <button className="secondary-button" type="button" onClick={onBrowseMaterials}>从素材库添加</button>
+        </div>
         {resultCount > 0 && <button className="secondary-button result-entry-button" type="button" onClick={onShowResults}>查看本次课次生成结果（{resultCount}）</button>}
       </div>
     </div>
@@ -499,29 +530,11 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
               </div>
             </div>
             <div className={`draft-content-body${editing ? ' is-editing' : ' is-preview'}`}>
-              {editing ? <textarea aria-label="编辑生成结果" value={editBody} onChange={(event) => onEditBody(event.target.value)} rows={24} disabled={busy} /> : <DraftMarkdownPreview body={selectedNote.bodyMd} />}
+              {editing ? <textarea aria-label="编辑生成结果" value={editBody} onChange={(event) => onEditBody(event.target.value)} rows={24} disabled={busy} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}
             </div>
           </>
         )}
       </section>
-    </div>
-  )
-}
-
-function DraftMarkdownPreview({ body }: { readonly body: string }): React.JSX.Element {
-  return (
-    <div className="draft-markdown-preview">
-      {body.split(/\r?\n/).map((line, index) => {
-        const heading = /^(#{1,4})\s+(.+)$/.exec(line)
-        if (heading !== null) {
-          const Heading = `h${Math.min(heading[1].length + 1, 5)}` as 'h2' | 'h3' | 'h4' | 'h5'
-          return <Heading key={index}>{heading[2]}</Heading>
-        }
-        if (/^[-*]\s+/.test(line)) return <p className="draft-bullet" key={index}>{line.replace(/^[-*]\s+/, '')}</p>
-        if (/^\d+[.、]\s*/.test(line)) return <p className="draft-numbered" key={index}>{line}</p>
-        if (line.trim() === '') return <span className="draft-preview-space" key={index} aria-hidden="true" />
-        return <p key={index}>{line}</p>
-      })}
     </div>
   )
 }

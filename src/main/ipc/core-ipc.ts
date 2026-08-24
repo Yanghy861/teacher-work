@@ -191,6 +191,9 @@ export async function dispatchCoreIpc(
             (payload as CreateNoteRequest).studentId,
             (payload as CreateNoteRequest).bodyMd,
             (payload as CreateNoteRequest).lessonId,
+            (payload as CreateNoteRequest).occurredOn === undefined
+              ? undefined
+              : { occurredOn: (payload as CreateNoteRequest).occurredOn },
           ),
           isNoteRecord,
         )

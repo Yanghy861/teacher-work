@@ -39,6 +39,7 @@ export interface CreateNodeInput {
   readonly parentId?: string | null
   readonly courseMode?: CourseMode
   readonly contentMd?: string
+  readonly lessonLabel?: string
 }
 
 interface NodeRow {
@@ -46,6 +47,7 @@ interface NodeRow {
   readonly parent_id: string | null
   readonly kind: NodeKind
   readonly title: string
+  readonly lesson_label: string | null
   readonly course_mode: CourseMode | null
   readonly sort_order: number
   readonly content_md: string
@@ -74,8 +76,18 @@ export class NodeService {
     return this.createNode({ kind: 'period', title, parentId: courseId })
   }
 
-  createLesson(periodId: string, title: string): NodeRecord {
-    return this.createNode({ kind: 'lesson', title, parentId: periodId })
+  createLesson(
+    periodId: string,
+    title: string,
+    options: { readonly lessonLabel?: string; readonly contentMd?: string } = {},
+  ): NodeRecord {
+    return this.createNode({
+      kind: 'lesson',
+      title,
+      parentId: periodId,
+      lessonLabel: options.lessonLabel,
+      contentMd: options.contentMd,
+    })
   }
 
   createNode(input: CreateNodeInput): NodeRecord {
@@ -85,6 +97,9 @@ export class NodeService {
     }
     if (input.kind !== 'course' && input.courseMode !== undefined) {
       throw new NodeServiceError('INVALID_NODE_KIND', '只有课程节点可以设置课程类型。')
+    }
+    if (input.kind !== 'lesson' && input.lessonLabel !== undefined) {
+      throw new NodeServiceError('INVALID_NODE_KIND', '只有课次节点可以设置原始课次标签。')
     }
 
     return this.transaction(() => {
@@ -96,15 +111,16 @@ export class NodeService {
       this.database
         .prepare(
           `INSERT INTO nodes
-             (id, parent_id, kind, title, course_mode, sort_order, content_md,
+             (id, parent_id, kind, title, lesson_label, course_mode, sort_order, content_md,
               created_at, updated_at, deleted_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
         )
         .run(
           id,
           parentId,
           input.kind,
           title,
+          input.lessonLabel === undefined ? null : normalizeTitle(input.lessonLabel),
           input.courseMode ?? null,
           sortOrder,
           input.contentMd ?? '',
@@ -118,7 +134,7 @@ export class NodeService {
   getNode(nodeId: string, includeDeleted = false): NodeRecord | undefined {
     const row = this.database
       .prepare(
-        `SELECT id, parent_id, kind, title, course_mode, sort_order, content_md,
+        `SELECT id, parent_id, kind, title, lesson_label, course_mode, sort_order, content_md,
                 created_at, updated_at, deleted_at
            FROM nodes
           WHERE id = ? ${includeDeleted ? '' : 'AND deleted_at IS NULL'}`,
@@ -130,7 +146,7 @@ export class NodeService {
   listNodes(options: { readonly includeDeleted?: boolean } = {}): NodeRecord[] {
     const rows = this.database
       .prepare(
-        `SELECT id, parent_id, kind, title, course_mode, sort_order, content_md,
+        `SELECT id, parent_id, kind, title, lesson_label, course_mode, sort_order, content_md,
                 created_at, updated_at, deleted_at
            FROM nodes
           ${options.includeDeleted ? '' : 'WHERE deleted_at IS NULL'}
@@ -338,7 +354,7 @@ export class NodeService {
   private requireNodeRow(nodeId: string): NodeRow {
     const row = this.database
       .prepare(
-        `SELECT id, parent_id, kind, title, course_mode, sort_order, content_md,
+        `SELECT id, parent_id, kind, title, lesson_label, course_mode, sort_order, content_md,
                 created_at, updated_at, deleted_at
            FROM nodes
           WHERE id = ?`,
@@ -368,6 +384,7 @@ function mapNode(row: NodeRow): NodeRecord {
     parentId: row.parent_id,
     kind: row.kind,
     title: row.title,
+    ...(row.lesson_label === null ? {} : { lessonLabel: row.lesson_label }),
     courseMode: row.course_mode,
     sortOrder: row.sort_order,
     contentMd: row.content_md,

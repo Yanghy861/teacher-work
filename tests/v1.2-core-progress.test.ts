@@ -54,8 +54,8 @@ describe('V12-01 course progress and attendance core', () => {
          VALUES ('course-old', 'student-old', '2026-08-22T00:00:00.000Z')`,
       ).run()
 
-      expect(runMigrations(database)).toBe(13)
-      expect(getAppliedMigrationVersions(database)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+      expect(runMigrations(database)).toBe(14)
+      expect(getAppliedMigrationVersions(database)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
       expect(database.prepare(
         `SELECT course_id, student_id, ended_at FROM course_students`,
       ).get()).toEqual({ course_id: 'course-old', student_id: 'student-old', ended_at: null })

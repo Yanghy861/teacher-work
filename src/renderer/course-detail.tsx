@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import type { CoreOverview, NodeRecord, NoteRecord } from '../shared/core-contracts'
+import type { CoreOverview, LessonSessionSummary, NodeRecord, NoteRecord } from '../shared/core-contracts'
 import {
+  formatLocalDateOnly,
   formatLocalDateTime,
   getLessonNumber,
   listValidCurrentLessons,
@@ -155,7 +156,7 @@ export default function CourseDetail({
           periodTitle={viewedPeriod?.title ?? ''}
           prepContext={viewedLesson === null
             ? null
-            : createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents)}
+            : createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents, viewedPeriod?.title)}
           draft={viewedDraft}
           onStartPrep={onStartPrep}
           onOpenDraft={onOpenDraft}
@@ -236,10 +237,11 @@ function LessonsSection({
 }): React.JSX.Element {
   const sessionByLesson = new Map(overview.lessonSessions.map((session) => [session.lessonId, session]))
   const viewedSession = viewedLesson === null ? undefined : sessionByLesson.get(viewedLesson.id)
+  const viewedPeriod = summary.periods.find((period) => period.id === viewedLesson?.parentId)
   return (
     <div className="course-lessons-section">
       <div className="section-toolbar">
-        <div><h3>阶段与课次</h3><p>点击课次只改变 Viewed Lesson，不会改变 Current Lesson。</p></div>
+        <div><h3>阶段与课次</h3><p>单击选择课次；双击直接进入这节课的备课内容。Current Lesson 不会因此改变。</p></div>
         <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={onCreatePeriod}>+ 新建阶段</button>
       </div>
       <div className="period-list">
@@ -260,14 +262,23 @@ function LessonsSection({
                       type="button"
                       key={lesson.id}
                       onClick={() => onViewLesson(lesson.id)}
+                      onDoubleClick={() => {
+                        const context = createLessonPrepContext(summary.course, lesson, summary.activeStudents, period.title)
+                        const draft = latestLessonDraft(overview, lesson.id)
+                        if (draft === null) onStartPrep(context)
+                        else onOpenDraft(context, draft.id)
+                      }}
                     >
-                      <span className="lesson-number">第 {index + 1} 课</span>
+                      <span className="lesson-number">{lesson.lessonLabel ?? `第 ${index + 1} 课`}</span>
                       <strong>{lesson.title}</strong>
                       <span className="lesson-row-status">
                         {session?.taughtConfirmedAt !== null && session?.taughtConfirmedAt !== undefined && <em>已上</em>}
+                        {session?.scheduledOn !== undefined && session.taughtConfirmedAt === null && <em>历史</em>}
                         {summary.currentLesson?.id === lesson.id && <em className="is-current">Current</em>}
                         {session?.attendanceRecordedAt !== null && session?.attendanceRecordedAt !== undefined && <em>已点名</em>}
-                        {session?.scheduledAt !== null && session?.scheduledAt !== undefined && <small>{formatLocalDateTime(session.scheduledAt)}</small>}
+                        {session?.scheduledOn !== null && session?.scheduledOn !== undefined
+                          ? <small>{formatLocalDateOnly(session.scheduledOn)} · {session.scheduledAt === null ? '时间未记录' : formatLocalDateTime(session.scheduledAt)}</small>
+                          : session?.scheduledAt !== null && session?.scheduledAt !== undefined && <small>{formatLocalDateTime(session.scheduledAt)}</small>}
                         {session?.durationMinutes !== null && session?.durationMinutes !== undefined && <small>{session.durationMinutes} 分钟</small>}
                       </span>
                     </button>
@@ -292,11 +303,11 @@ function LessonsSection({
           <div>
             <span className="viewed-label">Viewed Lesson</span>
             <h3>{viewedLesson.title}</h3>
-            <p>排课：{formatLocalDateTime(viewedSession?.scheduledAt ?? null)} · 时长：{viewedSession?.durationMinutes === null || viewedSession === undefined ? '未设置' : `${viewedSession.durationMinutes} 分钟`} · 点名：{viewedSession?.attendanceRecordedAt === null || viewedSession === undefined ? '未保存' : `已记录 ${viewedSession.totalCount} 人`}</p>
+            <p>排课：{formatSessionSchedule(viewedSession)} · 时长：{viewedSession?.durationMinutes === null || viewedSession === undefined ? '未设置' : `${viewedSession.durationMinutes} 分钟`} · 点名：{viewedSession?.attendanceRecordedAt === null || viewedSession === undefined ? '未保存' : `已记录 ${viewedSession.totalCount} 人`}</p>
           </div>
           <div className="viewed-lesson-actions">
             <button className="primary-button" type="button" onClick={() => {
-              const context = createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents)
+              const context = createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents, viewedPeriod?.title)
               if (viewedDraft === null) onStartPrep(context)
               else onOpenDraft(context, viewedDraft.id)
             }}>{viewedDraft === null ? '开始备课' : '继续备课'}</button>
@@ -536,7 +547,7 @@ function ProgressModal({ overview, summary, viewedLessonId, busy, onClose, onAct
         {validLessons.map((lesson) => {
           const period = summary.periods.find((candidate) => candidate.id === lesson.parentId)
           const number = lesson.parentId === null ? 0 : getLessonNumber(summary.lessons, lesson.parentId, lesson.id)
-          return <option key={lesson.id} value={lesson.id}>{period?.title} · 第 {number} 课 {lesson.title}</option>
+          return <option key={lesson.id} value={lesson.id}>{period?.title} · {lesson.lessonLabel ?? `第 ${number} 课`} {lesson.title}</option>
         })}
       </select></label>
       <footer className="modal-actions"><button className="secondary-button" type="button" onClick={onClose}>取消</button><button className="primary-button" type="button" disabled={busy} onClick={() => void apply()}>保存选择</button></footer>
@@ -547,6 +558,14 @@ function ProgressModal({ overview, summary, viewedLessonId, busy, onClose, onAct
 function courseStudentsLine(summary: CourseSummary): string {
   if (summary.activeStudents.length === 0) return '学生：未关联在读学生'
   return `学生：${summary.activeStudents.map((student) => student.name).join('、')}`
+}
+
+function formatSessionSchedule(session: LessonSessionSummary | undefined): string {
+  if (session === undefined) return '未排时间'
+  if (session.scheduledOn !== undefined) {
+    return `${formatLocalDateOnly(session.scheduledOn)} · ${session.scheduledAt === null ? '时间未记录' : formatLocalDateTime(session.scheduledAt)}`
+  }
+  return formatLocalDateTime(session.scheduledAt)
 }
 
 function currentLessonLine(summary: CourseSummary): string {

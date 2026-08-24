@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { NodeRecord, NoteRecord } from '../shared/core-contracts'
 import type { ManagedFileOverview } from '../shared/file-contracts'
-import { listLessonPrepFiles, type LessonPrepContext } from './lesson-prep-context'
+import { filterLessonMaterialFiles, listLessonPrepFiles, type LessonPrepContext } from './lesson-prep-context'
+import LessonMaterialReader from './lesson-material-reader'
 
 export default function LessonFilesSection({
   lesson,
@@ -22,12 +23,19 @@ export default function LessonFilesSection({
   const [overview, setOverview] = useState<ManagedFileOverview | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [selectedFileId, setSelectedFileId] = useState('')
   const lessonFiles = useMemo(
-    () => overview === null || lesson === null ? [] : listLessonPrepFiles(overview, lesson.id),
-    [lesson, overview],
+    () => overview === null || lesson === null ? [] : filterLessonMaterialFiles(
+      listLessonPrepFiles(overview, lesson.id),
+      { lessonLabel: lesson.lessonLabel, periodTitle },
+    ),
+    [lesson, overview, periodTitle],
   )
 
-  useEffect(() => { void reload() }, [lesson?.id])
+  useEffect(() => {
+    setSelectedFileId('')
+    void reload()
+  }, [lesson?.id])
 
   useEffect(() => window.teacherWorkbench.files.onContentChanged(() => { void reload() }), [])
 
@@ -73,9 +81,9 @@ export default function LessonFilesSection({
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       <header className="lesson-files-header">
         <div>
-          <p className="section-kicker">Viewed Lesson 资料</p>
+          <p className="section-kicker">本课次资料</p>
           <h3>{periodTitle === '' ? lesson.title : `${periodTitle} · ${lesson.title}`}</h3>
-          <p>这里只显示本课次的 lesson_files，不包含整门课程资料或学生文件。</p>
+          <p>不包含整门课程资料或学生文件；课次下的 Markdown 文件平铺显示，正文引用的图片和素材挂在对应文档下面，原始文件不会被改写。</p>
         </div>
         <div className="lesson-files-actions">
           <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
@@ -84,32 +92,20 @@ export default function LessonFilesSection({
           </button>
         </div>
       </header>
-      <ul className="lesson-file-list">
-        {lessonFiles.map((file) => (
-          <li key={file.id}>
-            <div>
-              <strong>{file.originalName}</strong>
-              <small>{formatBytes(file.sizeBytes)} · {file.contentHash === null ? '待完成文本准备' : '内容已核对'}</small>
-            </div>
-            <div className="lesson-file-actions">
-              <button className="link-button" type="button" disabled={busy} onClick={() => void openFile(file.id)}>打开</button>
-              <button className="link-button" type="button" disabled={busy} onClick={() => void openFile(file.id, true)}>所在文件夹</button>
-            </div>
-          </li>
-        ))}
-        {overview === null && <li className="empty-state">正在读取本课次资料…</li>}
-        {overview !== null && lessonFiles.length === 0 && (
-          <li className="empty-state">本课次还没有资料。进入本次备课后，可从外部资料或素材库添加独立副本。</li>
-        )}
-      </ul>
+      {overview === null ? (
+        <div className="material-reader-state">正在读取本课次资料…</div>
+      ) : (
+        <LessonMaterialReader
+          files={lessonFiles}
+          selectedFileId={selectedFileId}
+          onSelectFile={setSelectedFileId}
+          onOpenFile={(fileId) => { void openFile(fileId) }}
+          onShowInFolder={(fileId) => { void openFile(fileId, true) }}
+          treeTitle={lesson.title}
+        />
+      )}
     </div>
   )
-}
-
-function formatBytes(size: number): string {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function toErrorMessage(error: unknown): string {

@@ -184,6 +184,13 @@ export function formatLocalDateTime(utcIso: string | null): string {
   }).format(new Date(utcIso))
 }
 
+export function formatLocalDateOnly(localDate: string | null | undefined): string {
+  if (localDate === null || localDate === undefined) return '未排日期'
+  const [year, month, day] = localDate.split('-').map(Number)
+  if (![year, month, day].every(Number.isInteger)) return '日期无效'
+  return `${year}年${month}月${day}日`
+}
+
 export function toDateTimeLocalValue(utcIso: string | null): string {
   if (utcIso === null) return ''
   const value = new Date(utcIso)

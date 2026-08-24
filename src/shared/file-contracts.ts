@@ -11,6 +11,23 @@ export interface ManagedFileRecord {
   readonly deletedAt: string | null
 }
 
+export type ManagedFileContent =
+  | {
+      readonly file: ManagedFileRecord
+      readonly kind: 'text'
+      readonly content: string
+    }
+  | {
+      readonly file: ManagedFileRecord
+      readonly kind: 'image'
+      readonly dataUrl: string
+    }
+  | {
+      readonly file: ManagedFileRecord
+      readonly kind: 'unsupported'
+      readonly message: string
+    }
+
 export type FileLinkTarget = 'lesson' | 'student'
 
 export interface ManagedFileLink {
@@ -69,6 +86,13 @@ export function isManagedFileRecord(value: unknown): value is ManagedFileRecord 
     isNonEmptyString(value.updatedAt) &&
     (value.deletedAt === null || isNonEmptyString(value.deletedAt))
   )
+}
+
+export function isManagedFileContent(value: unknown): value is ManagedFileContent {
+  if (!isRecord(value) || !isManagedFileRecord(value.file)) return false
+  if (value.kind === 'text') return typeof value.content === 'string'
+  if (value.kind === 'image') return isNonEmptyString(value.dataUrl)
+  return value.kind === 'unsupported' && isNonEmptyString(value.message)
 }
 
 export function isManagedFileLink(value: unknown): value is ManagedFileLink {
