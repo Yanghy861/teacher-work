@@ -12,6 +12,7 @@ import {
   BACKUP_IPC_CHANNELS,
   EXTERNAL_LIBRARY_IPC_CHANNELS,
   SKILL_IPC_CHANNELS,
+  QUESTION_BANK_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContentChanged,
   isManagedFileOverview,
@@ -42,6 +43,9 @@ import {
   isExternalActionResult,
   isExternalDirectoryListing,
   isNullableExternalRootSummary,
+  isQuestionBankDetail,
+  isQuestionBankSearchResult,
+  isQuestionBankSummary,
   parseIpcResponse,
   TeacherWorkbenchError,
   type CreateCourseRequest,
@@ -85,6 +89,9 @@ import {
   type UpdateSkillRequest,
   type ExternalPathRequest,
   type ExternalLessonCopyRequest,
+  type QuestionBankLessonCopyRequest,
+  type QuestionBankQuestionRequest,
+  type QuestionBankSearchRequest,
 } from '../shared/preload-api'
 
 async function invoke<T>(
@@ -194,6 +201,35 @@ const api = Object.freeze({
     showInFolder: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.showInFolder, request, isExternalActionResult),
     copyToLibrary: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLibrary, request, isManagedFileRecord),
     copyToLesson: (request: ExternalLessonCopyRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
+  }),
+  questionBank: Object.freeze({
+    getSummary: () => invoke(QUESTION_BANK_IPC_CHANNELS.getSummary, {}, isQuestionBankSummary),
+    chooseAndImport: () => invoke(
+      QUESTION_BANK_IPC_CHANNELS.chooseAndImport,
+      {},
+      (value): value is import('../shared/question-bank-contracts').QuestionBankSummary | null =>
+        value === null || isQuestionBankSummary(value),
+    ),
+    search: (request: QuestionBankSearchRequest) => invoke(
+      QUESTION_BANK_IPC_CHANNELS.search,
+      request,
+      isQuestionBankSearchResult,
+    ),
+    getQuestion: (request: QuestionBankQuestionRequest) => invoke(
+      QUESTION_BANK_IPC_CHANNELS.getQuestion,
+      request,
+      isQuestionBankDetail,
+    ),
+    copyToLibrary: (request: QuestionBankQuestionRequest) => invoke(
+      QUESTION_BANK_IPC_CHANNELS.copyToLibrary,
+      request,
+      isManagedFileRecord,
+    ),
+    copyToLesson: (request: QuestionBankLessonCopyRequest) => invoke(
+      QUESTION_BANK_IPC_CHANNELS.copyToLesson,
+      request,
+      isManagedFileRecord,
+    ),
   }),
   backup: Object.freeze({
     create: () => invoke(BACKUP_IPC_CHANNELS.create, {}, (value): value is import('../shared/ipc-contracts').BackupSummary | null =>

@@ -716,3 +716,18 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 冻结三段实施链：V14-01 快照 / 服务 / IPC，V14-02 工作台原生 UI / 单题动作，V14-03 全量验收。
 - UI 裁决：默认完整列表；点击后宽屏右侧、窄屏下方展开详情；加入课程使用临时选择弹窗。
 - 安全边界：`E:\Wss_Tiku` 永远只读；不提交真实快照；不组卷、不同步、不运行 portable / installer、不自动 push。
+
+## 2026-08-24 · V14-01 · IN_PROGRESS
+
+- 前置：V1.4 冻结方案提交 `f45c5ba`，基线仍为 `checkpoint-V1.3-pass`。
+- 当前唯一范围：适配 `.tqbank` 导出器、原子导入、只读服务、单题复制、契约、Preload、IPC 和 Main 生命周期；不接入题库 Renderer 页面。
+- 移植方式：只把已完成题库分支的明确文件和差异应用到独立 V1.4 工作树，不 cherry-pick 旧 V1.2 基线上的整提交，避免覆盖 V1.3 快速建课代码。
+
+## 2026-08-24 · V14-01 · DONE
+
+- 完成 `.tqbank` 完整快照导出器、最大 2 GiB 输入边界、staging 校验、原子替换和失败恢复；当前快照始终 readonly + query-only。
+- 完成 package summary、facet、全文 / 短词搜索、组合筛选、分页、详情与图片总量限制；所有动态条件参数化。
+- 完成单题独立 Markdown 复制到素材库或指定 lesson，并在复制后进入现有索引队列；Markdown 内嵌图片在 Parser 中先剥离 base64 再索引。
+- 完成 question-bank 契约、严格 guard、白名单 IPC、Preload API、Main 生命周期和本地文件选择器；Renderer 仍不接触路径、SQLite、Node 或 BLOB。
+- 自动验收：题库 service / IPC 2 files / 8 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 47 / Preload 11 / Renderer 56 modules）；`git diff --check` ✅。
+- 未接入 Renderer 题库入口，符合 V14-01 范围；未读取旧题库、未运行 portable / installer、未修改 `main`、未 push。

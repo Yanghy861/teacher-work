@@ -12,6 +12,7 @@ import { registerBackupIpc } from './ipc/backup-ipc'
 import { registerExternalLibraryIpc } from './ipc/external-library-ipc'
 import { registerSkillIpc } from './ipc/skill-ipc'
 import { registerAttendanceIpc } from './ipc/attendance-ipc'
+import { registerQuestionBankIpc } from './ipc/question-bank-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
@@ -28,6 +29,7 @@ import { DraftService } from './draft/draft-service'
 import { BackupRestoreService } from './backup/backup-service'
 import { ExternalLibraryService } from './external/external-library-service'
 import { SkillService } from './skills/skill-service'
+import { QuestionBankService } from './question-bank/question-bank-service'
 import { BACKUP_DIRECTORY_NAME } from './backup/backup-service'
 import { WorkspaceActivityError, WorkspaceActivityGate } from './workspace/activity-gate'
 import {
@@ -54,12 +56,14 @@ let unregisterBackupIpc: (() => void) | null = null
 let unregisterExternalLibraryIpc: (() => void) | null = null
 let unregisterSkillIpc: (() => void) | null = null
 let unregisterAttendanceIpc: (() => void) | null = null
+let unregisterQuestionBankIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
 let backupRestoreService: BackupRestoreService | null = null
 let externalLibraryService: ExternalLibraryService | null = null
 let skillService: SkillService | null = null
+let questionBankService: QuestionBankService | null = null
 const deferredIndexIds = new Set<string>()
 const deferredRefreshTriggers = new Set<string>()
 let servicesClosed = false
@@ -199,6 +203,13 @@ function getExternalLibraryService(): ExternalLibraryService {
   if (workspaceHandle === null) throw new Error('Workspace was not initialized')
   externalLibraryService ??= new ExternalLibraryService(workspaceHandle.database.raw)
   return externalLibraryService
+}
+
+function getQuestionBankService(): QuestionBankService {
+  if (workspaceHandle === null) getWorkspaceInfo()
+  if (workspaceHandle === null) throw new Error('Workspace was not initialized')
+  questionBankService ??= new QuestionBankService(workspaceHandle.paths, getManagedFiles())
+  return questionBankService
 }
 
 function enqueueIndex(fileId: string): void {
@@ -434,6 +445,26 @@ void app.whenReady().then(() => {
     },
     logger,
   )
+  unregisterQuestionBankIpc = registerQuestionBankIpc(
+    ipcMain,
+    {
+      getService: getQuestionBankService,
+      activityGate,
+      enqueueIndex,
+      chooseSnapshotPath: async () => {
+        const options: OpenDialogOptions = {
+          properties: ['openFile'],
+          title: '导入教师题库快照',
+          filters: [{ name: '教师题库快照', extensions: ['tqbank'] }],
+        }
+        const result = mainWindow !== null && !mainWindow.isDestroyed()
+          ? await dialog.showOpenDialog(mainWindow, options)
+          : await dialog.showOpenDialog(options)
+        return result.canceled ? null : result.filePaths[0] ?? null
+      },
+    },
+    logger,
+  )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
   void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
@@ -470,6 +501,7 @@ app.on('before-quit', (event) => {
   unregisterExternalLibraryIpc?.()
   unregisterSkillIpc?.()
   unregisterAttendanceIpc?.()
+  unregisterQuestionBankIpc?.()
   coreDataService = null
   managedFileService = null
   aiGateway = null
@@ -477,6 +509,8 @@ app.on('before-quit', (event) => {
   draftService = null
   externalLibraryService = null
   skillService = null
+  questionBankService?.close()
+  questionBankService = null
   void (async () => {
     await documentIndexWorker?.close()
     documentIndexWorker = null

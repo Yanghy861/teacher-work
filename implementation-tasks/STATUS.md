@@ -70,6 +70,6 @@
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
-| V14-01 题库快照、只读服务与安全 IPC | TODO | 等待从已完成题库分支适配到 `checkpoint-V1.3-pass` |
+| V14-01 题库快照、只读服务与安全 IPC | DONE | `.tqbank` 导出、原子导入、只读查询、单题复制、契约 / Preload / IPC / Main 接入完成；2 files / 8 tests、typecheck、lint、build、diff check 通过 |
 | V14-02 工作台原生题库浏览与单题动作 | TODO | 等待 V14-01 |
 | V14-03 V1.4 全量回归与版本验收 | TODO | 等待 V14-01–V14-02 |

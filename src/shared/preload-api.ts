@@ -139,8 +139,22 @@ import {
   type SkillRecord,
   type UpdateSkillRequest,
 } from './skill-contracts'
+import {
+  isQuestionBankDetail,
+  isQuestionBankLessonCopyRequest,
+  isQuestionBankQuestionRequest,
+  isQuestionBankSearchRequest,
+  isQuestionBankSearchResult,
+  isQuestionBankSummary,
+  type QuestionBankDetail,
+  type QuestionBankLessonCopyRequest,
+  type QuestionBankQuestionRequest,
+  type QuestionBankSearchRequest,
+  type QuestionBankSearchResult,
+  type QuestionBankSummary,
+} from './question-bank-contracts'
 
-export { AI_IPC_CHANNELS, ATTENDANCE_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, SEARCH_IPC_CHANNELS, SKILL_IPC_CHANNELS } from './ipc-contracts'
+export { AI_IPC_CHANNELS, ATTENDANCE_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, QUESTION_BANK_IPC_CHANNELS, SEARCH_IPC_CHANNELS, SKILL_IPC_CHANNELS } from './ipc-contracts'
 export type { BackupSummary, IpcChannel, RestoreSummary, WorkspaceInfo } from './ipc-contracts'
 export { isBackupSummary, isRestoreSummary } from './ipc-contracts'
 export type {
@@ -197,6 +211,18 @@ export type {
   ExternalRootSummary,
 } from './external-library-contracts'
 export type { CreateSkillRequest, SkillIdRequest, SkillRecord, UpdateSkillRequest } from './skill-contracts'
+export type {
+  QuestionBankAsset,
+  QuestionBankDetail,
+  QuestionBankFacetValue,
+  QuestionBankLessonCopyRequest,
+  QuestionBankOption,
+  QuestionBankQuestionRequest,
+  QuestionBankSearchItem,
+  QuestionBankSearchRequest,
+  QuestionBankSearchResult,
+  QuestionBankSummary,
+} from './question-bank-contracts'
 
 export interface TeacherWorkbenchApi {
   app: {
@@ -280,6 +306,14 @@ export interface TeacherWorkbenchApi {
     copyToLibrary: (request: ExternalPathRequest) => Promise<ManagedFileRecord>
     copyToLesson: (request: ExternalLessonCopyRequest) => Promise<ManagedFileRecord>
   }
+  questionBank: {
+    getSummary: () => Promise<QuestionBankSummary>
+    chooseAndImport: () => Promise<QuestionBankSummary | null>
+    search: (request: QuestionBankSearchRequest) => Promise<QuestionBankSearchResult>
+    getQuestion: (request: QuestionBankQuestionRequest) => Promise<QuestionBankDetail>
+    copyToLibrary: (request: QuestionBankQuestionRequest) => Promise<ManagedFileRecord>
+    copyToLesson: (request: QuestionBankLessonCopyRequest) => Promise<ManagedFileRecord>
+  }
   backup: {
     create: () => Promise<BackupSummary | null>
     restore: () => Promise<RestoreSummary | null>
@@ -349,4 +383,10 @@ export {
   isSkillIdRequest,
   isSkillRecord,
   isUpdateSkillRequest,
+  isQuestionBankDetail,
+  isQuestionBankLessonCopyRequest,
+  isQuestionBankQuestionRequest,
+  isQuestionBankSearchRequest,
+  isQuestionBankSearchResult,
+  isQuestionBankSummary,
 }

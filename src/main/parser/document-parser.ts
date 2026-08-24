@@ -362,6 +362,12 @@ function textChunks(text) {
     .filter((chunk) => chunk.text.trim().length > 0)
 }
 
+function searchableMarkdown(text) {
+  return text
+    .replace(/<img\b[^>]*\bsrc=["']data:image\/[a-z0-9.+-]+;base64,[^"']+["'][^>]*>/giu, '[题目图片]')
+    .replace(/!\[[^\]]*\]\(data:image\/[a-z0-9.+-]+;base64,[^)]+\)/giu, '[题目图片]')
+}
+
 function parserPosition(metadata, sourceType) {
   if (typeof metadata?.pageNumber === 'number') return { type: 'page', value: metadata.pageNumber }
   if (typeof metadata?.slideNumber === 'number') return { type: 'slide', value: metadata.slideNumber }
@@ -414,7 +420,8 @@ async function parseFile(filePath, originalName) {
   const extension = extname(originalName).toLowerCase()
   if (extension === '.txt' || extension === '.md') {
     const text = readFileSync(filePath, 'utf8')
-    return { text, chunks: textChunks(text) }
+    const searchableText = extension === '.md' ? searchableMarkdown(text) : text
+    return { text: searchableText, chunks: textChunks(searchableText) }
   }
   return parseOffice(filePath, originalName)
 }

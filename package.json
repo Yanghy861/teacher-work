@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "question-bank:export": "node scripts/export-question-bank.mjs"
   },
   "build": {
     "appId": "com.teacherworkbench.desktop",

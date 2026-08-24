@@ -90,6 +90,15 @@ export const EXTERNAL_LIBRARY_IPC_CHANNELS = {
   copyToLesson: 'external-library:copy-to-lesson',
 } as const
 
+export const QUESTION_BANK_IPC_CHANNELS = {
+  getSummary: 'question-bank:get-summary',
+  chooseAndImport: 'question-bank:choose-and-import',
+  search: 'question-bank:search',
+  getQuestion: 'question-bank:get-question',
+  copyToLibrary: 'question-bank:copy-to-library',
+  copyToLesson: 'question-bank:copy-to-lesson',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -105,6 +114,7 @@ export type IpcChannel =
   | (typeof SKILL_IPC_CHANNELS)[keyof typeof SKILL_IPC_CHANNELS]
   | (typeof BACKUP_IPC_CHANNELS)[keyof typeof BACKUP_IPC_CHANNELS]
   | (typeof EXTERNAL_LIBRARY_IPC_CHANNELS)[keyof typeof EXTERNAL_LIBRARY_IPC_CHANNELS]
+  | (typeof QUESTION_BANK_IPC_CHANNELS)[keyof typeof QUESTION_BANK_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -122,6 +132,7 @@ export const IPC_ERROR_CODES = {
   BACKUP_ERROR: 'BACKUP_ERROR',
   WORKSPACE_BUSY: 'WORKSPACE_BUSY',
   EXTERNAL_LIBRARY_ERROR: 'EXTERNAL_LIBRARY_ERROR',
+  QUESTION_BANK_ERROR: 'QUESTION_BANK_ERROR',
 } as const
 
 export type IpcErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES]
