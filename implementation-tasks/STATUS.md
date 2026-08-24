@@ -56,7 +56,7 @@
 | V12-04 课次资料与 V1.1 备课接入 | DONE | Viewed Lesson 的 lesson_files、任意课次开始/继续备课、Prep 文案和学生文件 UI 收口已完成；35 项相关、131 项全量测试、typecheck、lint、build、隔离 Electron smoke 通过 |
 | V12-05 V1.2 全量回归与版本验收 | DONE | 42 files / 133 tests、typecheck、lint、production build、diff check、安全审计与代表性隔离 Windows 流程通过；产品负责人最终体验确认 PASS，`checkpoint-V1.2-pass` 创建于最终确认提交 |
 
-## V1.3 活动里程碑
+## V1.3 已完成里程碑
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
@@ -66,7 +66,7 @@
 | V13-04 排课、确认页与课程页完整接入 | DONE | 三种排课、自由日期月历、例外 / 单节调整、全部 / 部分 / 未排确认、唯一事务提交、失败定位 / 重试、课程页主次入口、成功回详情和单节时长维护完成；10 files / 52 tests、typecheck、lint、build、diff check 与两组隔离 Windows Electron smoke 通过 |
 | V13-05 V1.3 全量回归与版本验收 | DONE | 47 files / 164 tests、typecheck、lint、production build、diff check、安全审计和 Windows 流程通过；产品负责人最终体验确认 PASS，最终确认提交用于创建并上传 `checkpoint-V1.3-pass` |
 
-## V1.4 活动里程碑
+## V1.4 已完成里程碑
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
@@ -75,3 +75,11 @@
 | V14-03 V1.4 全量回归与版本验收 | DONE | 普通全量 50 files / 174 tests、真实快照 1 file / 1 test、typecheck、lint、production build、diff check、安全 / Git 审计和代表性 Windows 流程通过；产品负责人最终体验确认 PASS，最终确认提交用于创建并上传 `checkpoint-V1.4-pass` |
 | V1.4 测试后筛选修复 | DONE | 题型归一为 4 类、非月考 / 缺失月份显示“无”、知识点标签可折叠多选并支持包含 / 不包含；全量 50 files / 173 tests、真实快照 1 file / 1 test、typecheck、lint、build、导出器语法和 diff check 通过 |
 | V1.4 高信息密度与组合筛选增强 | DONE | 紧凑两行筛选、考试类型 facet、自由题号表达式、结果卡 KaTeX 与 Markdown 转义处理完成；全量 50 files / 174 tests、真实快照 1 file / 1 test、typecheck、lint、build、隔离 Electron smoke 和 diff check 通过 |
+
+## V1.5 活动里程碑
+
+| 里程碑 | 状态 | 完成/阻塞记录 |
+|---|---|---|
+| V15-01 课程导航目标与双向返回 | TODO | 等待按 V1.5 冻结方案实施 |
+| V15-02 课次课件浏览与备课动作分离 | TODO | 前置 V15-01 `DONE` |
+| V15-03 V1.5 全量回归与版本验收 | TODO | 前置 V15-01–V15-02 `DONE`；最终体验确认前不创建 `checkpoint-V1.5-pass` |

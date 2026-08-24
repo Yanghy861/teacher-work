@@ -1,4 +1,4 @@
-# 教师工作台 V1 / V1.1 / V1.2 / V1.3 / V1.4 · Git 版本控制协议
+# 教师工作台 V1 / V1.1 / V1.2 / V1.3 / V1.4 / V1.5 · Git 版本控制协议
 
 ## 1. 授权与禁止事项
 
@@ -25,6 +25,9 @@
 - V1.3 已在 `checkpoint-V1.3-pass` 冻结；V1.4 唯一活动链为 V14-01–V14-03，不回改 V13-xx。
 - V1.4 方案提交使用 `plan(V1.4): <摘要>`，里程碑提交使用 `v1.4(V14-XX): <摘要>`。
 - V14-03 完成全部自动门和代表性本地 Windows 流程且产品负责人最终体验确认后，才可在最终提交上创建 `checkpoint-V1.4-pass`。
+- V1.4 已在 `checkpoint-V1.4-pass` 冻结；V1.5 唯一活动链为 V15-01–V15-03，不回改 V14-xx。
+- V1.5 方案提交使用 `plan(V1.5): <摘要>`，里程碑提交使用 `v1.5(V15-XX): <摘要>`。
+- V15-03 完成全部自动门和代表性本地 Windows 流程且产品负责人最终体验确认后，才可在最终提交上创建 `checkpoint-V1.5-pass`。
 
 ## 3. 实施里程碑提交
 
@@ -32,11 +35,11 @@
 
 1. 开始前检查 `git status --short --branch` 和最近提交；保留被中断的已有成果，不 reset/clean；
 2. 只修改当前里程碑及必要的状态/进度文件；
-3. 普通里程碑运行相关测试、typecheck、lint；V1/V1.1 历史闸门按原协议执行；V14-03 运行全量测试、typecheck、lint、production build、`git diff --check` 和代表性本地 Windows 流程；V1.4 不运行 portable/installer packaging；
+3. 普通里程碑运行相关测试、typecheck、lint；V1/V1.1 历史闸门按原协议执行；V15-03 运行全量测试、typecheck、lint、production build、`git diff --check` 和代表性本地 Windows 流程；V1.5 不运行 portable/installer packaging；
 4. 检查 `.gitignore`，确保 `.env`、Key、真实资料、运行数据库、索引、备份、日志、临时文件、`node_modules` 和构建产物未进入暂存区；
 5. 使用路径明确的 `git add -- <files...>`，不使用 `git add .` 或 `git add -A`；
 6. 提交前运行 `git diff --check`、`git diff --cached --stat`，并审阅完整 staged diff；
-7. 验收齐全且状态为 `DONE` 时，历史 V1 使用 `lean(LXX): <简短名称>`，V1.1 使用 `v1.1(V11-XX): <简短名称>`，V1.2 使用 `v1.2(V12-XX): <简短名称>`，V1.3 使用 `v1.3(V13-XX): <简短名称>`，V1.4 使用 `v1.4(V14-XX): <简短名称>`；真实阻塞使用对应任务号提交 `blocked(<任务号>): <原因>`；
+7. 验收齐全且状态为 `DONE` 时，历史 V1 使用 `lean(LXX): <简短名称>`，V1.1 使用 `v1.1(V11-XX): <简短名称>`，V1.2 使用 `v1.2(V12-XX): <简短名称>`，V1.3 使用 `v1.3(V13-XX): <简短名称>`，V1.4 使用 `v1.4(V14-XX): <简短名称>`，V1.5 使用 `v1.5(V15-XX): <简短名称>`；真实阻塞使用对应任务号提交 `blocked(<任务号>): <原因>`；
 8. 不自动 push。无法把当前成果与不明改动安全分离时停止并说明。
 
 ## 4. V1 历史审核交接
@@ -52,7 +55,7 @@
 
 审核基线：T08 使用 `checkpoint-T03-pass`；L04 使用 `checkpoint-T08-pass`；L07 使用 `checkpoint-L04-pass`；L10 使用 `checkpoint-L07-pass`；L12 使用 `checkpoint-L10-pass`。
 
-上述审核链已全部完成，只用于历史追溯。V1.1、V1.2 与 V1.3 的最终验收也已完成。V1.4 不复制多阶段审核流程：V14-01–V14-02 正常完成和提交；V14-03 是唯一最终验收点，形成 `docs/v1.4-acceptance.md`，在自动质量门、代表性本地 Windows 流程和产品负责人体验确认均完成后创建 `checkpoint-V1.4-pass`。
+上述审核链已全部完成，只用于历史追溯。V1.1、V1.2、V1.3 与 V1.4 的最终验收也已完成。V1.5 不复制多阶段审核流程：V15-01–V15-02 正常完成和提交；V15-03 是唯一最终验收点，形成 `docs/v1.5-acceptance.md`，在自动质量门、代表性本地 Windows 流程和产品负责人体验确认均完成后创建 `checkpoint-V1.5-pass`。
 
 ## 5. V1 历史 Sol 独立审核
 
