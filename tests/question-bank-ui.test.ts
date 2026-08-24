@@ -1,0 +1,34 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+import { describe, expect, it } from 'vitest'
+
+const repositoryRoot = join(__dirname, '..')
+
+describe('question bank V1.4 UI wiring', () => {
+  it('adds a native navigation page whose detail opens only after selection', () => {
+    const app = readFileSync(join(repositoryRoot, 'src', 'renderer', 'App.tsx'), 'utf8')
+    const page = readFileSync(join(repositoryRoot, 'src', 'renderer', 'question-bank-page.tsx'), 'utf8')
+    const styles = readFileSync(join(repositoryRoot, 'src', 'renderer', 'question-bank.css'), 'utf8')
+    const html = readFileSync(join(repositoryRoot, 'src', 'renderer', 'index.html'), 'utf8')
+
+    expect(app).toContain("{ label: '题库', icon: 'questionBank' }")
+    expect(app).toContain('<QuestionBankPage />')
+    expect(page).toContain('搜索题干、答案、解析或试卷名')
+    expect(page).toContain('导入素材库')
+    expect(page).toContain('加入课程')
+    expect(page).toContain('查看答案')
+    expect(page).toContain('查看解析')
+    expect(page).toContain("katex.renderToString")
+    expect(page).toContain("trust: false")
+    expect(page).toContain("selectedQuestionId !== '' && <main")
+    expect(page).toContain("current !== '' && nextResult.items.some")
+    expect(page).not.toContain("nextResult.items[0]?.id")
+    expect(page).toContain('aria-label="收起题目详情"')
+    expect(styles).toContain('.question-bank-workspace.is-detail-open')
+    expect(styles).toContain('grid-template-columns: minmax(330px, 40%) minmax(0, 1fr)')
+    expect(styles).toContain('grid-template-rows: minmax(340px, 54%) minmax(0, 46%)')
+    expect(styles).toContain('.question-bank-detail-pane')
+    expect(html).toContain("img-src 'self' data:")
+  })
+})

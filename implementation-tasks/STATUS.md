@@ -71,5 +71,5 @@
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
 | V14-01 题库快照、只读服务与安全 IPC | DONE | `.tqbank` 导出、原子导入、只读查询、单题复制、契约 / Preload / IPC / Main 接入完成；2 files / 8 tests、typecheck、lint、build、diff check 通过 |
-| V14-02 工作台原生题库浏览与单题动作 | TODO | 等待 V14-01 |
+| V14-02 工作台原生题库浏览与单题动作 | DONE | 现有工作台壳内题库导航、空状态、默认完整列表、宽屏右侧 / 窄屏下方详情、公式图片、答案解析和单题动作完成；3 files / 9 tests、typecheck、lint、build、真实快照 Electron smoke 通过 |
 | V14-03 V1.4 全量回归与版本验收 | TODO | 等待 V14-01–V14-02 |

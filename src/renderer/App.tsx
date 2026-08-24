@@ -10,10 +10,12 @@ import ExternalLibraryPanel from './external-library-panel'
 import MaterialPickerPanel from './material-picker-panel'
 import type { LessonPrepContext } from './lesson-prep-context'
 import StudentsPage from './students-page'
+import QuestionBankPage from './question-bank-page'
 
 const navigationItems = [
   { label: '我的课程', icon: 'courses' },
   { label: '搜索', icon: 'search' },
+  { label: '题库', icon: 'questionBank' },
   { label: '外部资料', icon: 'external' },
   { label: '素材库', icon: 'materials' },
   { label: '学生', icon: 'students' },
@@ -112,6 +114,8 @@ export default function App(): React.JSX.Element {
         )}
         {activeItem === '搜索' ? (
           <SearchPanel />
+        ) : activeItem === '题库' ? (
+          <QuestionBankPage />
         ) : activeItem === '我的课程' ? (
           <CourseDashboard
             selectedCourseId={selectedCourseId}
@@ -194,6 +198,8 @@ function NavigationIcon({ name }: { readonly name: NavigationIconName }): React.
       return <svg {...commonProps}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z" /><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22V5.5Z" /></svg>
     case 'search':
       return <svg {...commonProps}><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 4 4" /></svg>
+    case 'questionBank':
+      return <svg {...commonProps}><path d="M5 3.5h12a2 2 0 0 1 2 2v15H7a2 2 0 0 1-2-2v-15Z" /><path d="M8 7h8M8 11h5" /><path d="M10 16.2c.35-1.5 1.25-2.2 2.6-2.2 1.25 0 2.4.7 2.4 2 0 1.7-2 1.9-2 3" /></svg>
     case 'external':
       return <svg {...commonProps}><path d="M3.5 7.5h6l2-2h9v13h-17v-11Z" /><path d="M3.5 9.5h17" /></svg>
     case 'materials':

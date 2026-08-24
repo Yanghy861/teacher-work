@@ -731,3 +731,19 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 完成 question-bank 契约、严格 guard、白名单 IPC、Preload API、Main 生命周期和本地文件选择器；Renderer 仍不接触路径、SQLite、Node 或 BLOB。
 - 自动验收：题库 service / IPC 2 files / 8 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 47 / Preload 11 / Renderer 56 modules）；`git diff --check` ✅。
 - 未接入 Renderer 题库入口，符合 V14-01 范围；未读取旧题库、未运行 portable / installer、未修改 `main`、未 push。
+
+## 2026-08-24 · V14-02 · IN_PROGRESS
+
+- 前置：V14-01 `DONE`，本地里程碑提交 `3734dae`。
+- 当前唯一范围：在 V1.3 现有 `App` 壳和主导航中新增题库页，完成空状态、浏览筛选、按需详情、本地公式 / 图片、答案解析与单题复制交互。
+- 已冻结交互：初次搜索不自动选中第一题；默认结果区占满页面；点击题目后大窗口右侧展开，小窗口使用上下分区；详情可主动收起。
+
+## 2026-08-24 · V14-02 · DONE
+
+- 在 V1.3 原有 `App`、侧栏和内容区内新增“题库”，未替换工作台壳；空状态明确说明 `.tqbank` 与旧库只读边界。
+- 默认加载 50 个结果但不自动选中：实机 DOM 为 `detailPanes=0`、`selected=0`、结果区单列 workspace / 两列卡片；点击后才增加 `is-detail-open`。
+- 1264px 窗口实机点击后得到 `453.594px + 680.406px` 左右布局；1050px 模拟窗口得到单列与上下两行，详情位于浏览区下方；关闭按钮恢复完整结果区。
+- 真实快照实机显示 25,370 道题 / 962 份试卷；题干、选项和 13 个 KaTeX 节点正常，答案可展开；单题经 Renderer → Preload → IPC → Main 成功复制为隔离工作区素材，无错误提示。
+- “加入课程”保留原搜索位置，使用现有 Modal 选择 course / lesson；无可用 lesson 时按钮禁用，不创建伪目标。
+- 自动验收：题库 UI / service / IPC 3 files / 9 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 47 / Preload 11 / Renderer 60 modules）；`git diff --check` ✅。
+- UI smoke 使用 `D:\teacher_work\tmp\v1.4-ui-smoke-20260824-1439` 隔离 app-data；临时远程调试开关已从源码移除，未接触正式工作区、未运行 portable / installer、未修改 `main`、未 push。
