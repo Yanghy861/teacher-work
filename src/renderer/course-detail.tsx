@@ -268,6 +268,7 @@ function LessonsSection({
                         {summary.currentLesson?.id === lesson.id && <em className="is-current">Current</em>}
                         {session?.attendanceRecordedAt !== null && session?.attendanceRecordedAt !== undefined && <em>已点名</em>}
                         {session?.scheduledAt !== null && session?.scheduledAt !== undefined && <small>{formatLocalDateTime(session.scheduledAt)}</small>}
+                        {session?.durationMinutes !== null && session?.durationMinutes !== undefined && <small>{session.durationMinutes} 分钟</small>}
                       </span>
                     </button>
                   )
@@ -291,7 +292,7 @@ function LessonsSection({
           <div>
             <span className="viewed-label">Viewed Lesson</span>
             <h3>{viewedLesson.title}</h3>
-            <p>排课：{formatLocalDateTime(viewedSession?.scheduledAt ?? null)} · 点名：{viewedSession?.attendanceRecordedAt === null || viewedSession === undefined ? '未保存' : `已记录 ${viewedSession.totalCount} 人`}</p>
+            <p>排课：{formatLocalDateTime(viewedSession?.scheduledAt ?? null)} · 时长：{viewedSession?.durationMinutes === null || viewedSession === undefined ? '未设置' : `${viewedSession.durationMinutes} 分钟`} · 点名：{viewedSession?.attendanceRecordedAt === null || viewedSession === undefined ? '未保存' : `已记录 ${viewedSession.totalCount} 人`}</p>
           </div>
           <div className="viewed-lesson-actions">
             <button className="primary-button" type="button" onClick={() => {
@@ -463,20 +464,28 @@ function ScheduleLessonModal({ overview, lessonId, busy, onClose, onAction }: {
   const session = overview.lessonSessions.find((candidate) => candidate.lessonId === lessonId)
   const lesson = overview.nodes.find((candidate) => candidate.id === lessonId)
   const [value, setValue] = useState(toDateTimeLocalValue(session?.scheduledAt ?? null))
+  const [durationText, setDurationText] = useState(session?.durationMinutes?.toString() ?? '')
+  const duration = durationText.trim() === '' ? null : Number(durationText)
+  const durationValid = duration === null || (Number.isInteger(duration) && duration > 0)
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
+    if (!durationValid) return
     const scheduledAt = localDateTimeToUtc(value)
     const success = await onAction(async () => {
-      await window.teacherWorkbench.attendance.updateSchedule({ lessonId, scheduledAt })
-    }, scheduledAt === null ? '已清除上课时间。' : '上课时间已按本地时间保存。')
+      await window.teacherWorkbench.attendance.updateSchedule({ lessonId, scheduledAt, durationMinutes: duration })
+    }, scheduledAt === null
+      ? duration === null ? '已清除上课时间和课程时长。' : '已清除上课时间，课程时长已保留。'
+      : '上课时间和课程时长已按本地设置保存。')
     if (success) onClose()
   }
   return (
     <Modal title="设置上课时间" description={lesson?.title} onClose={onClose}>
       <form className="modal-form" onSubmit={(event) => void submit(event)}>
         <label className="modal-field">Windows 本地日期与时间<input type="datetime-local" value={value} disabled={busy} onChange={(event) => setValue(event.target.value)} /></label>
-        <p className="modal-hint">保存时转换为 UTC ISO 8601；“今日待点名”再按本地日界显示。</p>
-        <footer className="modal-actions"><button className="secondary-button" type="button" disabled={busy} onClick={() => setValue('')}>清除时间</button><button className="secondary-button" type="button" onClick={onClose}>取消</button><button className="primary-button" type="submit" disabled={busy}>保存</button></footer>
+        <label className="modal-field">课程时长（分钟，可选）<input type="number" min="1" step="1" value={durationText} disabled={busy} onChange={(event) => setDurationText(event.target.value)} placeholder="例如 90" /></label>
+        {!durationValid && <p className="inline-error" role="alert">课程时长必须是正整数分钟。</p>}
+        <p className="modal-hint">保存时转换为 UTC ISO 8601；清除时间不会自动清除课程时长。</p>
+        <footer className="modal-actions"><button className="secondary-button" type="button" disabled={busy} onClick={() => setValue('')}>清除时间</button><button className="secondary-button" type="button" disabled={busy} onClick={() => setDurationText('')}>清除时长</button><button className="secondary-button" type="button" onClick={onClose}>取消</button><button className="primary-button" type="submit" disabled={busy || !durationValid}>保存</button></footer>
       </form>
     </Modal>
   )

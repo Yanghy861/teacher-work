@@ -94,12 +94,13 @@ export default function QuickCourseWizardBasics({
   function goToLessons(): void {
     const stepValidation = validateQuickCourseStep(state, 1)
     if (!stepValidation.valid) return
+    const hadLessons = state.lessons.length > 0
     let lessons = state.lessons
-    if (lessons.length === 0) {
+    if (!hadLessons) {
       lessons = buildEmptyLessons(16)
       setEmptyCountText('16')
     }
-    commitState({ ...state, currentStep: 2, lessonMode: 'empty', lessons })
+    commitState({ ...state, currentStep: 2, lessonMode: hadLessons ? state.lessonMode : 'empty', lessons })
   }
 
   function selectLessonMode(mode: QuickLessonMode): void {

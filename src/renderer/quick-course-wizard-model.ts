@@ -460,8 +460,8 @@ export function validateQuickCourseStep(
   }
   if (step >= 3) {
     const scheduledCount = state.lessons.filter((lesson) => lesson.scheduledAt !== null).length
-    if (state.scheduleMode === 'regular' && scheduledCount !== state.lessons.length) {
-      issues.push('请先生成完整的规律排课。')
+    if (state.scheduleMode === 'regular' && scheduledCount === 0) {
+      issues.push('请先生成规律排课。')
     }
     if (state.scheduleMode === 'free_dates') {
       let selectedDateCount = state.selectedFreeDates.length

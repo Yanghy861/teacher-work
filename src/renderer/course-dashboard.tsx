@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import type { CoreOverview, CourseMode } from '../shared/core-contracts'
+import type { CoreOverview, CourseMode, CreateCourseSetupResult } from '../shared/core-contracts'
 import ConfirmLessonTaughtModal from './confirm-lesson-taught-modal'
 import CourseDetail from './course-detail'
 import CourseList from './course-list'
@@ -13,6 +13,7 @@ import {
 import LessonAttendanceModal from './lesson-attendance-modal'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
 import Modal from './modal'
+import QuickCourseWizard from './quick-course-wizard-full'
 
 type CourseFilter = 'active' | 'ended'
 
@@ -35,6 +36,7 @@ export default function CourseDashboard({
   const [viewedLessonId, setViewedLessonId] = useState('')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<CourseFilter>('active')
+  const [quickCourseOpen, setQuickCourseOpen] = useState(false)
   const [createCourseOpen, setCreateCourseOpen] = useState(false)
   const [attendanceLessonId, setAttendanceLessonId] = useState<string | null>(null)
   const [confirmLessonId, setConfirmLessonId] = useState<string | null>(null)
@@ -42,6 +44,7 @@ export default function CourseDashboard({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [quickCourseSuccess, setQuickCourseSuccess] = useState<CreateCourseSetupResult | null>(null)
 
   const summaries = useMemo(
     () => overview === null ? [] : buildCourseSummaries(overview),
@@ -157,6 +160,27 @@ export default function CourseDashboard({
     <div className="course-dashboard" aria-live="polite">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       {notice !== '' && <div className="inline-notice" role="status">{notice}</div>}
+      {quickCourseSuccess !== null && (
+        <div className="quick-course-success" role="status">
+          <div>
+            <strong>“{quickCourseSuccess.course.title}”已创建</strong>
+            <span>{quickCourseSuccess.lessons.length} 节课已加入课程，第 1 课已设为 Current Lesson。</span>
+          </div>
+          <div>
+            <button className="primary-button" type="button" onClick={() => {
+              const firstLesson = quickCourseSuccess.lessons[0]
+              if (firstLesson !== undefined) {
+                onStartPrep(createLessonPrepContext(
+                  quickCourseSuccess.course,
+                  firstLesson,
+                  quickCourseSuccess.students,
+                ))
+              }
+            }}>进入第 1 课备课</button>
+            <button className="modal-close" type="button" aria-label="关闭创建成功提示" onClick={() => setQuickCourseSuccess(null)}>×</button>
+          </div>
+        </div>
+      )}
 
       <header className="course-page-header">
         <div className="course-page-stats">
@@ -165,7 +189,8 @@ export default function CourseDashboard({
         </div>
         <div className="course-page-actions">
           <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
-          <button className="primary-button" type="button" disabled={busy} onClick={() => setCreateCourseOpen(true)}>+ 创建课程</button>
+          <button className="secondary-button" type="button" disabled={busy} onClick={() => setCreateCourseOpen(true)}>仅创建课程</button>
+          <button className="primary-button" type="button" disabled={busy} onClick={() => { setQuickCourseSuccess(null); setQuickCourseOpen(true) }}>+ 快速建课</button>
         </div>
       </header>
 
@@ -227,6 +252,22 @@ export default function CourseDashboard({
         )}
       </div>
 
+      {quickCourseOpen && overview !== null && (
+        <QuickCourseWizard
+          overview={overview}
+          onClose={() => setQuickCourseOpen(false)}
+          onCreated={async (result) => {
+            setFilter('active')
+            setSearch('')
+            onSelectCourse(result.course.id)
+            setViewedLessonId(result.lessons[0]?.id ?? '')
+            await reload()
+            setNotice('')
+            setQuickCourseSuccess(result)
+            setQuickCourseOpen(false)
+          }}
+        />
+      )}
       {createCourseOpen && overview !== null && (
         <CreateCourseModal
           overview={overview}
@@ -300,7 +341,7 @@ function CreateCourseModal({ overview, busy, onClose, onCreated, onAction }: {
   }
 
   return (
-    <Modal title="创建课程" description="课程与可选学生关联会在同一个 Main 事务中完成。" onClose={onClose}>
+    <Modal title="仅创建课程" description="只建立课程和可选学生关系；阶段、课次与排课稍后逐项添加。" onClose={onClose}>
       <form className="modal-form" onSubmit={(event) => void submit(event)}>
         <label className="modal-field">课程名称 *<input autoFocus value={title} disabled={busy} onChange={(event) => setTitle(event.target.value)} placeholder="例如：张三一对一" /></label>
         <fieldset className="course-mode-fieldset" disabled={busy}>

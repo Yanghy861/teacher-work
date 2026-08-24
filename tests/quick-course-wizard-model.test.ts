@@ -300,6 +300,20 @@ describe('V13-02 quick course wizard model', () => {
     })
   })
 
+  it('allows an explicitly cleared lesson to remain unscheduled after regular generation', () => {
+    const generated = generateRegularSchedule(buildEmptyLessons(3), {
+      firstDate: '2026-09-05',
+      time: '14:00',
+      repeat: 'weekly',
+      durationMinutes: 90,
+    })
+    const partial = state({
+      scheduleMode: 'regular',
+      lessons: clearLessonSchedule(generated, 'lesson-2'),
+    })
+    expect(validateQuickCourseStep(partial, 3)).toMatchObject({ valid: true, issues: [] })
+  })
+
   it('validates free-date remainder confirmation before allowing the final request', () => {
     const plan = applyFreeDateSchedule(parseTeachingPlan('主题一\n主题二\n主题三'), {
       dates: ['2026-08-03', '2026-08-10'],
