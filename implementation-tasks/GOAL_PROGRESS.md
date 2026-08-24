@@ -783,3 +783,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动验收：题库专项 3 files / 10 tests ✅；普通全量 50 files / 174 tests ✅；真实快照 1 file / 1 test ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（Main 47 / Preload 11 / Renderer 61 modules）；`git diff --check` ✅。
 - 实机验收：隔离 production Electron 工作区筛选 `2025 + 期中 + 1,2,13-15`，总数 255，首批 50 张结果卡含 105 个 KaTeX 节点，Markdown 残留转义 0；题号帮助同排，右侧详情无页面级横向溢出。
 - 安全与发布：只使用既有 `.tqbank` 快照，未读取或修改 `E:\Wss_Tiku`；未运行 portable / installer。产品负责人明确授权把本轮普通提交推送到既有 GitHub `origin/main`，但未授权创建 `checkpoint-V1.4-pass`。
+
+## 2026-08-24 · V1.4 最终体验确认 · PASS
+
+- 产品负责人明确回复“ok，验收吧，上传”，构成冻结协议要求的 V1.4 最终体验确认。
+- 最终证据：普通全量 50 files / 174 tests、真实快照 1 file / 1 test、typecheck、lint、production build、diff check、题号 / 考试类型 / 年份组合筛选、105 个结果卡 KaTeX 节点与右侧详情实机检查均为 PASS。
+- 版本动作：在本确认记录提交创建 annotated tag `checkpoint-V1.4-pass`；用户明确授权把 `main` 与该标签上传到既有 GitHub `origin`。
+- 恢复边界：`checkpoint-V1.3-pass` 继续固定指向 `8a6c8e6`，不移动、不覆盖；V1.4 标签只指向最终确认记录提交。
+- 发布边界：不修改远程配置，不运行 portable / installer，不提交真实 `.tqbank`、工作区数据库、Key、日志、临时文件或构建产物。
