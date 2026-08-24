@@ -1,6 +1,6 @@
-# 教师工作台 V1 / V1.1 / V1.2 / V1.3 全局实施约束
+# 教师工作台 V1 / V1.1 / V1.2 / V1.3 / V1.4 全局实施约束
 
-Lean V1、V1.1、V1.2 已分别在 `checkpoint-L12-pass`、`checkpoint-V1.1-pass`、`checkpoint-V1.2-pass` 完成。本文件中的安全边界继续适用于 V1.3；V1.3 的新增产品范围与简单化裁决以冻结的 V1.3 产品方案和 `V1_3_DECISIONS.md` 为准。
+Lean V1、V1.1、V1.2、V1.3 已分别在 `checkpoint-L12-pass`、`checkpoint-V1.1-pass`、`checkpoint-V1.2-pass`、`checkpoint-V1.3-pass` 完成。本文件中的安全边界继续适用于 V1.4；V1.4 的新增产品范围与简单化裁决以冻结的 V1.4 产品方案和 `V1_4_DECISIONS.md` 为准。
 
 ## 1. 产品目标
 
@@ -54,7 +54,7 @@ V1 只证明三条核心流程：
 
 ## 6. 完成与阻塞规则
 
-历史 Lxx、V11-xx 与 V12-xx 的验证记录保持不变。V13-01–V13-04 运行相关测试、typecheck、lint，并按风险补充 build 或本地 smoke；V13-05 运行全量测试、typecheck、lint、production build、`git diff --check` 和代表性本地 Windows 流程。V1.3 不运行 portable/installer packaging，不创建对外交付包，也不建立多层企业审核链。
+历史 Lxx、V11-xx、V12-xx 与 V13-xx 的验证记录保持不变。V14-01–V14-02 运行相关测试、typecheck、lint，并按风险补充 build 或本地 smoke；V14-03 运行全量测试、typecheck、lint、production build、`git diff --check` 和代表性本地 Windows 流程。V1.4 不运行 portable/installer packaging，不创建对外交付包，也不建立多层企业审核链。
 
 只有以下情况可以标记 `BLOCKED`：
 

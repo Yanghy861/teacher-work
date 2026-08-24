@@ -707,3 +707,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 最终证据：全量 47 files / 164 tests、typecheck、lint、production build、diff check、安全审计、三种排课、原子失败重试和 production 重启持久化流程均为 PASS。
 - 版本动作：在本确认记录提交创建 annotated tag `checkpoint-V1.3-pass`；用户明确授权把 `main` 与该标签上传到现有 GitHub `origin`。
 - 发布边界：不修改远程配置，不运行 portable / installer，不提交真实资料、运行数据库、Key、日志或临时文件。
+
+## 2026-08-24 · V1.4 方案冻结
+
+- 产品负责人指定题库接入为 V1.4，并确认另一窗口的 V1.3 已完成。
+- 固定基线为 `checkpoint-V1.3-pass`（`8a6c8e6`），同时由本地标签、当前 `main` 和 `origin/main` 锚定；禁止移动或覆盖该标签。
+- 在独立工作树 `D:\teacher_work\tmp\v1.4-question-bank-worktree` 与分支 `codex/v1.4-question-bank` 实施，验证通过前不修改 `main`。
+- 冻结三段实施链：V14-01 快照 / 服务 / IPC，V14-02 工作台原生 UI / 单题动作，V14-03 全量验收。
+- UI 裁决：默认完整列表；点击后宽屏右侧、窄屏下方展开详情；加入课程使用临时选择弹窗。
+- 安全边界：`E:\Wss_Tiku` 永远只读；不提交真实快照；不组卷、不同步、不运行 portable / installer、不自动 push。

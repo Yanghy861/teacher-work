@@ -65,3 +65,11 @@
 | V13-03 快速建课前两步 UI | DONE | 四步容器、课程 / 学生、重名确认、阶段 / 课次、即时预览、100 节上限和返回保留状态完成；2 files / 17 tests、typecheck、lint、build、静态 Renderer smoke、diff check 通过，未提前暴露不完整入口 |
 | V13-04 排课、确认页与课程页完整接入 | DONE | 三种排课、自由日期月历、例外 / 单节调整、全部 / 部分 / 未排确认、唯一事务提交、失败定位 / 重试、课程页主次入口、成功回详情和单节时长维护完成；10 files / 52 tests、typecheck、lint、build、diff check 与两组隔离 Windows Electron smoke 通过 |
 | V13-05 V1.3 全量回归与版本验收 | DONE | 47 files / 164 tests、typecheck、lint、production build、diff check、安全审计和 Windows 流程通过；产品负责人最终体验确认 PASS，最终确认提交用于创建并上传 `checkpoint-V1.3-pass` |
+
+## V1.4 活动里程碑
+
+| 里程碑 | 状态 | 完成/阻塞记录 |
+|---|---|---|
+| V14-01 题库快照、只读服务与安全 IPC | TODO | 等待从已完成题库分支适配到 `checkpoint-V1.3-pass` |
+| V14-02 工作台原生题库浏览与单题动作 | TODO | 等待 V14-01 |
+| V14-03 V1.4 全量回归与版本验收 | TODO | 等待 V14-01–V14-02 |
