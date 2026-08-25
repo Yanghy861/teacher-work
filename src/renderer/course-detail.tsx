@@ -295,11 +295,11 @@ function LessonsSection({
             <p>排课：{formatSessionSchedule(viewedSession)} · 时长：{viewedSession?.durationMinutes === null || viewedSession === undefined ? '未设置' : `${viewedSession.durationMinutes} 分钟`} · 点名：{viewedSession?.attendanceRecordedAt === null || viewedSession === undefined ? '未保存' : `已记录 ${viewedSession.totalCount} 人`}</p>
           </div>
           <div className="viewed-lesson-actions">
-            <button className="primary-button" type="button" onClick={() => {
+            {!summary.ended && <button className="primary-button" type="button" onClick={() => {
               const context = createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents, viewedPeriod?.title)
               if (viewedDraft === null) onStartPrep(context)
               else onOpenDraft(context, viewedDraft.id)
-            }}>{viewedDraft === null ? '开始备课' : '继续备课'}</button>
+            }}>{viewedDraft === null ? '开始备课' : '继续备课'}</button>}
             <button className="secondary-button" type="button" onClick={() => onOpenTeachingContent(createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents, viewedPeriod?.title))}>查看教学内容</button>
             <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={() => onSchedule(viewedLesson.id)}>设置时间</button>
             <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={() => onOpenAttendance(viewedLesson.id)}>
