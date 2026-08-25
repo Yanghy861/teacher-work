@@ -40,6 +40,7 @@ export default function App(): React.JSX.Element {
   const [externalPickerOpen, setExternalPickerOpen] = useState(false)
   const [materialPickerOpen, setMaterialPickerOpen] = useState(false)
   const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [selectedLessonId, setSelectedLessonId] = useState('')
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [teachingContentTarget, setTeachingContentTarget] = useState<TeachingContentTarget | null>(null)
   const [courseOriginStudentId, setCourseOriginStudentId] = useState('')
@@ -70,6 +71,8 @@ export default function App(): React.JSX.Element {
   function startPrep(context: LessonPrepContext): void {
     const originStudentId = courseOriginStudentId === '' ? undefined : courseOriginStudentId
     setTeachingContentTarget(createTeachingContentTarget(context, 'prep', originStudentId))
+    setSelectedCourseId(context.courseId)
+    setSelectedLessonId(context.lessonId)
     setPrepContext(context)
     setPrepDraftId(null)
     setExternalPickerOpen(false)
@@ -80,6 +83,8 @@ export default function App(): React.JSX.Element {
   function openDraft(context: LessonPrepContext, noteId: string): void {
     const originStudentId = courseOriginStudentId === '' ? undefined : courseOriginStudentId
     setTeachingContentTarget(createTeachingContentTarget(context, 'prep', originStudentId))
+    setSelectedCourseId(context.courseId)
+    setSelectedLessonId(context.lessonId)
     setPrepContext(context)
     setPrepDraftId(noteId)
     setExternalPickerOpen(false)
@@ -98,6 +103,7 @@ export default function App(): React.JSX.Element {
   function openCourse(courseId: string, originStudentId?: string): void
   function openCourse(courseId: string, originStudentId?: string): void {
     setSelectedCourseId(courseId)
+    setSelectedLessonId('')
     setCourseOriginStudentId(originStudentId ?? '')
     setActiveItem('课程')
   }
@@ -108,12 +114,17 @@ export default function App(): React.JSX.Element {
   }
 
   function openTeachingContent(target?: TeachingContentTarget): void {
-    if (target !== undefined) setTeachingContentTarget(target)
+    if (target !== undefined) {
+      setTeachingContentTarget(target)
+      if (target.courseId !== null) setSelectedCourseId(target.courseId)
+      if (target.lessonId !== null) setSelectedLessonId(target.lessonId)
+    }
     setActiveItem('教学内容')
   }
 
   function returnToCourses(target: TeachingContentTarget): void {
     if (target.courseId !== null) setSelectedCourseId(target.courseId)
+    if (target.lessonId !== null) setSelectedLessonId(target.lessonId)
     setActiveItem('课程')
   }
 
@@ -146,6 +157,7 @@ export default function App(): React.JSX.Element {
         ) : activeItem === '课程' ? (
           <CourseDashboard
             selectedCourseId={selectedCourseId}
+            initialViewedLessonId={selectedLessonId}
             onStartPrep={startPrep}
             onOpenDraft={openDraft}
             onOpenDraftInbox={() => openTeachingContent(createDraftInboxTarget())}

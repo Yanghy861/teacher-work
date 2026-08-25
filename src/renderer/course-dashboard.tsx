@@ -19,6 +19,7 @@ type CourseFilter = 'active' | 'ended'
 
 export default function CourseDashboard({
   selectedCourseId,
+  initialViewedLessonId,
   onStartPrep,
   onOpenDraft,
   onOpenDraftInbox,
@@ -27,6 +28,7 @@ export default function CourseDashboard({
   onOpenTeachingContent,
 }: {
   readonly selectedCourseId: string
+  readonly initialViewedLessonId: string
   readonly onStartPrep: (context: LessonPrepContext) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
   readonly onOpenDraftInbox: () => void
@@ -35,7 +37,7 @@ export default function CourseDashboard({
   readonly onOpenTeachingContent: (context: LessonPrepContext) => void
 }): React.JSX.Element {
   const [overview, setOverview] = useState<CoreOverview | null>(null)
-  const [viewedLessonId, setViewedLessonId] = useState('')
+  const [viewedLessonId, setViewedLessonId] = useState(initialViewedLessonId)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<CourseFilter>('active')
   const [quickCourseOpen, setQuickCourseOpen] = useState(false)
@@ -69,6 +71,12 @@ export default function CourseDashboard({
   ).length ?? 0
 
   useEffect(() => { void reload() }, [])
+
+  useEffect(() => {
+    if (initialViewedLessonId === '') return
+    const summary = summaries.find((candidate) => candidate.course.id === selectedCourseId)
+    if (summary?.lessons.some((lesson) => lesson.id === initialViewedLessonId)) setViewedLessonId(initialViewedLessonId)
+  }, [initialViewedLessonId, selectedCourseId, summaries])
 
   useEffect(() => {
     const target = summaries.find((summary) => summary.course.id === selectedCourseId)
