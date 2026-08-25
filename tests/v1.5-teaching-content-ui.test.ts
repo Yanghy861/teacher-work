@@ -36,6 +36,7 @@ describe('V15 teaching content workspace contract', () => {
     expect(files).toContain('沉浸阅读')
     expect(files).toContain('hideTree={immersive}')
     expect(files).not.toContain('setCurrentLesson')
+    expect(source('../src/renderer/styles.css')).toContain('.lesson-files-section.is-immersive .material-reader.is-single { grid-template-columns: minmax(0, 1fr); }')
   })
 
   it('keeps student origin and historical course read-only paths visible', () => {

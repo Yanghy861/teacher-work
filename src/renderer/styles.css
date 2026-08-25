@@ -2125,6 +2125,9 @@ button:disabled {
 .lesson-files-section.is-immersive .lesson-files-header { padding: 0 4px; }
 .lesson-files-section .material-reader { grid-template-columns: minmax(220px, 250px) minmax(0, 1fr); }
 .lesson-files-section.is-immersive .material-reader { border: 0; border-radius: 0; }
+.lesson-files-section.is-immersive .material-reader.is-single { grid-template-columns: minmax(0, 1fr); }
+.lesson-files-section.is-immersive .material-reader-document,
+.lesson-files-section.is-immersive .material-reader-scroll { width: 100%; }
 .lesson-files-section.is-immersive .material-reader.is-single { min-height: calc(100vh - 180px); }
 .lesson-files-empty { min-height: 360px; place-items: center; align-content: center; color: #64748b; text-align: center; }
 .lesson-files-empty h3 { margin: 0; color: #334155; }
