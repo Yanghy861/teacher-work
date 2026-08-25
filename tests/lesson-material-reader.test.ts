@@ -20,4 +20,14 @@ describe('lesson material Markdown reader', () => {
     expect(markup).not.toContain('katex-error')
     expect(markup).not.toContain('\\($')
   })
+
+  it('decodes escaped comparisons and renders bare LaTeX fragments', () => {
+    const markup = renderToStaticMarkup(createElement(MarkdownDocument, {
+      body: '(1) k&gt;\\frac{5}{4}; (2) 另一个根为 0',
+      files: [],
+    }))
+
+    expect(markup).toContain('class="katex"')
+    expect(markup).not.toContain('&amp;gt;')
+  })
 })

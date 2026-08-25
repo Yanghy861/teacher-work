@@ -13,6 +13,7 @@ import type {
 } from '../shared/question-bank-contracts'
 import { parseQuestionNumberExpression } from '../shared/question-bank-contracts'
 import Modal from './modal'
+import { formatPlainMarkdownText, splitMathText } from './rich-text'
 import './question-bank.css'
 
 interface FilterState {
@@ -635,31 +636,6 @@ function QuestionText({
     : <div className="question-rich-text">{content}</div>
 }
 
-interface MathTextPart {
-  readonly text: string
-  readonly formula: string | null
-  readonly displayMode: boolean
-}
-
-function splitMathText(text: string): MathTextPart[] {
-  const pattern = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$(?:\\.|[^$\\])+\$|\\\((?:\\.|[^\\])*?\\\))/gu
-  const parts: MathTextPart[] = []
-  let cursor = 0
-  for (const match of text.matchAll(pattern)) {
-    const index = match.index
-    if (index > cursor) parts.push({ text: text.slice(cursor, index), formula: null, displayMode: false })
-    const token = match[0]
-    const displayMode = token.startsWith('$$') || token.startsWith('\\[')
-    const formula = token.startsWith('$$') || token.startsWith('\\[') || token.startsWith('\\(')
-      ? token.slice(2, -2)
-      : token.slice(1, -1)
-    parts.push({ text: '', formula, displayMode })
-    cursor = index + token.length
-  }
-  if (cursor < text.length) parts.push({ text: text.slice(cursor), formula: null, displayMode: false })
-  return parts.length === 0 ? [{ text, formula: null, displayMode: false }] : parts
-}
-
 interface CourseTarget {
   readonly course: NodeRecord
   readonly label: string
@@ -730,10 +706,6 @@ function buildActiveFilterLabels(filters: FilterState): string[] {
   }
   if (filters.tags.length > 0) labels.push(`标签 ${filters.tags.length}`)
   return labels
-}
-
-function formatPlainMarkdownText(text: string): string {
-  return text.replace(/\\([\\`*_[\]{}()#+.!-])/gu, '$1')
 }
 
 function toSearchRequest(

@@ -8,6 +8,7 @@ import {
   isSelectableLessonPrepFile,
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
+import { normalizeRichText } from './rich-text'
 
 export default function LessonMaterialReader({
   files,
@@ -434,8 +435,8 @@ function renderParagraphLines(
 
 function renderInline(text: string, files: readonly ManagedFileRecord[], keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = []
-  const normalizedText = normalizeSiYuanInlineMath(text)
-  const pattern = /(!\[[^\]]*\]\([^)]*\)|\[[^\]]+\]\([^)]*\)|`[^`]+`|\\\([^\n]+?\\\)|\$\$[^$]+?\$\$|\$[^$\n]+?\$|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/gu
+  const normalizedText = normalizeRichText(text)
+  const pattern = /(!\[[^\]]*\]\([^)]*\)|\[[^\]]+\]\([^)]*\)|`[^`]+`|\\\([^\n]+?\\\)|\\\[[^\n]+?\\\]|\$\$[^$]+?\$\$|\$[^$\n]+?\$|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/gu
   let cursor = 0
   let match: RegExpExecArray | null
   let tokenIndex = 0
@@ -469,13 +470,6 @@ function renderInline(text: string, files: readonly ManagedFileRecord[], keyPref
   }
   if (cursor < normalizedText.length) nodes.push(normalizedText.slice(cursor))
   return nodes
-}
-
-function normalizeSiYuanInlineMath(text: string): string {
-  const withoutInvisibleCharacters = text.replace(/\u200B|\u200C|\u200D|\uFEFF/gu, '')
-  return withoutInvisibleCharacters
-    .replace(/\\\(\$([^$\n]+)\$\\\)/gu, (_match, formula: string) => `$${formula}$`)
-    .replace(/\\\(\$([^$\n]+)\$\$\)\$/gu, (_match, formula: string) => `$${formula}$`)
 }
 
 function MathSpan({ formula, display = false }: { readonly formula: string; readonly display?: boolean }): React.JSX.Element {
