@@ -24,6 +24,7 @@ export default function CourseDashboard({
   onOpenDraftInbox,
   onSelectCourse,
   onOpenStudent,
+  onOpenTeachingContent,
 }: {
   readonly selectedCourseId: string
   readonly onStartPrep: (context: LessonPrepContext) => void
@@ -31,6 +32,7 @@ export default function CourseDashboard({
   readonly onOpenDraftInbox: () => void
   readonly onSelectCourse: (courseId: string) => void
   readonly onOpenStudent: (studentId: string) => void
+  readonly onOpenTeachingContent: (context: LessonPrepContext) => void
 }): React.JSX.Element {
   const [overview, setOverview] = useState<CoreOverview | null>(null)
   const [viewedLessonId, setViewedLessonId] = useState('')
@@ -248,6 +250,7 @@ export default function CourseDashboard({
             onOpenAttendance={setAttendanceLessonId}
             onConfirmTaught={setConfirmLessonId}
             onOpenStudent={onOpenStudent}
+            onOpenTeachingContent={onOpenTeachingContent}
             onAction={runAction}
           />
         )}

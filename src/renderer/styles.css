@@ -18,7 +18,7 @@ body,
 
 body {
   margin: 0;
-  min-width: 960px;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -95,6 +95,50 @@ nav {
   overscroll-behavior: contain;
   padding: 10px 12px 12px;
 }
+
+.teaching-content-page {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.teaching-content-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 4px 2px 12px;
+}
+
+.teaching-content-context { min-width: 0; }
+.teaching-content-context h1 { overflow: hidden; margin: 0 0 5px; color: #172554; font-size: 21px; text-overflow: ellipsis; white-space: nowrap; }
+.teaching-content-context p { margin: 0; color: #64748b; font-size: 12px; }
+.teaching-content-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.teaching-content-tabs { display: flex; gap: 18px; border-bottom: 1px solid #e2e8f0; padding: 0 4px; }
+.teaching-content-tabs button { border: 0; border-bottom: 2px solid transparent; padding: 10px 3px 8px; color: #64748b; background: transparent; cursor: pointer; font-size: 13px; font-weight: 800; }
+.teaching-content-tabs button.is-active { border-bottom-color: #2563eb; color: #1d4ed8; }
+.teaching-content-empty { display: grid; min-height: 320px; place-items: center; align-content: center; gap: 8px; text-align: center; }
+.teaching-content-empty h2 { margin: 0; color: #172554; font-size: 20px; }
+.teaching-content-empty p { max-width: 480px; margin: 0 0 8px; color: #64748b; line-height: 1.7; }
+.teaching-content-drawer-backdrop { position: fixed; z-index: 90; inset: 0; display: flex; background: rgb(15 23 42 / 28%); }
+.teaching-content-drawer { display: flex; width: min(360px, 92vw); height: 100%; flex-direction: column; border-right: 1px solid #dbe2ea; padding: 18px 14px; background: #fff; box-shadow: 18px 0 48px rgb(15 23 42 / 15%); }
+.teaching-content-drawer > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border-bottom: 1px solid #e2e8f0; padding: 0 2px 13px; }
+.teaching-content-drawer h2 { margin: 0; color: #172554; font-size: 18px; }
+.teaching-content-drawer-list { display: grid; align-content: start; gap: 10px; min-height: 0; overflow-y: auto; padding: 14px 2px 4px; }
+.teaching-content-drawer-list > section { display: grid; gap: 7px; border-bottom: 1px solid #eef2f7; padding-bottom: 10px; }
+.teaching-content-drawer-list > section > strong { color: #1e293b; font-size: 13px; }
+.teaching-content-period { display: grid; gap: 4px; padding-left: 8px; }
+.teaching-content-period > span { color: #64748b; font-size: 11px; font-weight: 700; }
+.teaching-content-period button { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; width: 100%; border: 1px solid transparent; border-radius: 7px; padding: 7px 8px; color: #334155; background: #f8fafc; cursor: pointer; text-align: left; }
+.teaching-content-period button:hover,
+.teaching-content-period button.is-selected { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
+.teaching-content-period button small { color: #64748b; font-size: 10px; }
+.teaching-content-period button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 h1,
 h2,
@@ -2076,7 +2120,12 @@ button:disabled {
 .historical-students { margin-top: 14px; color: #64748b; font-size: 12px; }
 .historical-students summary { margin-bottom: 8px; cursor: pointer; font-weight: 700; }
 
-.lesson-files-section { display: grid; gap: 14px; padding: 15px; }
+.lesson-files-section { display: grid; min-width: 0; gap: 14px; padding: 15px; }
+.lesson-files-section.is-immersive { padding: 8px 0 0; }
+.lesson-files-section.is-immersive .lesson-files-header { padding: 0 4px; }
+.lesson-files-section .material-reader { grid-template-columns: minmax(220px, 250px) minmax(0, 1fr); }
+.lesson-files-section.is-immersive .material-reader { border: 0; border-radius: 0; }
+.lesson-files-section.is-immersive .material-reader.is-single { min-height: calc(100vh - 180px); }
 .lesson-files-empty { min-height: 360px; place-items: center; align-content: center; color: #64748b; text-align: center; }
 .lesson-files-empty h3 { margin: 0; color: #334155; }
 .lesson-files-empty p { margin: 6px 0 0; }

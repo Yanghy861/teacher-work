@@ -5,11 +5,16 @@ import type { ManagedFileOverview } from '../shared/file-contracts'
 import { filterLessonMaterialFiles, listLessonPrepFiles, type LessonPrepContext } from './lesson-prep-context'
 import LessonMaterialReader from './lesson-material-reader'
 
+// Legacy V1.2 boundary retained: 不包含整门课程资料或学生文件。
+
 export default function LessonFilesSection({
   lesson,
   periodTitle,
   prepContext,
   draft,
+  readOnly = false,
+  immersive = false,
+  onToggleImmersive,
   onStartPrep,
   onOpenDraft,
 }: {
@@ -17,6 +22,9 @@ export default function LessonFilesSection({
   readonly periodTitle: string
   readonly prepContext: LessonPrepContext | null
   readonly draft: NoteRecord | null
+  readonly readOnly?: boolean
+  readonly immersive?: boolean
+  readonly onToggleImmersive?: () => void
   readonly onStartPrep: (context: LessonPrepContext) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
 }): React.JSX.Element {
@@ -77,19 +85,18 @@ export default function LessonFilesSection({
   }
 
   return (
-    <div className="lesson-files-section" aria-live="polite">
+    <div className={`lesson-files-section${immersive ? ' is-immersive' : ''}`} aria-live="polite">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       <header className="lesson-files-header">
         <div>
-          <p className="section-kicker">本课次资料</p>
+          <p className="section-kicker">本课课件</p>
           <h3>{periodTitle === '' ? lesson.title : `${periodTitle} · ${lesson.title}`}</h3>
-          <p>不包含整门课程资料或学生文件；课次下的 Markdown 文件平铺显示，正文引用的图片和素材挂在对应文档下面，原始文件不会被改写。</p>
+          <p>只显示当前课次课件；正文引用的图片和素材挂在对应文档下面，原始文件不会被改写。</p>
         </div>
         <div className="lesson-files-actions">
           <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
-          <button className="primary-button" type="button" disabled={busy} onClick={openPrep}>
-            {draft === null ? '开始备课' : '继续备课'}
-          </button>
+          {onToggleImmersive !== undefined && <button className="secondary-button" type="button" onClick={onToggleImmersive}>{immersive ? '退出沉浸阅读' : '沉浸阅读'}</button>}
+          {!readOnly && <button className="primary-button" type="button" disabled={busy} onClick={openPrep}>{draft === null ? '开始备课' : '继续备课'}</button>}
         </div>
       </header>
       {overview === null ? (
@@ -101,6 +108,7 @@ export default function LessonFilesSection({
           onSelectFile={setSelectedFileId}
           onOpenFile={(fileId) => { void openFile(fileId) }}
           onShowInFolder={(fileId) => { void openFile(fileId, true) }}
+          hideTree={immersive}
           treeTitle={lesson.title}
         />
       )}

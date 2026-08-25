@@ -80,6 +80,6 @@
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
-| V15-01 课程导航目标与双向返回 | TODO | 等待按 V1.5 冻结方案实施 |
-| V15-02 课次课件浏览与备课动作分离 | TODO | 前置 V15-01 `DONE` |
+| V15-01 教学内容导航目标与双向入口 | DONE | Renderer 类型化教学内容目标、课程/学生/直接入口、草稿箱迁移、临时上下文与双向返回完成；52 files / 180 tests、typecheck、lint、production build、diff check 通过；未运行 portable/installer |
+| V15-02 教学内容工作台与宽正文 | IN_PROGRESS | 三分区工作台、临时课次抽屉、课件正文与沉浸阅读已接入；待补代表性 Windows 流程与最终 UI 宽度验收 |
 | V15-03 V1.5 全量回归与版本验收 | TODO | 前置 V15-01–V15-02 `DONE`；最终体验确认前不创建 `checkpoint-V1.5-pass` |

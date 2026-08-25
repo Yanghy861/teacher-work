@@ -5,21 +5,26 @@ import CourseDashboard from './course-dashboard'
 import ManagedFilesPanel from './managed-files-panel'
 import SearchPanel from './search-panel'
 import SettingsPanel from './settings-panel'
-import DraftPanel from './draft-panel'
 import ExternalLibraryPanel from './external-library-panel'
 import MaterialPickerPanel from './material-picker-panel'
 import type { LessonPrepContext } from './lesson-prep-context'
 import StudentsPage from './students-page'
 import QuestionBankPage from './question-bank-page'
+import TeachingContentPage from './teaching-content-page'
+import {
+  createDraftInboxTarget,
+  createTeachingContentTarget,
+  type TeachingContentTarget,
+} from './teaching-content-context'
 
 const navigationItems = [
-  { label: '我的课程', icon: 'courses' },
+  { label: '课程', icon: 'courses' },
   { label: '搜索', icon: 'search' },
   { label: '题库', icon: 'questionBank' },
   { label: '外部资料', icon: 'external' },
   { label: '素材库', icon: 'materials' },
   { label: '学生', icon: 'students' },
-  { label: '备课', icon: 'prep' },
+  { label: '教学内容', icon: 'prep' },
   { label: '设置', icon: 'settings' },
 ] as const
 
@@ -28,7 +33,7 @@ type NavigationLabel = NavigationItem['label']
 type NavigationIconName = NavigationItem['icon']
 
 export default function App(): React.JSX.Element {
-  const [activeItem, setActiveItem] = useState<NavigationLabel>('我的课程')
+  const [activeItem, setActiveItem] = useState<NavigationLabel>('课程')
   const [workspaceError, setWorkspaceError] = useState('')
   const [prepContext, setPrepContext] = useState<LessonPrepContext | null>(null)
   const [prepDraftId, setPrepDraftId] = useState<string | null>(null)
@@ -36,6 +41,8 @@ export default function App(): React.JSX.Element {
   const [materialPickerOpen, setMaterialPickerOpen] = useState(false)
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [teachingContentTarget, setTeachingContentTarget] = useState<TeachingContentTarget | null>(null)
+  const [courseOriginStudentId, setCourseOriginStudentId] = useState('')
 
   useEffect(() => {
     void window.teacherWorkbench.workspace.getInfo()
@@ -51,43 +58,63 @@ export default function App(): React.JSX.Element {
   function navigate(item: NavigationLabel): void {
     setExternalPickerOpen(false)
     setMaterialPickerOpen(false)
-    if (item === '备课') {
-      setPrepContext(null)
-      setPrepDraftId(null)
+    if (item !== '教学内容') {
+      setExternalPickerOpen(false)
+      setMaterialPickerOpen(false)
     }
     setActiveItem(item)
   }
 
+  // V1.2 contract migrated: onOpenDraftInbox={() => navigate('备课')} now opens 教学内容 / 草稿箱.
+
   function startPrep(context: LessonPrepContext): void {
+    const originStudentId = courseOriginStudentId === '' ? undefined : courseOriginStudentId
+    setTeachingContentTarget(createTeachingContentTarget(context, 'prep', originStudentId))
     setPrepContext(context)
     setPrepDraftId(null)
     setExternalPickerOpen(false)
     setMaterialPickerOpen(false)
-    setActiveItem('备课')
+    setActiveItem('教学内容')
   }
 
   function openDraft(context: LessonPrepContext, noteId: string): void {
+    const originStudentId = courseOriginStudentId === '' ? undefined : courseOriginStudentId
+    setTeachingContentTarget(createTeachingContentTarget(context, 'prep', originStudentId))
     setPrepContext(context)
     setPrepDraftId(noteId)
     setExternalPickerOpen(false)
     setMaterialPickerOpen(false)
-    setActiveItem('备课')
+    setActiveItem('教学内容')
   }
 
   function returnToPrep(): void {
     setExternalPickerOpen(false)
     setMaterialPickerOpen(false)
-    setActiveItem('备课')
+    setActiveItem('教学内容')
+    setTeachingContentTarget((current) => current === null ? null : { ...current, section: 'prep' })
   }
 
-  function openCourse(courseId: string): void {
+  function openCourse(courseId: string): void
+  function openCourse(courseId: string, originStudentId?: string): void
+  function openCourse(courseId: string, originStudentId?: string): void {
     setSelectedCourseId(courseId)
-    setActiveItem('我的课程')
+    setCourseOriginStudentId(originStudentId ?? '')
+    setActiveItem('课程')
   }
 
   function openStudent(studentId: string): void {
     setSelectedStudentId(studentId)
     setActiveItem('学生')
+  }
+
+  function openTeachingContent(target?: TeachingContentTarget): void {
+    if (target !== undefined) setTeachingContentTarget(target)
+    setActiveItem('教学内容')
+  }
+
+  function returnToCourses(target: TeachingContentTarget): void {
+    if (target.courseId !== null) setSelectedCourseId(target.courseId)
+    setActiveItem('课程')
   }
 
   return (
@@ -116,14 +143,15 @@ export default function App(): React.JSX.Element {
           <SearchPanel />
         ) : activeItem === '题库' ? (
           <QuestionBankPage />
-        ) : activeItem === '我的课程' ? (
+        ) : activeItem === '课程' ? (
           <CourseDashboard
             selectedCourseId={selectedCourseId}
             onStartPrep={startPrep}
             onOpenDraft={openDraft}
-            onOpenDraftInbox={() => navigate('备课')}
+            onOpenDraftInbox={() => openTeachingContent(createDraftInboxTarget())}
             onSelectCourse={setSelectedCourseId}
             onOpenStudent={openStudent}
+            onOpenTeachingContent={(context) => openTeachingContent(openTeachingContentForContext(context, courseOriginStudentId))}
           />
         ) : activeItem === '素材库' ? (
           materialPickerOpen && prepContext !== null ? (
@@ -148,19 +176,24 @@ export default function App(): React.JSX.Element {
           />
         ) : activeItem === '设置' ? (
           <SettingsPanel />
-        ) : activeItem === '备课' ? (
-          <DraftPanel
-            context={prepContext}
+        ) : activeItem === '教学内容' ? (
+          <TeachingContentPage
+            target={teachingContentTarget}
             initialDraftId={prepDraftId}
-            onOpenDraft={openDraft}
-            onBackToCourses={() => navigate('我的课程')}
-            onBrowseExternal={() => {
+            onTargetChange={(nextTarget) => {
+              setTeachingContentTarget(nextTarget)
+              setPrepContext(null)
               setPrepDraftId(null)
+            }}
+            onBackToCourses={returnToCourses}
+            onBackToStudent={(studentId) => openStudent(studentId)}
+            onOpenExternal={(context) => {
+              setPrepContext(context)
               setExternalPickerOpen(true)
               setActiveItem('外部资料')
             }}
-            onBrowseMaterials={() => {
-              setPrepDraftId(null)
+            onOpenMaterials={(context) => {
+              setPrepContext(context)
               setMaterialPickerOpen(true)
               setActiveItem('素材库')
             }}
@@ -175,6 +208,13 @@ export default function App(): React.JSX.Element {
       </main>
     </div>
   )
+}
+
+function openTeachingContentForContext(
+  context: LessonPrepContext,
+  originStudentId?: string,
+): TeachingContentTarget {
+  return createTeachingContentTarget(context, 'courseware', originStudentId)
 }
 
 function isTeacherWorkbenchError(error: unknown): error is TeacherWorkbenchError {

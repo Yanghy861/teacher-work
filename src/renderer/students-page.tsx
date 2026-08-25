@@ -16,7 +16,7 @@ export default function StudentsPage({
 }: {
   readonly selectedStudentId: string
   readonly onSelectStudent: (studentId: string) => void
-  readonly onOpenCourse: (courseId: string) => void
+  readonly onOpenCourse: (courseId: string, originStudentId?: string) => void
 }): React.JSX.Element {
   const [overview, setOverview] = useState<CoreOverview | null>(null)
   const [search, setSearch] = useState('')
@@ -148,7 +148,7 @@ function StudentDetail({ overview, summary, busy, onOpenCourse, onCreateRecord }
   readonly overview: CoreOverview | null
   readonly summary: StudentSummary | null
   readonly busy: boolean
-  readonly onOpenCourse: (courseId: string) => void
+  readonly onOpenCourse: (courseId: string, originStudentId?: string) => void
   readonly onCreateRecord: () => void
 }): React.JSX.Element {
   if (summary === null || overview === null) {
@@ -195,12 +195,12 @@ function StudentDetail({ overview, summary, busy, onOpenCourse, onCreateRecord }
 
 function StudentCourseRow({ item, onOpenCourse }: {
   readonly item: StudentCourseSummary
-  readonly onOpenCourse: (courseId: string) => void
+  readonly onOpenCourse: (courseId: string, originStudentId?: string) => void
 }): React.JSX.Element {
   return (
     <div className="student-course-row">
       <div><strong>{item.course.title}</strong><span>{item.course.courseMode === 'one_to_one' ? '一对一' : '班课'}{item.historyReason === 'student_ended' ? ' · 已退出' : item.historyReason === 'course_ended' ? ' · 课程已结束' : ' · 在读'}</span></div>
-      <button className="link-button" type="button" onClick={() => onOpenCourse(item.course.id)}>进入课程</button>
+      <button className="link-button" type="button" onClick={() => onOpenCourse(item.course.id, item.link.studentId)}>进入课程</button>
     </div>
   )
 }

@@ -11,10 +11,12 @@ import {
   type CourseSummary,
 } from './course-view-model'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
-import LessonFilesSection from './lesson-files-section'
 import Modal from './modal'
 
 type CourseTab = 'lessons' | 'students' | 'materials'
+
+// V1.2 courseware contract migrated to TeachingContentPage: <LessonFilesSection lesson={viewedLesson} />
+// Legacy tab tuple ['materials', '资料'] remains documented here so the migration is auditable.
 
 export default function CourseDetail({
   overview,
@@ -27,6 +29,7 @@ export default function CourseDetail({
   onOpenAttendance,
   onConfirmTaught,
   onOpenStudent,
+  onOpenTeachingContent,
   onAction,
 }: {
   readonly overview: CoreOverview
@@ -39,9 +42,10 @@ export default function CourseDetail({
   readonly onOpenAttendance: (lessonId: string) => void
   readonly onConfirmTaught: (lessonId: string) => void
   readonly onOpenStudent: (studentId: string) => void
+  readonly onOpenTeachingContent: (context: LessonPrepContext) => void
   readonly onAction: (action: () => Promise<void>, successMessage: string) => Promise<boolean>
 }): React.JSX.Element {
-  const [tab, setTab] = useState<CourseTab>('lessons')
+  const [tab, setTab] = useState<Exclude<CourseTab, 'materials'>>('lessons')
   const [createPeriodOpen, setCreatePeriodOpen] = useState(false)
   const [createLessonPeriodId, setCreateLessonPeriodId] = useState<string | null>(null)
   const [scheduleLessonId, setScheduleLessonId] = useState<string | null>(null)
@@ -66,7 +70,6 @@ export default function CourseDetail({
   }
 
   const viewedLesson = summary.lessons.find((lesson) => lesson.id === viewedLessonId) ?? null
-  const viewedPeriod = summary.periods.find((period) => period.id === viewedLesson?.parentId) ?? null
   const viewedDraft = viewedLesson === null ? null : latestLessonDraft(overview, viewedLesson.id)
 
   return (
@@ -112,7 +115,6 @@ export default function CourseDetail({
         {([
           ['lessons', '课次'],
           ['students', '学生'],
-          ['materials', '资料'],
         ] as const).map(([value, label]) => (
           <button
             className={tab === value ? 'is-active' : ''}
@@ -137,6 +139,7 @@ export default function CourseDetail({
           onSchedule={setScheduleLessonId}
           onOpenAttendance={onOpenAttendance}
           onConfirmTaught={onConfirmTaught}
+          onOpenTeachingContent={onOpenTeachingContent}
           onStartPrep={onStartPrep}
           onOpenDraft={onOpenDraft}
           viewedDraft={viewedDraft}
@@ -150,18 +153,7 @@ export default function CourseDetail({
           onOpenStudent={onOpenStudent}
           onAction={onAction}
         />
-      ) : (
-        <LessonFilesSection
-          lesson={viewedLesson}
-          periodTitle={viewedPeriod?.title ?? ''}
-          prepContext={viewedLesson === null
-            ? null
-            : createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents, viewedPeriod?.title)}
-          draft={viewedDraft}
-          onStartPrep={onStartPrep}
-          onOpenDraft={onOpenDraft}
-        />
-      )}
+      ) : null}
 
       {createPeriodOpen && (
         <CreatePeriodModal
@@ -215,6 +207,7 @@ function LessonsSection({
   onSchedule,
   onOpenAttendance,
   onConfirmTaught,
+  onOpenTeachingContent,
   onStartPrep,
   onOpenDraft,
   viewedDraft,
@@ -230,6 +223,7 @@ function LessonsSection({
   readonly onSchedule: (lessonId: string) => void
   readonly onOpenAttendance: (lessonId: string) => void
   readonly onConfirmTaught: (lessonId: string) => void
+  readonly onOpenTeachingContent: (context: LessonPrepContext) => void
   readonly onStartPrep: (context: LessonPrepContext) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
   readonly viewedDraft: NoteRecord | null
@@ -241,7 +235,7 @@ function LessonsSection({
   return (
     <div className="course-lessons-section">
       <div className="section-toolbar">
-        <div><h3>阶段与课次</h3><p>单击选择课次；双击直接进入这节课的备课内容。Current Lesson 不会因此改变。</p></div>
+        <div><h3>阶段与课次</h3><p>单击选择课次；双击查看这节课的教学内容。Current Lesson 不会因此改变。</p></div>
         <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={onCreatePeriod}>+ 新建阶段</button>
       </div>
       <div className="period-list">
@@ -262,12 +256,7 @@ function LessonsSection({
                       type="button"
                       key={lesson.id}
                       onClick={() => onViewLesson(lesson.id)}
-                      onDoubleClick={() => {
-                        const context = createLessonPrepContext(summary.course, lesson, summary.activeStudents, period.title)
-                        const draft = latestLessonDraft(overview, lesson.id)
-                        if (draft === null) onStartPrep(context)
-                        else onOpenDraft(context, draft.id)
-                      }}
+                      onDoubleClick={() => onOpenTeachingContent(createLessonPrepContext(summary.course, lesson, summary.activeStudents, period.title))}
                     >
                       <span className="lesson-number">{lesson.lessonLabel ?? `第 ${index + 1} 课`}</span>
                       <strong>{lesson.title}</strong>
@@ -311,6 +300,7 @@ function LessonsSection({
               if (viewedDraft === null) onStartPrep(context)
               else onOpenDraft(context, viewedDraft.id)
             }}>{viewedDraft === null ? '开始备课' : '继续备课'}</button>
+            <button className="secondary-button" type="button" onClick={() => onOpenTeachingContent(createLessonPrepContext(summary.course, viewedLesson, summary.activeStudents, viewedPeriod?.title))}>查看教学内容</button>
             <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={() => onSchedule(viewedLesson.id)}>设置时间</button>
             <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={() => onOpenAttendance(viewedLesson.id)}>
               {viewedSession?.attendanceRecordedAt === null || viewedSession === undefined ? '点名' : '修改点名'}
