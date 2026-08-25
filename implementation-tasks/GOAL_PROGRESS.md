@@ -820,3 +820,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 工作台已接入：课件 / 备课 / 草稿箱三分区、临时课程/课次抽屉、上一课/下一课、课件目录与正文、沉浸阅读、历史课程只读状态；未新增 schema、migration、Service 或 IPC。
 - 自动验证：`npm test` 通过 52 files / 180 tests（1 skipped）；`npm run typecheck`、`npm run lint`、`npm run build`、`git diff --check` 均通过；未运行 portable/installer。
 - 下一步：补 V15-02 的 1200px 正文宽度与窄窗口本地流程证据，再进入 V15-03 全量验收；当前不创建 `checkpoint-V1.5-pass`。
+
+## 2026-08-25 · V15-02 · IN_PROGRESS · 备课布局溢出修复
+
+- 问题定位：备课 AI 卡片宽度约 280–330px 时，Skill / 本次要求输入仍强制 `minmax(200px)` + `minmax(280px)` 两列，导致右侧控件溢出并触发页面级横向滚动。
+- 关键改动：`.prep-input-grid` 改为可收缩的 `repeat(2, minmax(0, 1fr))`，输入标签允许收缩；`.content-area` 明确 `overflow-x: hidden`，避免子内容把整个工作台撑出横向滚动条。
+- 修改文件：`src/renderer/styles.css`、`tests/v1.5-teaching-content-ui.test.ts`、本文件与 `STATUS.md`。
+- 验证命令与结果：V15-02 相关测试 2 files / 7 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`git diff --check` ✅；未运行 portable/installer。
+- 当前状态：仍为 `IN_PROGRESS`；尚缺约 1200px / 窄窗口代表性 Windows 流程证据，未创建 `checkpoint-V1.5-pass`。

@@ -48,4 +48,13 @@ describe('V15 teaching content workspace contract', () => {
     expect(page).toContain('返回学生')
     expect(page).toContain('历史课程只读')
   })
+
+  it('keeps the prep controls inside the narrow AI card', () => {
+    const styles = source('../src/renderer/styles.css')
+    const contentArea = styles.match(/\.content-area\s*\{([^}]*)\}/u)?.[1] ?? ''
+    const prepGrid = styles.match(/\.prep-input-grid\s*\{([^}]*)\}/u)?.[1] ?? ''
+    expect(contentArea).toContain('overflow-x: hidden')
+    expect(prepGrid).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))')
+    expect(prepGrid).toContain('min-width: 0')
+  })
 })
