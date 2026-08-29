@@ -2,7 +2,7 @@
 
 Lean V1 的 T01–T08 与 L01–L12、V1.1 的 V11-01–V11-05、V1.2 的 V12-01–V12-05、V1.3 的 V13-01–V13-05、V1.4 的 V14-01–V14-03、V1.5 的 V15-01–V15-03 均已完成；稳定基线依次为 `checkpoint-L12-pass`、`checkpoint-V1.1-pass`、`checkpoint-V1.2-pass`、`checkpoint-V1.3-pass`、`checkpoint-V1.4-pass`、`checkpoint-V1.5-pass`。旧 `tasks/T09-*` 至 `tasks/T42-*` 已退役，只保留历史参考；所有已完成状态和验收记录不得因后续增量重新实现或改写。
 
-V1.5（增量 V1.5.1）已完成并在 `checkpoint-V1.5-pass` 冻结。当前活动增量是 V1.5.2「AI 修改工作台/修改工作区」：产品方案在主规格第 11 节，实施决策为 `implementation-tasks/V1_5_DECISIONS.md` 的 D09–D15，唯一活动链为 `implementation-tasks/v1.5.2-tasks/` 中的 V152-A–V152-E。V1.5 的历史状态与验收记录不得改写。参考图只用于布局和交互关系；与冻结文字方案冲突时以文字为准。
+V1.5（增量 V1.5.1）与 V1.5.2（AI 修改工作区，V152-A–E）均已分别冻结在 `checkpoint-V1.5-pass` 与 `checkpoint-V1.5.2-pass`。当前无活动实施链；下一增量 V1.5.3 由产品负责人确认后另行冻结任务链（候选见验收报告）。V1.5/V1.5.2 的历史状态与验收记录不得改写；与冻结文字方案冲突时以文字为准。
 
 当用户指定当前实现任务时：
 
