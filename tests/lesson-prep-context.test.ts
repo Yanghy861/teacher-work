@@ -150,4 +150,16 @@ describe('V11-02 lesson prep renderer state', () => {
       { periodTitle: '七年级春季', lessonLabel: '第二课' },
     ).map((item) => item.id)).toEqual([lecture.id, feedback.id])
   })
+
+  it('keeps real topic-titled lectures while hiding bare numbered indexes (V152-E)', () => {
+    const bareIndex = file('bare', '第12讲.md', 'text/markdown')
+    const bareCourseIndex = file('bare-course', '第3课.md', 'text/markdown')
+    const realLecture = file('real-lecture', '第1讲 实数综合.md', 'text/markdown')
+    const anotherReal = file('real-2', '第5讲 二次根式综合.md', 'text/markdown')
+
+    expect(filterLessonMaterialFiles(
+      [bareIndex, bareCourseIndex, realLecture, anotherReal],
+      { periodTitle: '七升八暑假', lessonLabel: '第 1 讲' },
+    ).map((item) => item.id)).toEqual([realLecture.id, anotherReal.id])
+  })
 })

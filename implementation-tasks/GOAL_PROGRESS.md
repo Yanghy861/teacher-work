@@ -912,3 +912,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Renderer：结果区"保存为新版本"按钮 + 确认弹窗 + 成功消息（含文件名与版次）。
 - 验证：全量 55 files / 196 tests（新增 V152-D 契约断言：原子写、路径、命名计数、状态迁移）✅、typecheck、lint、build、diff check ✅。隔离发布 UI smoke 与三层验收归入 V152-E。未运行 portable/installer。
 - Git：由 `v1.5.2(V152-D): publish work copy as new courseware version` 本地提交收束；不 push。
+
+## 2026-08-29 · V152-E · DONE / AWAITING_PRODUCT_CONFIRMATION
+
+- 真实数据验收：产品负责人提供思源导出真实暑期课资料（306 文件，含学生隐私；仅存临时目录、不入 Git、报告匿名、验后已删除）。隔离 production 工作区完成全链路：SQL 种课 → 素材库 UI 导入真实讲义（5.8KB LaTeX 课件）→ 备课副本 → 中继式改进（真实语义方案+讲义 v2）→ 跨重启工作副本恢复 → 保存为新版本《第 1 讲 实数综合 · 第 1 版.md》→ 课件区 v1（5788B）/v2（2326B）并存且均 indexed → 节点转"已确认成果"。
+- 缺陷修复（真实数据暴露）：V1.5 引入的思源结构性文件过滤正则过宽，把"第1讲 实数综合.md"等真实讲义误判为目录索引而在备课资料区隐藏；收窄为仅匹配裸编号并新增真实命名回归测试。
+- D15 三层 AI 验收：自动门持续通过；中继式开发验收完整执行（序号化 reply-N 机制固化）；真实 Key 最终体验待产品负责人执行。
+- 自动门：`npm test` 54 files / 197 tests、typecheck、lint、production build、`git diff --check` 全过；未运行 portable/installer；未 push。
+- 对话框自动化改用 CDP `Page.handleJavaScriptDialog` 自动应答，替代模拟点击系统弹窗（B 轮遗留问题的根治）。
+- 验收报告：`docs/v1.5.2-acceptance.md`。V152-A–E 全部 `DONE`；`checkpoint-V1.5.2-pass` 待产品负责人真实 Key 最终体验确认；临时隔离环境（含学生隐私资料）已全部删除。

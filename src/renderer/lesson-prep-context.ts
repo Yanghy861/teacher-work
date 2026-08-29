@@ -95,7 +95,8 @@ function isStructuralLessonIndexFile(
 
   // 导出的思源目录索引会以“第X课/讲”或“年级/升学阶段+季节”命名。
   // 这些文件代表文件夹入口，不应在某一节课的正文资料中重复出现。
-  if (/^第.+(?:课|讲)(?:\s|$)/u.test(baseName)) return true
+  // 只有裸编号（如“第12讲”“第3课”）才是目录索引；带主题后缀（如“第1讲 实数综合”）是真实内容。
+  if (/^第.+?(?:课|讲)\s*$/u.test(baseName)) return true
   if (/(?:年级|升).*(?:春|秋|寒|暑)|(?:春|秋|寒|暑)假/u.test(baseName)) return true
   return baseName === '总课程大纲'
 }
