@@ -828,3 +828,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 修改文件：`src/renderer/styles.css`、`tests/v1.5-teaching-content-ui.test.ts`、本文件与 `STATUS.md`。
 - 验证命令与结果：V15-02 相关测试 2 files / 7 tests ✅；`npm run typecheck` ✅；`npm run lint` ✅；`git diff --check` ✅；未运行 portable/installer。
 - 当前状态：仍为 `IN_PROGRESS`；尚缺约 1200px / 窄窗口代表性 Windows 流程证据，未创建 `checkpoint-V1.5-pass`。
+
+## 2026-08-26 · V1.5.1 方案修订 · DONE（方案层）
+
+- 产品决定：AI 修改工作区命名为 V1.5.1，不创建 V1.6；当前 V15-01～V15-03 验收链保持不变。
+- 业务模型：教学内容固定分区调整为“课件 / AI 备课 / 修改记录”；草稿不再被理解为全局草稿箱，而是当前 lesson 的工作副本和 Agent 修改节点。
+- 保存语义：任何时间可保存“当前进度”，只保存未发布工作副本；老师确认后才“保存为新版本”，旧正式课件继续保留。
+- AI 流程：新课支持从 0 生成；已有课件支持选择参考内容、填写修改意图、先审阅 AI 修改方案，再生成新工作副本并进行新旧对比。
+- 修改文件：`教师工作台_V1_5_教学内容工作台_产品与实施方案.md`、`implementation-tasks/V1_5_DECISIONS.md`、`implementation-tasks/v1.5-tasks/V15-03-final-gate.md`、本文件与 `STATUS.md`。
+- 当前状态：方案已记录，未提前实现后续代码、schema、migration、Service 或 IPC；未创建 `checkpoint-V1.5-pass`。

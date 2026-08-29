@@ -2,16 +2,16 @@
 
 Lean V1 的 T01–T08 与 L01–L12、V1.1 的 V11-01–V11-05、V1.2 的 V12-01–V12-05、V1.3 的 V13-01–V13-05、V1.4 的 V14-01–V14-03 均已完成；稳定基线依次为 `checkpoint-L12-pass`、`checkpoint-V1.1-pass`、`checkpoint-V1.2-pass`、`checkpoint-V1.3-pass`、`checkpoint-V1.4-pass`。旧 `tasks/T09-*` 至 `tasks/T42-*` 已退役，只保留历史参考；所有已完成状态和验收记录不得因 V1.5 重新实现或改写。
 
-当前活动版本是 V1.5。产品主规格是 `教师工作台_V1_5_课程课件导航重构_产品与实施方案.md`，实施决策是 `implementation-tasks/V1_5_DECISIONS.md`，唯一活动链为 `implementation-tasks/v1.5-tasks/` 中的 V15-01–V15-03。参考图只用于布局和交互关系；与冻结文字方案冲突时以文字为准。
+当前活动版本是 V1.5。产品主规格是 `教师工作台_V1_5_教学内容工作台_产品与实施方案.md`，实施决策是 `implementation-tasks/V1_5_DECISIONS.md`，唯一活动链为 `implementation-tasks/v1.5-tasks/` 中的 V15-01–V15-03。参考图只用于布局和交互关系；与冻结文字方案冲突时以文字为准。
 
 当用户指定当前实现任务时：
 
 1. 先阅读 V1.5 产品主规格、`implementation-tasks/GLOBAL_CONSTRAINTS.md`、`implementation-tasks/V1_5_DECISIONS.md`、`implementation-tasks/VERSION_CONTROL.md`、当前 V15-xx 任务文件及其明确列出的前置产物；
 2. 只完成当前任务，不提前实现后续任务；同一时刻最多一个 V15-xx 为 `IN_PROGRESS`；
 3. 解析、搜索和文件刷新继续服从 `docs/spike-results.md` 的有效证据；V1.5 新增范围以冻结的 V1.5 方案与 decisions 为准；
-4. 把 V1.5 当作个人 Windows 桌面小项目，优先复用 CourseDashboard、CourseDetail、StudentsPage、LessonFilesSection、LessonMaterialReader、DraftPanel、LessonPrepContext 及既有 Main 服务；不得重做 V1.1 备课内核、V1.2 课程进度模型、V1.3 快速建课或 V1.4 题库；
+4. 把 V1.5 当作个人 Windows 桌面小项目，优先复用 CourseDashboard、CourseDetail、StudentsPage、LessonFilesSection、LessonMaterialReader、DraftPanel、LessonPrepContext 及既有 Main 服务；“教学内容”统一承载课件、备课和草稿箱，不得重做 V1.1 备课内核、V1.2 课程进度模型、V1.3 快速建课或 V1.4 题库；
 5. V1.5 默认只修改 Renderer 信息架构和交互，不新增 schema、migration、Service 或 IPC；若现有安全能力不足，停止并请产品负责人重新确认范围；
-6. 不得顺手加入独立课件库、第二棵课程树、文件拖拽整理、云同步、组卷、错题本、自动推荐、成绩分析、多题批量入课或新 AI 工作流；
+6. 课程 / 课次目录默认只能按需临时展开，不得与本课课件目录同时常驻并挤压正文；不得顺手加入独立课件库、第二棵课程树、文件拖拽整理、云同步、组卷、错题本、自动推荐、成绩分析、多题批量入课或新 AI 工作流；
 7. V15-01–V15-02 分别运行相关测试、typecheck、lint，并按风险补充必要 build 或本地 smoke；只有 V15-03 运行全量测试、production build、`git diff --check` 和代表性本地 Windows 流程；
 8. V1.5 不运行 `package:portable`，不生成 portable、installer 或对外交付包；
 9. 完成每个节点后更新 `implementation-tasks/STATUS.md` 与 `implementation-tasks/GOAL_PROGRESS.md`，并按版本控制协议创建当前里程碑的本地提交；
