@@ -44,10 +44,11 @@ export default function StudentsPage({
   useEffect(() => { void reload() }, [])
 
   useEffect(() => {
+    if (loading) return
     if (!visibleSummaries.some((summary) => summary.student.id === selectedStudentId)) {
       onSelectStudent(visibleSummaries[0]?.student.id ?? '')
     }
-  }, [onSelectStudent, selectedStudentId, visibleSummaries])
+  }, [onSelectStudent, selectedStudentId, visibleSummaries, loading])
 
   async function reload(): Promise<void> {
     setLoading(true)

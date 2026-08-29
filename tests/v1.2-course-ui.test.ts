@@ -46,4 +46,14 @@ describe('V12-02 course renderer contract', () => {
     expect(detail).toContain('window.teacherWorkbench.core.startPeriod')
     expect(detail).toContain('课次已创建；Current Lesson 未自动改变。')
   })
+
+  it('keeps the entered course selection while the dashboard overview is loading', () => {
+    const dashboard = source('../src/renderer/course-dashboard.tsx')
+    const selectionEffect = dashboard.slice(
+      dashboard.indexOf('const target = summaries.find((summary) => summary.course.id === selectedCourseId)'),
+      dashboard.indexOf('async function reload'),
+    )
+    expect(selectionEffect).toContain('if (loading) return')
+    expect(selectionEffect).toContain('visibleSummaries, loading]')
+  })
 })

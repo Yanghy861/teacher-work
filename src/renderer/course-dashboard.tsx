@@ -84,10 +84,11 @@ export default function CourseDashboard({
       setFilter(target.ended ? 'ended' : 'active')
       return
     }
+    if (loading) return
     if (!visibleSummaries.some((summary) => summary.course.id === selectedCourseId)) {
       onSelectCourse(visibleSummaries[0]?.course.id ?? '')
     }
-  }, [filter, onSelectCourse, selectedCourseId, summaries, visibleSummaries])
+  }, [filter, onSelectCourse, selectedCourseId, summaries, visibleSummaries, loading])
 
   async function reload(): Promise<void> {
     setLoading(true)

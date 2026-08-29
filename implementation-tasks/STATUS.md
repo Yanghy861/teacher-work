@@ -81,5 +81,5 @@
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
 | V15-01 教学内容导航目标与双向入口 | DONE | Renderer 类型化教学内容目标、课程/学生/直接入口、草稿箱迁移、临时上下文与双向返回完成；52 files / 180 tests、typecheck、lint、production build、diff check 通过；未运行 portable/installer |
-| V15-02 教学内容工作台与宽正文 | IN_PROGRESS | 三分区工作台、临时课次抽屉、课件正文与沉浸阅读已接入；已修复备课右侧 AI 卡片最小列宽导致的横向溢出；已补充 V1.5.1 AI 修改工作区方案；待补代表性 Windows 流程与最终 UI 宽度验收 |
-| V15-03 V1.5 全量回归与版本验收 | TODO | 前置 V15-01–V15-02 `DONE`；最终体验确认前不创建 `checkpoint-V1.5-pass` |
+| V15-02 教学内容工作台与宽正文 | DONE | 三分区工作台、临时课次抽屉、课件正文、沉浸阅读、备课“查看课件”返回与窄窗口防御布局完成；1200px 宽度与窄窗口证据并入 V15-03 隔离流程；53 files / 187 tests、typecheck、lint、production build、diff check 通过 |
+| V15-03 V1.5 全量回归与版本验收 | DONE | 最终门 54 files / 190 tests、typecheck、lint、production build、diff check 通过；代表性隔离 Windows 流程、真实 380MB 题库、fake AI 备课与宽度证据见 `docs/v1.5-acceptance.md`；修复课程/学生页加载期选择丢失缺陷；`checkpoint-V1.5-pass` 等待产品负责人最终体验确认 |

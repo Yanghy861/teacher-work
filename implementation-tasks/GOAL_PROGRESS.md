@@ -837,3 +837,16 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - AI 流程：新课支持从 0 生成；已有课件支持选择参考内容、填写修改意图、先审阅 AI 修改方案，再生成新工作副本并进行新旧对比。
 - 修改文件：`教师工作台_V1_5_教学内容工作台_产品与实施方案.md`、`implementation-tasks/V1_5_DECISIONS.md`、`implementation-tasks/v1.5-tasks/V15-03-final-gate.md`、本文件与 `STATUS.md`。
 - 当前状态：方案已记录，未提前实现后续代码、schema、migration、Service 或 IPC；未创建 `checkpoint-V1.5-pass`。
+
+## 2026-08-29 · V15-02 收尾 + V15-03 · DONE / AWAITING_PRODUCT_CONFIRMATION
+
+- V15-02 收尾：备课结果区新增“查看课件”，保存成果后原地回到课件分区；≤760px 媒体查询防御性布局（目录落到正文上方）；2 项契约测试。提交 `4256fe6`。
+- 方案层收束：V1.5 规格改名为“教学内容工作台”、任务文件重命名、V1.5.1 方案与 D09–D14 决策冻结。提交 `6fd5c35`。
+- 隔离 production Windows 流程：真实 Electron（沙箱/contextIsolation 默认开启）+ `%TEMP%` 全新空工作区 + 本地 fake OpenAI-compatible 服务 + 真实 380MB `.tqbank`（25,370 题/962 卷，UI 导入复制、源只读）；窗口 Win32 精确 1200×800。
+- V1.5 流程证据：直接打开空状态/最近位置恢复、单击仅 Viewed、双击进课件、空课次“本课次还没有资料”、素材库副本入课、fake AI 讲义/例题生成、保存到本次课次、“查看课件”返回、沉浸阅读收起/恢复（目录 250px ↔ 正文 1011→1041px）、上一课/下一课、抽屉切换自动收回、历史课程只读、草稿箱→备课上下文、返回课程/学生精确恢复、题库导入/搜索/KaTeX 详情/加入第 3 课、全局搜索 11 条结果、优雅退出重开。
+- 宽度证据：视口 1184px = 主导航 104px + 课件目录 250px + 正文约 1026px；窄窗口 960×700（视口 944px）无页面级横向溢出；760px 断点因最小窗口宽度不可达，仅作防御。
+- 缺陷修复（V1.2 遗留，非 V1.5 引入）：CourseDashboard/StudentsPage 挂载时概览未加载，兜底 effect 用空列表覆盖外部传入的课程/学生选择，导致“学生→进入历史课程”和“返回学生”落到第一门课程/第一位学生；两个 effect 增加 `if (loading) return` 守卫 + 2 项回归测试。修复后在隔离 production 应用实测：进入寒假班自动切“已结束”筛选并选中、确认已上禁用；返回学生精确回到王小刚。
+- 最终自动门：`npm test` 54 files / 190 tests（1 skipped 真实快照 smoke）✅、typecheck ✅、lint ✅、production build ✅、`git diff --check` ✅；未运行 portable/installer。
+- 数据完整性：隔离工作区 `integrity_check=ok`、schema v14、2 课程/20 课次/3 学生/2 notes/3 managed 文件；真实工作区全程未触碰。
+- 验收报告：`docs/v1.5-acceptance.md`。V15-01–V15-03 全部 `DONE`；`checkpoint-V1.5-pass` 等待产品负责人最终体验确认，确认前不创建标签、不 push。
+- 产品建议（未排期，需产品负责人确认范围）：设置页显示当前工作区路径并支持切换，避免多启动方式/隔离变量下“看似丢数据”。

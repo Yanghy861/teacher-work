@@ -42,4 +42,14 @@ describe('V12-03 students renderer contract', () => {
     expect(model).toContain('listStudentLessonOptions')
     expect(core).toContain('this.requireStudentLinkedToLessonCourse(lessonId, studentId)')
   })
+
+  it('keeps the entered student selection while the overview is loading', () => {
+    const page = source('../src/renderer/students-page.tsx')
+    const selectionEffect = page.slice(
+      page.indexOf('useEffect(() => {'),
+      page.indexOf('async function reload'),
+    )
+    expect(selectionEffect).toContain('if (loading) return')
+    expect(selectionEffect).toContain('visibleSummaries, loading]')
+  })
 })
