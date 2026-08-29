@@ -35,6 +35,7 @@ export default function DraftPanel({
   onBackToCourses,
   onBrowseExternal,
   onBrowseMaterials,
+  onOpenCourseware,
 }: {
   readonly context: LessonPrepContext | null
   readonly initialDraftId: string | null
@@ -42,6 +43,7 @@ export default function DraftPanel({
   readonly onBackToCourses: () => void
   readonly onBrowseExternal: () => void
   readonly onBrowseMaterials: () => void
+  readonly onOpenCourseware?: () => void
 }): React.JSX.Element {
   const [files, setFiles] = useState<ManagedFileOverview | null>(null)
   const [core, setCore] = useState<CoreOverview | null>(null)
@@ -329,6 +331,7 @@ export default function DraftPanel({
           onCancelEdit={cancelEditing}
           onSaveModification={() => void saveModification()}
           onSaveToLesson={() => void saveToLesson()}
+          onOpenCourseware={onOpenCourseware}
           onRegenerate={() => void regenerate()}
           onDelete={(note) => void deleteDraft(note)}
           onReturnToSetup={returnToSetup}
@@ -478,7 +481,7 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selecte
   )
 }
 
-function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onRegenerate, onDelete, onReturnToSetup }: {
+function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup }: {
   readonly notes: readonly NoteRecord[]
   readonly selectedNote: NoteRecord | undefined
   readonly editing: boolean
@@ -490,6 +493,7 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
   readonly onCancelEdit: () => void
   readonly onSaveModification: () => void
   readonly onSaveToLesson: () => void
+  readonly onOpenCourseware?: () => void
   readonly onRegenerate: () => void
   readonly onDelete: (note: NoteRecord) => void
   readonly onReturnToSetup: () => void
@@ -527,6 +531,7 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
                 {editing ? <><button className="secondary-button" type="button" onClick={onCancelEdit} disabled={busy}>取消编辑</button><button className="secondary-button" type="button" onClick={onSaveModification} disabled={busy}>保存修改</button></> : <button className="secondary-button" type="button" onClick={onEdit} disabled={busy}>编辑</button>}
                 <button className="secondary-button" type="button" onClick={onRegenerate} disabled={busy}>重新生成</button>
                 {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={onSaveToLesson} disabled={busy}>保存到本次课次</button>}
+                {onOpenCourseware !== undefined && <button className="secondary-button" type="button" onClick={onOpenCourseware} disabled={busy}>查看课件</button>}
               </div>
             </div>
             <div className={`draft-content-body${editing ? ' is-editing' : ' is-preview'}`}>

@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CoreOverview, NodeRecord } from '../shared/core-contracts'
 import LessonFilesSection from './lesson-files-section'
 import { buildCourseSummaries, type CourseSummary } from './course-view-model'
-import DraftPanel from './draft-panel'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
+import DraftPanel from './draft-panel'
 import {
   type TeachingContentSection,
   type TeachingContentTarget,
@@ -177,6 +177,7 @@ export default function TeachingContentPage({
           onBackToCourses={() => target === null ? undefined : onBackToCourses(target)}
           onBrowseExternal={() => onOpenExternal(prepContext)}
           onBrowseMaterials={() => onOpenMaterials(prepContext)}
+          onOpenCourseware={() => setSection('courseware')}
         />
       ) : (
         <LessonFilesSection

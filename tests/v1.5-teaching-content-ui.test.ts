@@ -36,7 +36,9 @@ describe('V15 teaching content workspace contract', () => {
     expect(files).toContain('沉浸阅读')
     expect(files).toContain('hideTree={immersive}')
     expect(files).not.toContain('setCurrentLesson')
+    expect(files).not.toContain('CourseDetail')
     expect(source('../src/renderer/styles.css')).toContain('.lesson-files-section.is-immersive .material-reader.is-single { grid-template-columns: minmax(0, 1fr); }')
+    expect(source('../src/renderer/styles.css')).toContain('.lesson-files-section .material-reader { grid-template-columns: minmax(220px, 250px) minmax(0, 1fr); }')
   })
 
   it('keeps student origin and historical course read-only paths visible', () => {
@@ -56,5 +58,20 @@ describe('V15 teaching content workspace contract', () => {
     expect(contentArea).toContain('overflow-x: hidden')
     expect(prepGrid).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))')
     expect(prepGrid).toContain('min-width: 0')
+  })
+
+  it('offers a courseware return after saving a lesson result', () => {
+    const page = source('../src/renderer/teaching-content-page.tsx')
+    const draft = source('../src/renderer/draft-panel.tsx')
+    expect(page).toContain("onOpenCourseware={() => setSection('courseware')}")
+    expect(draft).toContain('onOpenCourseware?: () => void')
+    expect(draft).toContain('查看课件')
+  })
+
+  it('keeps narrow teaching content readable without page-level horizontal overflow', () => {
+    const styles = source('../src/renderer/styles.css')
+    expect(styles).toContain('@media (max-width: 760px)')
+    expect(styles).toContain('.lesson-files-section .material-reader {\n    grid-template-columns: minmax(0, 1fr);')
+    expect(styles).toContain('.lesson-files-section .material-reader-tree {\n    max-height: 210px;')
   })
 })

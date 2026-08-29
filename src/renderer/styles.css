@@ -2450,3 +2450,43 @@ button.quick-status { cursor: pointer; }
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 760px) {
+  .teaching-content-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .teaching-content-header-actions {
+    justify-content: flex-start;
+  }
+
+  .teaching-content-context h1 {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .teaching-content-tabs {
+    gap: 14px;
+  }
+
+  .lesson-files-section {
+    padding: 10px 0;
+  }
+
+  .lesson-files-header {
+    flex-direction: column;
+  }
+
+  .lesson-files-section .material-reader {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lesson-files-section .material-reader-tree {
+    max-height: 210px;
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+}
