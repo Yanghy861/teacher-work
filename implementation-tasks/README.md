@@ -18,7 +18,9 @@ checkpoint-V1.4-pass
 → V15-01 教学内容导航目标、课程 / 学生入口与返回
 → V15-02 教学内容三分区、临时课次抽屉与宽正文
 → V15-03 全量回归与版本验收
-→ checkpoint-V1.5-pass（需最终产品体验确认）
+→ checkpoint-V1.5-pass（已确认）
+→ V1.5.2：V152-A 术语收口 → V152-B 工作副本 → V152-C 已有课件改进 → V152-D 修改记录与版本发布 → V152-E 最终门
+→ checkpoint-V1.5.2-pass（需最终产品体验确认）
 ```
 
 V15-01–V15-02 分别运行相关测试、typecheck、lint，并按风险补 build 或本地 smoke。V15-03 运行全量测试、typecheck、lint、build、`git diff --check` 和代表性本地 Windows 流程。V1.5 不运行 portable/installer packaging，不生成对外交付包。

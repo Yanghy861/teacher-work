@@ -95,3 +95,9 @@
 
 - 后续 AI 协作优先复用现有 DraftPanel、LessonPrepContext、notes 生命周期、AI Gateway、ManagedFileService 和 LessonMaterialReader。
 - 默认不新增 schema、migration、Service 或 IPC；若“工作副本/修改记录/版本发布”无法在既有事实和安全能力上实现，必须先重新确认范围。
+
+## D15 · V1.5.2 验收分层
+
+- 自动门使用固定 fake provider，验证状态机、失败路径与安全边界，保证可重复；
+- 开发验收使用"中继式 AI"：本地 OpenAI-compatible 服务挂起请求并暴露完整 prompt，由实施代理按真实语义现写修改方案与内容回填，检验 prompt 组装、两步确认流与内容质量；每次相关改动至少执行一轮并留痕；
+- 最终体验确认由产品负责人以真实 API Key 完成至少一轮完整备课；三层全部通过才算验收。

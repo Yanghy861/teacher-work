@@ -65,4 +65,6 @@ V1 只证明三条核心流程：
 
 实现很麻烦、自动化不完美、缺少极端矩阵、非核心增强做不完，不属于真实阻塞。此时必须选择简单实现或写入 Later，并继续推进。
 
+V1.5 已在 `checkpoint-V1.5-pass` 冻结（增量 V1.5.1）。增量 V1.5.2（AI 修改工作区）遵循既有安全边界与复用裁决（D10–D14）：默认不新增 schema、migration、Service 或 IPC，现有白名单能力不足时停止并请产品负责人重新确认范围；验收按 D15 分层执行。V152-A–V152-D 运行相关测试、typecheck、lint 并按风险补 build；V152-E 运行全量测试、production build、`git diff --check` 和代表性本地 Windows 流程；不运行 portable/installer packaging。
+
 完成里程碑后更新 `STATUS.md` 与 `GOAL_PROGRESS.md`，按 `VERSION_CONTROL.md` 创建范围清晰的本地提交；不得自动 push。

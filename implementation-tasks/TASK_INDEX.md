@@ -23,3 +23,17 @@
 V15 任务必须按编号顺序执行；同一时刻最多一个里程碑为 `IN_PROGRESS`。V15-03 通过且产品负责人最终体验确认后才创建 `checkpoint-V1.5-pass`。V1.5 不运行 portable/installer packaging。
 
 下一轮增量 V1.5.2（AI 修改工作区；本轮实施链整体记为 V1.5.1）不改变当前 V1.5 活动链，也不创建 V1.6；后续会在同一教学内容工作台上把“草稿箱”收口为“AI 备课 / 修改记录”，并补充工作副本、修改方案确认和版本发布能力。实现任务需在 V15-03 完成后另行确认。
+
+## V1.5.2 活动链（AI 修改工作区）
+
+基线 `checkpoint-V1.5-pass`；方案为主规格第 11 节，决策 D09–D15。
+
+| 里程碑 | 前置 | 核心产物 | 验收 |
+|---|---|---|---|
+| [V152-A](v1.5.2-tasks/V152-A-terminology.md) | `checkpoint-V1.5-pass` | 课件 / AI 备课 / 修改记录三分区术语与全局入口收口 | 相关测试 + typecheck + lint + 风险 build |
+| [V152-B](v1.5.2-tasks/V152-B-work-copy.md) | V152-A | 工作副本保存/恢复/未发布提示 | 相关测试 + typecheck + lint + 风险 build |
+| [V152-C](v1.5.2-tasks/V152-C-improvement-flow.md) | V152-B | 参考范围 + 修改要求 + AI 方案确认 + 新旧对比 | 相关测试 + 中继式 AI 验收 + build |
+| [V152-D](v1.5.2-tasks/V152-D-records-and-publish.md) | V152-C | 修改记录时间线 + 保存为新版本 | 相关测试 + UI smoke + build |
+| [V152-E](v1.5.2-tasks/V152-E-final-gate.md) | V152-A–D | 全量回归 + 代表性 Windows 流程 + 分层 AI 验收 | 最终验收；确认后创建 `checkpoint-V1.5.2-pass` |
+
+任务按编号顺序执行；同一时刻最多一个 `IN_PROGRESS`。V1.5.2 不运行 portable/installer packaging。
