@@ -921,3 +921,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动门：`npm test` 54 files / 197 tests、typecheck、lint、production build、`git diff --check` 全过；未运行 portable/installer；未 push。
 - 对话框自动化改用 CDP `Page.handleJavaScriptDialog` 自动应答，替代模拟点击系统弹窗（B 轮遗留问题的根治）。
 - 验收报告：`docs/v1.5.2-acceptance.md`。V152-A–E 全部 `DONE`；`checkpoint-V1.5.2-pass` 待产品负责人真实 Key 最终体验确认；临时隔离环境（含学生隐私资料）已全部删除。
+
+## 2026-08-29 · V1.5.2 最终体验确认 · PASS
+
+- 产品负责人裁决："就这样测试一下，然后结束 V1.5.2"——确认以中继式 AI 测试（真实思源课件全流程 + 实施代理现写内容）作为最终体验确认；真实 provider 延迟与质量为遗留自测项，不阻塞冻结。
+- 版本动作：在本确认记录提交创建 annotated tag `checkpoint-V1.5.2-pass`；V1.5.2 冻结。
+- 体验环境与中继服务已关闭；临时目录已清理。
+- 后续增量按 V1.5.3 递增（候选：版本折叠/归档策略）。
