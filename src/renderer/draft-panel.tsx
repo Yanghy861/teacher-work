@@ -36,6 +36,7 @@ export default function DraftPanel({
   onBrowseExternal,
   onBrowseMaterials,
   onOpenCourseware,
+  onDirtyChange,
 }: {
   readonly context: LessonPrepContext | null
   readonly initialDraftId: string | null
@@ -44,6 +45,7 @@ export default function DraftPanel({
   readonly onBrowseExternal: () => void
   readonly onBrowseMaterials: () => void
   readonly onOpenCourseware?: () => void
+  readonly onDirtyChange?: (dirty: boolean) => void
 }): React.JSX.Element {
   const [files, setFiles] = useState<ManagedFileOverview | null>(null)
   const [core, setCore] = useState<CoreOverview | null>(null)
@@ -59,6 +61,7 @@ export default function DraftPanel({
   const [busyAction, setBusyAction] = useState<BusyAction>('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [restoreNoticeVisible, setRestoreNoticeVisible] = useState(false)
   const knownLessonFileIds = useRef<Set<string>>(new Set())
 
   const lessonFiles = useMemo(() => {
@@ -82,6 +85,11 @@ export default function DraftPanel({
   const dirty = editing && selectedNote !== undefined && editBody !== selectedNote.bodyMd
 
   useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
+
+  useEffect(() => {
+    let cancelled = false
     knownLessonFileIds.current = new Set()
     setSelectedFileIds([])
     setPreviewFileId('')
@@ -93,7 +101,22 @@ export default function DraftPanel({
     setEditBody('')
     setMessage('')
     setError('')
-    void reload()
+    setRestoreNoticeVisible(false)
+    void (async () => {
+      const loadedCore = await reload()
+      if (cancelled || context === null || loadedCore === null) return
+      if (initialDraftId !== null) {
+        setRestoreNoticeVisible(true)
+        return
+      }
+      const latestDraft = listLessonAiResults(loadedCore, context.lessonId)
+        .find((note) => note.draftStatus === 'draft')
+      if (latestDraft === undefined) return
+      setSelectedNoteId(latestDraft.id)
+      setShowResults(true)
+      setRestoreNoticeVisible(true)
+    })()
+    return () => { cancelled = true }
   }, [context?.lessonId, initialDraftId])
 
   useEffect(() => {
@@ -113,7 +136,7 @@ export default function DraftPanel({
     setEditBody('')
   }, [lessonResults, selectedNoteId, showResults])
 
-  async function reload(): Promise<void> {
+  async function reload(): Promise<CoreOverview | null> {
     try {
       const [nextFiles, nextCore, nextSkills] = await Promise.all([
         window.teacherWorkbench.files.getOverview(),
@@ -124,8 +147,10 @@ export default function DraftPanel({
       setCore(nextCore)
       setSkills(nextSkills)
       setError('')
+      return nextCore
     } catch (loadError) {
       setError(toErrorMessage(loadError))
+      return null
     }
   }
 
@@ -160,6 +185,7 @@ export default function DraftPanel({
       await reload()
       setSelectedNoteId(result.noteId)
       setShowResults(true)
+      setRestoreNoticeVisible(false)
       setEditing(false)
       setEditBody('')
       setMessage(`已生成，可在修改记录中查看。`)
@@ -173,6 +199,7 @@ export default function DraftPanel({
 
   function selectResult(note: NoteRecord): void {
     if (dirty && !window.confirm('当前修改尚未保存，确定切换到其他结果吗？')) return
+    setRestoreNoticeVisible(false)
     setSelectedNoteId(note.id)
     setEditing(false)
     setEditBody('')
@@ -335,6 +362,8 @@ export default function DraftPanel({
           onRegenerate={() => void regenerate()}
           onDelete={(note) => void deleteDraft(note)}
           onReturnToSetup={returnToSetup}
+          restoreNoticeVisible={restoreNoticeVisible}
+          onDismissRestoreNotice={() => setRestoreNoticeVisible(false)}
         />
       ) : (
         <PrepSetup
@@ -481,7 +510,7 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selecte
   )
 }
 
-function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup }: {
+function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup, restoreNoticeVisible, onDismissRestoreNotice }: {
   readonly notes: readonly NoteRecord[]
   readonly selectedNote: NoteRecord | undefined
   readonly editing: boolean
@@ -497,6 +526,8 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
   readonly onRegenerate: () => void
   readonly onDelete: (note: NoteRecord) => void
   readonly onReturnToSetup: () => void
+  readonly restoreNoticeVisible: boolean
+  readonly onDismissRestoreNotice: () => void
 }): React.JSX.Element {
   return (
     <div className="draft-result-layout">
@@ -525,6 +556,12 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
           <div className="draft-content-empty"><p>请选择左侧结果，或返回备课设置生成新内容。</p></div>
         ) : (
           <>
+            {restoreNoticeVisible && selectedNote.draftStatus === 'draft' && (
+              <div className="draft-restore-notice" role="status">
+                <span>已恢复最近的工作副本：修改尚未发布，不会改变正式课件与已确认成果。</span>
+                <button className="secondary-button" type="button" onClick={onDismissRestoreNotice}>知道了</button>
+              </div>
+            )}
             <div className="draft-content-header">
               <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{kindLabels[selectedNote.noteKind as DraftKind]}{selectedNote.draftStatus === 'draft' ? '修改节点' : '成果'}</h2></div>
               <div className="draft-content-actions">

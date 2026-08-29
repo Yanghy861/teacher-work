@@ -2490,3 +2490,17 @@ button.quick-status { cursor: pointer; }
   }
 
 }
+
+.draft-restore-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 0 0 10px;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 13px;
+}

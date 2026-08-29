@@ -89,7 +89,7 @@
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
 | V152-A 术语和界面收口 | DONE | 三分区改为"课件 / AI 备课 / 修改记录"，全局入口改为"修改记录 {计数}"，状态术语改为"修改中/已确认"，Main 删除保护文案同步；全量 54 files / 190 tests、typecheck、lint、production build、diff check 通过 |
-| V152-B 当前工作副本 | IN_PROGRESS | 前置 V152-A `DONE`；实现工作副本保存/恢复/离开确认与未发布提示 |
-| V152-C 已有课件改进流程 | TODO | 前置 V152-B `DONE`；按 D15 中继式 AI 验收 |
+| V152-B 当前工作副本 | DONE | 进入 AI 备课自动恢复最近未发布工作副本并提示"未成为正式课件"；跨分区/换课次/返回有未保存编辑时弹确认；编辑中切换结果保留原有确认；54 files / 191 tests、typecheck、lint、production build、diff check 通过；隔离 UI smoke 通过 |
+| V152-C 已有课件改进流程 | IN_PROGRESS | 前置 V152-B `DONE`；实现参考范围 + 修改要求 + AI 方案确认 + 新旧对比；按 D15 中继式 AI 验收 |
 | V152-D 修改记录与版本发布 | TODO | 前置 V152-C `DONE` |
 | V152-E V1.5.2 全量回归与版本验收 | TODO | 前置 V152-A–D `DONE`；最终体验确认前不创建 `checkpoint-V1.5.2-pass` |

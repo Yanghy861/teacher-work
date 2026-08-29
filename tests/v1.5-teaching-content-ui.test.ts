@@ -77,3 +77,14 @@ describe('V15 teaching content workspace contract', () => {
     expect(styles).toContain('.lesson-files-section .material-reader-tree {\n    max-height: 210px;')
   })
 })
+
+  it('restores the latest work copy and guards unsaved prep edits (V152-B)', () => {
+    const page = source('../src/renderer/teaching-content-page.tsx')
+    const draft = source('../src/renderer/draft-panel.tsx')
+    expect(draft).toContain('onDirtyChange?: (dirty: boolean) => void')
+    expect(draft).toContain("find((note) => note.draftStatus === 'draft')")
+    expect(draft).toContain('已恢复最近的工作副本：修改尚未发布，不会改变正式课件与已确认成果。')
+    expect(page).toContain('prepDirtyRef.current = value')
+    expect(page).toContain('AI 备课中有未保存的修改，离开后将丢失本次编辑。确定离开吗？')
+    expect(page).toContain('onDirtyChange={handlePrepDirtyChange}')
+  })

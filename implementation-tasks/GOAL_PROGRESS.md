@@ -881,3 +881,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - notes 数据完全兼容，无 schema/migration/Service/IPC 变化；无行为变化（V152-B 起再引入工作副本语义）。
 - 验证：全量 `npm test` 54 files / 190 tests ✅、typecheck ✅、lint ✅、production build ✅、`git diff --check` ✅；更新 v1.2-course-ui 与 v1.5-teaching-content-ui 契约断言（含新增 AI 备课/修改记录标签与"无草稿箱残留"断言）。未运行 portable/installer。
 - Git：由 `v1.5.2(V152-A): adopt modification workspace terminology` 本地提交收束；不 push。
+
+## 2026-08-29 · V152-B · DONE
+
+- 工作副本恢复：进入课次 AI 备课时加载概览后自动选中最近"修改中"节点并直接打开结果区，显示"已恢复最近的工作副本：修改尚未发布，不会改变正式课件与已确认成果。"（知道了可关闭；切换节点/重新生成后自动隐藏）。
+- 离开保护：备课存在未保存编辑时，切分区、抽屉选课、上一课/下一课、返回课程/学生均弹"AI 备课中有未保存的修改，离开后将丢失本次编辑。确定离开吗？"；取消留在备课且编辑保留。DraftPanel 通过 onDirtyChange 上报脏状态（ref 承载，不触发多余渲染）。
+- 边界：仅复用 notes draft 生命周期与既有 IPC，无 schema/migration/Service/IPC 变化。
+- 验证：全量 `npm test` 54 files / 191 tests（新增 V152-B 契约测试）✅、typecheck ✅、lint ✅、production build ✅、`git diff --check` ✅。隔离 UI smoke（SQL 种子工作副本，无 AI 依赖）：恢复提示、知道了关闭、编辑→切分区触发确认→取消保留→离开后未保存编辑不落库（重启仅种子正文）全部通过。冒烟中的多次对话框系测试脚本排队点击所致，非应用缺陷；后续 UI smoke 改用 CDP Page.handleJavaScriptDialog 自动应答。未运行 portable/installer。
+- Git：由 `v1.5.2(V152-B): restore work copy and guard unsaved edits` 本地提交收束；不 push。

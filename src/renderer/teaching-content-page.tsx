@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { CoreOverview, NodeRecord } from '../shared/core-contracts'
 import LessonFilesSection from './lesson-files-section'
@@ -32,6 +32,15 @@ export default function TeachingContentPage({
   const [initialDraftId, setInitialDraftId] = useState<string | null>(externalInitialDraftId)
   const [immersive, setImmersive] = useState(false)
   const [error, setError] = useState('')
+  const prepDirtyRef = useRef(false)
+  const handlePrepDirtyChange = useCallback((value: boolean) => {
+    prepDirtyRef.current = value
+  }, [])
+
+  function confirmLeavePrep(): boolean {
+    if (target?.section !== 'prep' || !prepDirtyRef.current) return true
+    return window.confirm('AI 备课中有未保存的修改，离开后将丢失本次编辑。确定离开吗？')
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -74,6 +83,8 @@ export default function TeachingContentPage({
     : `${summary.course.title} / ${period?.title ?? '未分组'} / ${lesson.title}`
 
   function setSection(section: TeachingContentSection): void {
+    if (target?.section === 'prep' && section !== 'prep' && !confirmLeavePrep()) return
+    prepDirtyRef.current = false
     if (target === null) {
       onTargetChange({ courseId: null, lessonId: null, section })
       return
@@ -84,6 +95,8 @@ export default function TeachingContentPage({
   }
 
   function selectLesson(course: CourseSummary, selectedLesson: NodeRecord): void {
+    if (!confirmLeavePrep()) return
+    prepDirtyRef.current = false
     setInitialDraftId(null)
     setImmersive(false)
     onTargetChange({
@@ -103,6 +116,8 @@ export default function TeachingContentPage({
   }
 
   function openPrep(context: LessonPrepContext): void {
+    if (!confirmLeavePrep()) return
+    prepDirtyRef.current = false
     setInitialDraftId(null)
     onTargetChange({
       courseId: context.courseId,
@@ -113,6 +128,8 @@ export default function TeachingContentPage({
   }
 
   function openDraft(context: LessonPrepContext, noteId: string): void {
+    if (!confirmLeavePrep()) return
+    prepDirtyRef.current = false
     setInitialDraftId(noteId)
     onTargetChange({
       courseId: context.courseId,
@@ -137,7 +154,7 @@ export default function TeachingContentPage({
         </div>
         <div className="teaching-content-header-actions">
           {target?.originStudentId !== undefined && (
-            <button className="link-button" type="button" onClick={() => onBackToStudent(target.originStudentId!)}>返回学生</button>
+            <button className="link-button" type="button" onClick={() => { if (confirmLeavePrep()) onBackToStudent(target.originStudentId!) }}>返回学生</button>
           )}
           <button className="secondary-button" type="button" onClick={() => setDrawerOpen(true)}>切换课程 / 课次</button>
           {target !== null && target.lessonId !== null && (
@@ -146,7 +163,7 @@ export default function TeachingContentPage({
               <button className="link-button" type="button" onClick={() => moveLesson(1)}>下一课</button>
             </>
           )}
-          {target?.courseId !== null && target?.courseId !== undefined && <button className="link-button" type="button" onClick={() => onBackToCourses(target)}>返回课程</button>}
+          {target?.courseId !== null && target?.courseId !== undefined && <button className="link-button" type="button" onClick={() => { if (confirmLeavePrep()) onBackToCourses(target) }}>返回课程</button>}
         </div>
       </header>
 
@@ -174,10 +191,11 @@ export default function TeachingContentPage({
           context={prepContext}
           initialDraftId={initialDraftId}
           onOpenDraft={openDraft}
-          onBackToCourses={() => target === null ? undefined : onBackToCourses(target)}
           onBrowseExternal={() => onOpenExternal(prepContext)}
           onBrowseMaterials={() => onOpenMaterials(prepContext)}
           onOpenCourseware={() => setSection('courseware')}
+          onDirtyChange={handlePrepDirtyChange}
+          onBackToCourses={() => { if (confirmLeavePrep()) onBackToCourses(target) }}
         />
       ) : (
         <LessonFilesSection
