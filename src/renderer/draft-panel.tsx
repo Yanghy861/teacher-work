@@ -62,6 +62,12 @@ export default function DraftPanel({
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [restoreNoticeVisible, setRestoreNoticeVisible] = useState(false)
+  const [improvePhase, setImprovePhase] = useState<'' | 'review'>('')
+  const [improvePlan, setImprovePlan] = useState('')
+  const [improveBusy, setImproveBusy] = useState(false)
+  const [improveError, setImproveError] = useState('')
+  const [improveBase, setImproveBase] = useState<{ title: string; body: string } | null>(null)
+  const [compareOpen, setCompareOpen] = useState(false)
   const knownLessonFileIds = useRef<Set<string>>(new Set())
 
   const lessonFiles = useMemo(() => {
@@ -102,6 +108,11 @@ export default function DraftPanel({
     setMessage('')
     setError('')
     setRestoreNoticeVisible(false)
+    setImprovePhase('')
+    setImprovePlan('')
+    setImproveError('')
+    setImproveBase(null)
+    setCompareOpen(false)
     void (async () => {
       const loadedCore = await reload()
       if (cancelled || context === null || loadedCore === null) return
@@ -195,6 +206,109 @@ export default function DraftPanel({
     } finally {
       setBusyAction('')
     }
+  }
+
+  async function startImprovePlan(): Promise<void> {
+    const refs = selectedFiles.filter(isSelectableLessonPrepFile)
+    if (refs.length === 0) {
+      setImproveError('请先勾选要改进的课件或资料。')
+      return
+    }
+    if (requirement.trim() === '') {
+      setImproveError('请先填写本次修改要求，AI 需要知道你想怎么改。')
+      return
+    }
+    setImproveBusy(true)
+    setImproveError('')
+    setMessage('正在生成修改方案…')
+    try {
+      const refParts: { title: string; body: string }[] = []
+      for (const file of refs) {
+        const content = await window.teacherWorkbench.files.readContent({ fileId: file.id })
+        if (content.kind !== 'text') continue
+        refParts.push({ title: file.originalName, body: content.content })
+      }
+      if (refParts.length === 0) {
+        setImproveError('所选资料没有可读文本，无法生成修改方案。')
+        setMessage('')
+        setImproveBusy(false)
+        return
+      }
+      const prompt = [
+        '你是一位备课助理。老师正在改进一节课的已有课件，请基于课件内容和老师的修改要求，输出一份可审阅的修改方案。',
+        '要求：分条说明每处「改什么、为什么、怎么改」；不要输出修改后的全文；全文控制在 500 字以内；使用中文。',
+        `老师修改要求：${requirement.trim()}`,
+        '当前课件内容：',
+        ...refParts.map((part) => `【${part.title}】${String.fromCharCode(10)}${part.body}`),
+      ].join(String.fromCharCode(10, 10))
+      const result = await window.teacherWorkbench.ai.requestText({
+        requestId: globalThis.crypto.randomUUID(),
+        prompt,
+        maxTokens: DRAFT_DEFAULT_MAX_TOKENS,
+      })
+      setImprovePlan(result.text)
+      setImproveBase(refParts[0])
+      setImprovePhase('review')
+      setMessage('修改方案已生成，请审阅确认后再生成新副本。')
+    } catch (planError) {
+      setMessage('')
+      setImproveError(toErrorMessage(planError))
+    } finally {
+      setImproveBusy(false)
+    }
+  }
+
+  async function confirmPlanAndGenerate(kind: DraftKind): Promise<void> {
+    if (context === null || improvePlan.trim() === '') return
+    const refs = selectedFiles.filter(isSelectableLessonPrepFile)
+    if (refs.length === 0) {
+      setImproveError('参考资料已变化，请重新发起改进。')
+      return
+    }
+    setImproveBusy(true)
+    setImproveError('')
+    setMessage(`正在按确认的方案生成${kindLabels[kind]}…`)
+    try {
+      const planBudget = DRAFT_REQUIREMENT_MAX_CHARS - requirement.trim().length - 40
+      const embeddedRequirement = [
+        requirement.trim(),
+        '【老师已确认的修改方案（请严格按方案修改）】',
+        improvePlan.trim().slice(0, Math.max(0, planBudget)),
+      ].join(String.fromCharCode(10))
+      const result = await window.teacherWorkbench.drafts.generate({
+        requestId: globalThis.crypto.randomUUID(),
+        kind,
+        lessonId: context.lessonId,
+        ...(context.studentId === undefined ? {} : { studentId: context.studentId }),
+        ...(selectedSkillId === '' ? {} : { skillId: selectedSkillId }),
+        requirement: embeddedRequirement,
+        sources: refs.map((file) => ({ fileId: file.id })),
+        maxChars: DRAFT_DEFAULT_MAX_CHARS,
+        maxTokens: DRAFT_DEFAULT_MAX_TOKENS,
+      })
+      await reload()
+      setSelectedNoteId(result.noteId)
+      setShowResults(true)
+      setRestoreNoticeVisible(false)
+      setEditing(false)
+      setEditBody('')
+      setCompareOpen(true)
+      setImprovePhase('')
+      setImprovePlan('')
+      setMessage(`${kindLabels[kind]}已按方案生成，可用“新旧对比”查看差异。`)
+    } catch (generationError) {
+      setMessage('')
+      setImproveError(toErrorMessage(generationError))
+    } finally {
+      setImproveBusy(false)
+    }
+  }
+
+  function abandonImprove(): void {
+    setImprovePhase('')
+    setImprovePlan('')
+    setImproveError('')
+    setMessage('')
   }
 
   function selectResult(note: NoteRecord): void {
@@ -364,6 +478,10 @@ export default function DraftPanel({
           onReturnToSetup={returnToSetup}
           restoreNoticeVisible={restoreNoticeVisible}
           onDismissRestoreNotice={() => setRestoreNoticeVisible(false)}
+          compareBase={improveBase}
+          compareOpen={compareOpen}
+          onToggleCompare={() => setCompareOpen((current) => !current)}
+          compareToggleVisible={improveBase !== null}
         />
       ) : (
         <PrepSetup
@@ -385,6 +503,14 @@ export default function DraftPanel({
           onRequirement={setRequirement}
           onGenerate={(kind) => void generate(kind)}
           onShowResults={() => { setSelectedNoteId(lessonResults[0]?.id ?? null); setShowResults(true) }}
+          improvePhase={improvePhase}
+          improvePlan={improvePlan}
+          improveBusy={improveBusy}
+          improveError={improveError}
+          improveAvailable={selectedFiles.some(isSelectableLessonPrepFile)}
+          onStartImprove={() => void startImprovePlan()}
+          onConfirmImprove={(kind) => void confirmPlanAndGenerate(kind)}
+          onAbandonImprove={abandonImprove}
         />
       )}
     </section>
@@ -442,7 +568,7 @@ function DraftInboxRow({ entry, busy, onOpenDraft, onDeleteDraft }: {
   )
 }
 
-function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selectedFilesCount, skills, selectedSkillId, requirement, resultCount, busyAction, onToggleFile, onPreviewFile, onBrowseExternal, onBrowseMaterials, onSelectSkill, onRequirement, onGenerate, onShowResults }: {
+function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selectedFilesCount, skills, selectedSkillId, requirement, resultCount, busyAction, onToggleFile, onPreviewFile, onBrowseExternal, onBrowseMaterials, onSelectSkill, onRequirement, onGenerate, onShowResults, improvePhase, improvePlan, improveBusy, improveError, improveAvailable, onStartImprove, onConfirmImprove, onAbandonImprove }: {
   readonly files: ManagedFileOverview | null
   readonly lessonFiles: ManagedFileOverview['files']
   readonly selectedFileIds: readonly string[]
@@ -461,7 +587,16 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selecte
   readonly onRequirement: (value: string) => void
   readonly onGenerate: (kind: DraftKind) => void
   readonly onShowResults: () => void
+  readonly improvePhase: '' | 'review'
+  readonly improvePlan: string
+  readonly improveBusy: boolean
+  readonly improveError: string
+  readonly improveAvailable: boolean
+  readonly onStartImprove: () => void
+  readonly onConfirmImprove: (kind: DraftKind) => void
+  readonly onAbandonImprove: () => void
 }): React.JSX.Element {
+  const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
   return (
     <div className="lesson-prep-layout lesson-prep-layout-reader">
       <aside className="workspace-card prep-materials-panel">
@@ -499,6 +634,27 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selecte
               <button key={kind} className={kind === 'lecture' ? 'primary-button' : 'secondary-button'} type="button" onClick={() => onGenerate(kind)} disabled={busyAction !== '' || selectedFilesCount === 0}>{busyAction === kind ? '生成中…' : `生成${kindLabels[kind]}`}</button>
             ))}
           </div>
+          {improvePhase === 'review' ? (
+            <div className="improve-review-card">
+              <div className="card-heading"><div><p className="section-kicker">改进流程</p><h2>修改方案（先审阅，再生成）</h2></div></div>
+              <div className="improve-plan-body"><MarkdownDocument body={improvePlan} files={[]} /></div>
+              <div className="improve-review-actions">
+                <label className="improve-kind-label">生成类型
+                  <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={improveBusy}>
+                    <option value="lecture">讲义</option>
+                    <option value="example">例题</option>
+                    <option value="homework">作业</option>
+                  </select>
+                </label>
+                <button className="primary-button" type="button" onClick={() => onConfirmImprove(improveKind)} disabled={improveBusy}>{improveBusy ? '生成中…' : '确认方案并生成'}</button>
+                <button className="secondary-button" type="button" onClick={onStartImprove} disabled={improveBusy}>重新出方案</button>
+                <button className="secondary-button" type="button" onClick={onAbandonImprove} disabled={improveBusy}>放弃改进</button>
+              </div>
+            </div>
+          ) : (
+            <button className="secondary-button improve-entry-button" type="button" onClick={onStartImprove} disabled={busyAction !== '' || !improveAvailable || improveBusy}>{improveBusy ? '正在生成修改方案…' : '基于课件改进（AI 先出修改方案）'}</button>
+          )}
+          {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
         </section>
         <div className="prep-source-actions prep-ai-sources">
           <button className="secondary-button" type="button" onClick={onBrowseExternal}>从外部资料添加</button>
@@ -510,7 +666,7 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selecte
   )
 }
 
-function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup, restoreNoticeVisible, onDismissRestoreNotice }: {
+function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup, restoreNoticeVisible, onDismissRestoreNotice, compareBase, compareOpen, onToggleCompare, compareToggleVisible }: {
   readonly notes: readonly NoteRecord[]
   readonly selectedNote: NoteRecord | undefined
   readonly editing: boolean
@@ -528,6 +684,10 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
   readonly onReturnToSetup: () => void
   readonly restoreNoticeVisible: boolean
   readonly onDismissRestoreNotice: () => void
+  readonly compareBase: { title: string; body: string } | null
+  readonly compareOpen: boolean
+  readonly onToggleCompare: () => void
+  readonly compareToggleVisible: boolean
 }): React.JSX.Element {
   return (
     <div className="draft-result-layout">
@@ -567,10 +727,17 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
               <div className="draft-content-actions">
                 {editing ? <><button className="secondary-button" type="button" onClick={onCancelEdit} disabled={busy}>取消编辑</button><button className="secondary-button" type="button" onClick={onSaveModification} disabled={busy}>保存修改</button></> : <button className="secondary-button" type="button" onClick={onEdit} disabled={busy}>编辑</button>}
                 <button className="secondary-button" type="button" onClick={onRegenerate} disabled={busy}>重新生成</button>
+                {compareToggleVisible && compareBase !== null && <button className="secondary-button" type="button" onClick={onToggleCompare} disabled={busy}>{compareOpen ? '关闭新旧对比' : '新旧对比'}</button>}
                 {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={onSaveToLesson} disabled={busy}>保存到本次课次</button>}
                 {onOpenCourseware !== undefined && <button className="secondary-button" type="button" onClick={onOpenCourseware} disabled={busy}>查看课件</button>}
               </div>
             </div>
+            {compareOpen && compareBase !== null && (
+              <div className="draft-compare-grid">
+                <div className="draft-compare-pane"><p className="section-kicker">参考课件：{compareBase.title}</p><MarkdownDocument body={compareBase.body} files={[]} /></div>
+                <div className="draft-compare-pane"><p className="section-kicker">新工作副本（未发布）</p>{editing ? <textarea aria-label="编辑新工作副本" value={editBody} onChange={(event) => onEditBody(event.target.value)} rows={16} disabled={busy} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}</div>
+              </div>
+            )}
             <div className={`draft-content-body${editing ? ' is-editing' : ' is-preview'}`}>
               {editing ? <textarea aria-label="编辑生成结果" value={editBody} onChange={(event) => onEditBody(event.target.value)} rows={24} disabled={busy} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}
             </div>

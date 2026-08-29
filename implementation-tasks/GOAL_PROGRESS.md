@@ -889,3 +889,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 边界：仅复用 notes draft 生命周期与既有 IPC，无 schema/migration/Service/IPC 变化。
 - 验证：全量 `npm test` 54 files / 191 tests（新增 V152-B 契约测试）✅、typecheck ✅、lint ✅、production build ✅、`git diff --check` ✅。隔离 UI smoke（SQL 种子工作副本，无 AI 依赖）：恢复提示、知道了关闭、编辑→切分区触发确认→取消保留→离开后未保存编辑不落库（重启仅种子正文）全部通过。冒烟中的多次对话框系测试脚本排队点击所致，非应用缺陷；后续 UI smoke 改用 CDP Page.handleJavaScriptDialog 自动应答。未运行 portable/installer。
 - Git：由 `v1.5.2(V152-B): restore work copy and guard unsaved edits` 本地提交收束；不 push。
+
+## 2026-08-29 · V152-C · DONE
+
+- 改进流程：备课设置区新增"基于课件改进（AI 先出修改方案）"——勾选参考资料 + 填写修改要求后，渲染层用既有 `ai:requestText` 与 `files.readContent` 组装方案 prompt（角色+输出约束+要求+参考全文，500 字方案），不加任何 schema/Service/IPC。
+- 方案审阅：方案卡片展示（讲义/例题/作业类型可选），支持"确认方案并生成""重新出方案""放弃改进"；确认后以"原要求 +【老师已确认的修改方案】"嵌入既有 `drafts.generate` 的 requirement（按 4000 字上限截断预算），元数据完整保留方案文本与分块级来源，满足 D12 追溯。
+- 新旧对比：生成后结果区提供"新旧对比"，双栏展示参考课件与新工作副本（未发布），对比关闭后可再打开；improve 状态随课次上下文切换重置。
+- D15 中继式 AI 验收（第二层）：本地中继服务挂起请求并暴露完整 prompt，实施代理按真实语义现写修改方案与讲义 v2 全文回填——方案 prompt 组装正确（含要求与课件全文），生成请求的 requirement 内嵌已确认方案，元数据 11 个分块级来源可追溯，原件 474B 未被改写，新副本为"修改中"工作副本。首次中继因回填慢于网关超时改用序号预写模式（reply-N.txt），已记录。
+- 验证：全量 `npm test` 55 files / 195 tests（新增 v1.5.2-improve-flow 4 项契约）✅、typecheck ✅、lint ✅、production build ✅、`git diff --check` ✅；隔离 Electron 实测截图留档（方案审阅卡、对比双栏、修改中节点）。未运行 portable/installer。
+- Git：由 `v1.5.2(V152-C): plan-confirm improvement flow with compare` 本地提交收束；不 push。
