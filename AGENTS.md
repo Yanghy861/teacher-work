@@ -1,8 +1,8 @@
 # 教师工作台 V1 / V1.1 / V1.2 / V1.3 / V1.4 / V1.5：实现代理约束
 
-Lean V1 的 T01–T08 与 L01–L12、V1.1 的 V11-01–V11-05、V1.2 的 V12-01–V12-05、V1.3 的 V13-01–V13-05、V1.4 的 V14-01–V14-03 均已完成；稳定基线依次为 `checkpoint-L12-pass`、`checkpoint-V1.1-pass`、`checkpoint-V1.2-pass`、`checkpoint-V1.3-pass`、`checkpoint-V1.4-pass`。旧 `tasks/T09-*` 至 `tasks/T42-*` 已退役，只保留历史参考；所有已完成状态和验收记录不得因 V1.5 重新实现或改写。
+Lean V1 的 T01–T08 与 L01–L12、V1.1 的 V11-01–V11-05、V1.2 的 V12-01–V12-05、V1.3 的 V13-01–V13-05、V1.4 的 V14-01–V14-03、V1.5 的 V15-01–V15-03 均已完成；稳定基线依次为 `checkpoint-L12-pass`、`checkpoint-V1.1-pass`、`checkpoint-V1.2-pass`、`checkpoint-V1.3-pass`、`checkpoint-V1.4-pass`、`checkpoint-V1.5-pass`。旧 `tasks/T09-*` 至 `tasks/T42-*` 已退役，只保留历史参考；所有已完成状态和验收记录不得因后续增量重新实现或改写。
 
-当前活动版本是 V1.5。产品主规格是 `教师工作台_V1_5_教学内容工作台_产品与实施方案.md`，实施决策是 `implementation-tasks/V1_5_DECISIONS.md`，唯一活动链为 `implementation-tasks/v1.5-tasks/` 中的 V15-01–V15-03。参考图只用于布局和交互关系；与冻结文字方案冲突时以文字为准。
+V1.5 已完成并在 `checkpoint-V1.5-pass` 冻结；本轮实施链 V15-01–V15-03 整体记为增量 V1.5.1。产品主规格是 `教师工作台_V1_5_教学内容工作台_产品与实施方案.md`（第 11 节为 V1.5.2「AI 修改工作区」方案），实施决策是 `implementation-tasks/V1_5_DECISIONS.md`。当前无活动实施链；产品负责人确认开工 V1.5.2 后，先冻结其任务链与验收规则，再顺序实施。参考图只用于布局和交互关系；与冻结文字方案冲突时以文字为准。
 
 当用户指定当前实现任务时：
 

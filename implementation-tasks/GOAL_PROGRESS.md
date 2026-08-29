@@ -857,3 +857,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 同步修订：主规格第 11 节及其 A–D 子计划、`V1_5_DECISIONS.md` D09、`README.md`、`TASK_INDEX.md`、`docs/v1.5-acceptance.md`；`STATUS.md` V15-02 行同步标注。
 - 历史记录（含 2026-08-26 的 V1.5.1 方案条目）按协议不改写，以本条裁决为准。
 - 版本基线与最终通过标签仍为 `checkpoint-V1.5-pass`，不受增量编号影响。
+
+## 2026-08-29 · V1.5 最终体验确认 · PASS
+
+- 产品负责人明确回复“对的，这部分就完结吧”，构成冻结协议要求的 V1.5 最终体验确认。
+- 最终证据：全量 54 files / 190 tests、typecheck、lint、production build、`git diff --check`、代表性隔离 Windows 流程（真实 380MB 题库、fake AI 备课、1200px 宽度与窄窗口证据）均为 PASS，见 `docs/v1.5-acceptance.md`。
+- 版本动作：在本确认记录提交创建 annotated tag `checkpoint-V1.5-pass`；本轮实施链（V15-01–V15-03）整体记为增量 V1.5.1 并冻结。
+- 发布边界：不运行 portable/installer，不自动 push；未提交真实资料、工作区数据库、Key、日志或临时文件。
+- 下一增量 V1.5.2（AI 修改工作区，方案见主规格第 11 节）待产品负责人确认开工后另行冻结实施链。
