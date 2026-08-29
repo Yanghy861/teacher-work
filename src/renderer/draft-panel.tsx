@@ -26,7 +26,7 @@ const kindLabels: Record<DraftKind, string> = {
   homework: '作业',
 }
 
-type BusyAction = DraftKind | 'regenerate' | 'save' | 'delete' | ''
+type BusyAction = DraftKind | 'regenerate' | 'save' | 'delete' | 'publish' | ''
 
 export default function DraftPanel({
   context,
@@ -304,6 +304,26 @@ export default function DraftPanel({
     }
   }
 
+  async function publishVersion(): Promise<void> {
+    if (selectedNote === undefined) return
+    if (!window.confirm('将把当前内容发布为本课课件新版本，旧版本保留。继续？')) return
+    setBusyAction('publish')
+    setMessage('')
+    setError('')
+    try {
+      const result = await window.teacherWorkbench.drafts.publishToLesson({
+        requestId: globalThis.crypto.randomUUID(),
+        noteId: selectedNote.id,
+      })
+      await reload()
+      setMessage(`已发布为课件《${result.file.originalName}》（第 ${result.version} 版），旧版本保留，可在课件区查看。`)
+    } catch (publishError) {
+      setError(toErrorMessage(publishError))
+    } finally {
+      setBusyAction('')
+    }
+  }
+
   function abandonImprove(): void {
     setImprovePhase('')
     setImprovePlan('')
@@ -480,6 +500,7 @@ export default function DraftPanel({
           onDismissRestoreNotice={() => setRestoreNoticeVisible(false)}
           compareBase={improveBase}
           compareOpen={compareOpen}
+          onPublishToLesson={() => void publishVersion()}
           onToggleCompare={() => setCompareOpen((current) => !current)}
           compareToggleVisible={improveBase !== null}
         />
@@ -666,7 +687,7 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selecte
   )
 }
 
-function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup, restoreNoticeVisible, onDismissRestoreNotice, compareBase, compareOpen, onToggleCompare, compareToggleVisible }: {
+function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup, restoreNoticeVisible, onDismissRestoreNotice, compareBase, compareOpen, onToggleCompare, compareToggleVisible, onPublishToLesson }: {
   readonly notes: readonly NoteRecord[]
   readonly selectedNote: NoteRecord | undefined
   readonly editing: boolean
@@ -688,6 +709,7 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
   readonly compareOpen: boolean
   readonly onToggleCompare: () => void
   readonly compareToggleVisible: boolean
+  readonly onPublishToLesson?: () => void
 }): React.JSX.Element {
   return (
     <div className="draft-result-layout">
@@ -729,6 +751,7 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
                 <button className="secondary-button" type="button" onClick={onRegenerate} disabled={busy}>重新生成</button>
                 {compareToggleVisible && compareBase !== null && <button className="secondary-button" type="button" onClick={onToggleCompare} disabled={busy}>{compareOpen ? '关闭新旧对比' : '新旧对比'}</button>}
                 {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={onSaveToLesson} disabled={busy}>保存到本次课次</button>}
+                {onPublishToLesson !== undefined && <button className="secondary-button" type="button" onClick={onPublishToLesson} disabled={busy}>保存为新版本</button>}
                 {onOpenCourseware !== undefined && <button className="secondary-button" type="button" onClick={onOpenCourseware} disabled={busy}>查看课件</button>}
               </div>
             </div>

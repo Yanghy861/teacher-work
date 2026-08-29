@@ -18,14 +18,17 @@ import {
   type SaveDraftRequest,
 } from '../../shared/draft-contracts'
 import { isNoteRecord } from '../../shared/core-contracts'
+import { isPublishDraftVersionRequest, type PublishDraftVersionRequest } from '../../shared/draft-contracts'
 import { AiGatewayError } from '../ai/ai-gateway'
 import { DraftService, DraftServiceError } from '../draft/draft-service'
+import type { ManagedFileService } from '../files/managed-file-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
 import type { WorkspaceActivityGate } from '../workspace/activity-gate'
 import { WorkspaceActivityError } from '../workspace/activity-gate'
 
 export interface DraftIpcDependencies {
   readonly getDraftService: () => DraftService
+  readonly getManagedFiles: () => ManagedFileService
   readonly activityGate?: WorkspaceActivityGate
 }
 
@@ -93,6 +96,13 @@ export async function dispatchDraftIpc(
       case DRAFT_IPC_CHANNELS.softDelete:
         assertRequest(payload, isDraftIdRequest)
         return ensureNoteResponse(service.softDelete(payload as DraftIdRequest))
+      case DRAFT_IPC_CHANNELS.publishToLesson: {
+        assertRequest(payload, isPublishDraftVersionRequest)
+        const published = dependencies
+          .getManagedFiles()
+          .publishLessonDraftVersion((payload as PublishDraftVersionRequest).noteId)
+        return success(published)
+      }
     }
     throw new Error('Unhandled draft IPC channel')
   } catch (error) {

@@ -41,6 +41,7 @@ type ProviderMode = 'success' | 'network' | 'empty' | 'cancel'
 interface AcceptanceFixture {
   readonly workspace: WorkspaceHandle
   readonly core: CoreDataService
+  readonly files: ManagedFileService
   readonly draft: DraftService
   readonly gateway: AiGateway
   readonly fileId: string
@@ -150,6 +151,7 @@ function fixture(): AcceptanceFixture {
   return {
     workspace,
     core,
+    files,
     draft,
     gateway,
     fileId: file.id,
@@ -201,7 +203,7 @@ describe('L10 AI lesson-prep phase acceptance', () => {
       dispatchDraftIpc(
         DRAFT_IPC_CHANNELS.generate,
         validRequest(value, kind, `l10-happy-${index}`),
-        { getDraftService: () => value.draft },
+        { getDraftService: () => value.draft, getManagedFiles: () => value.files },
         logger,
       )))
 
@@ -231,7 +233,7 @@ describe('L10 AI lesson-prep phase acceptance', () => {
 
   it('does not send without selected material and enforces character/token limits at IPC', async () => {
     const value = fixture()
-    const dependencies = { getDraftService: () => value.draft }
+    const dependencies = { getDraftService: () => value.draft, getManagedFiles: () => value.files }
     const empty = await dispatchDraftIpc(
       DRAFT_IPC_CHANNELS.generate,
       { ...validRequest(value, 'lecture', 'l10-no-selection'), sources: [] },
@@ -272,7 +274,7 @@ describe('L10 AI lesson-prep phase acceptance', () => {
   it('keeps existing notes through network, empty-response, and cancellation failures, then retries', async () => {
     const value = fixture()
     const existing = value.core.createNote(value.studentId, '已有 note', value.lessonId)
-    const dependencies = { getDraftService: () => value.draft }
+    const dependencies = { getDraftService: () => value.draft, getManagedFiles: () => value.files }
     const request = validRequest(value, 'homework', 'l10-failure')
 
     value.setProviderMode('network')
@@ -308,7 +310,7 @@ describe('L10 AI lesson-prep phase acceptance', () => {
     const response = await dispatchDraftIpc(
       DRAFT_IPC_CHANNELS.generate,
       validRequest(value, 'lecture', 'l10-secret-audit'),
-      { getDraftService: () => value.draft },
+      { getDraftService: () => value.draft, getManagedFiles: () => value.files },
       value.logger,
     )
     const databaseRows = value.workspace.database.raw.prepare('SELECT provider, model, endpoint FROM ai_settings').all()

@@ -1,6 +1,7 @@
 import { isRecord } from './ipc-contracts'
 import { isSearchPosition, type SearchPosition } from './search-contracts'
 import { SKILL_NAME_MAX_CHARS, SKILL_PROMPT_MAX_CHARS } from './skill-contracts'
+import { isManagedFileRecord, type ManagedFileRecord } from './file-contracts'
 
 export const DRAFT_KINDS = {
   lecture: 'lecture',
@@ -232,4 +233,27 @@ function hasOnlyKeys(
   const allowed = new Set([...requiredKeys, ...optionalKeys])
   const keys = Object.keys(value)
   return requiredKeys.every((key) => keys.includes(key)) && keys.every((key) => allowed.has(key))
+}
+
+export interface PublishDraftVersionRequest {
+  readonly requestId: string
+  readonly noteId: string
+}
+
+export interface PublishDraftVersionResult {
+  readonly file: ManagedFileRecord
+  readonly version: number
+}
+
+export function isPublishDraftVersionRequest(value: unknown): value is PublishDraftVersionRequest {
+  if (typeof value !== 'object' || value === null) return false
+  const record = value as Record<string, unknown>
+  return typeof record.requestId === 'string' && record.requestId.trim() !== '' &&
+    typeof record.noteId === 'string' && record.noteId.trim() !== ''
+}
+
+export function isPublishDraftVersionResult(value: unknown): value is PublishDraftVersionResult {
+  if (!isRecord(value)) return false
+  const record = value as Record<string, unknown>
+  return isManagedFileRecord(record.file) && typeof record.version === 'number' && Number.isInteger(record.version) && record.version >= 1
 }

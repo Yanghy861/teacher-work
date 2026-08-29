@@ -904,3 +904,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 产品负责人批准选项 1：为"保存为新版本"新增窄白名单通道 `drafts:publish-to-lesson`，Main 侧复用既有 managed 原子写入与路径边界；发布文件按"原标题 · 第 N 版"命名入课，旧版本保留。
 - 产品负责人同时提出增长担忧，已裁决：数据层（文本课件 KB 级）无风险；体验层版本折叠/归档记为 V1.5.3 候选，本轮不做。
 - V152-D 据此进入实施。
+
+## 2026-08-29 · V152-D · DONE
+
+- 按产品负责人批准的选项 1 实现发布通道：`draft:publish-to-lesson` 严格契约（requestId+noteId）+ Preload 运行时守卫 + Handler 白名单用例。
+- Main：ManagedFileService.publishLessonDraftVersion——校验节点（AI 节点/未删除/绑定课次/内容非空）、requireActiveLesson、"第 N 版"计数（按已发布命名规范）→ 文本对象同目录临时文件 + writeFileSync + 原子 rename + 事务登记 files/lesson_files → 节点转 saved（已确认）。失败清理半成品。
+- Renderer：结果区"保存为新版本"按钮 + 确认弹窗 + 成功消息（含文件名与版次）。
+- 验证：全量 55 files / 196 tests（新增 V152-D 契约断言：原子写、路径、命名计数、状态迁移）✅、typecheck、lint、build、diff check ✅。隔离发布 UI smoke 与三层验收归入 V152-E。未运行 portable/installer。
+- Git：由 `v1.5.2(V152-D): publish work copy as new courseware version` 本地提交收束；不 push。

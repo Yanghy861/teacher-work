@@ -67,6 +67,7 @@ export const DRAFT_IPC_CHANNELS = {
   regenerate: 'draft:regenerate',
   saveToLesson: 'draft:save-to-lesson',
   softDelete: 'draft:soft-delete',
+  publishToLesson: 'draft:publish-to-lesson',
 } as const
 
 export const SKILL_IPC_CHANNELS = {

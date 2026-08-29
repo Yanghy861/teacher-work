@@ -47,3 +47,23 @@ describe('V152-C improvement flow contract', () => {
     expect(contextEffect).toContain('setCompareOpen(false)')
   })
 })
+
+describe('V152-D publish version contract', () => {
+  it('exposes the approved publish channel end to end', () => {
+    const contracts = source('../src/shared/ipc-contracts.ts')
+    const managed = source('../src/main/files/managed-file-service.ts')
+    const draft = source('../src/renderer/draft-panel.tsx')
+    const preload = source('../src/preload/index.ts')
+    expect(contracts).toContain("publishToLesson: 'draft:publish-to-lesson'")
+    expect(managed).toContain('publishLessonDraftVersion(noteId: string)')
+    expect(managed).toContain('只能发布 AI 修改节点。')
+    expect(managed).toContain("UPDATE notes SET draft_status = 'saved', updated_at = ? WHERE id = ?")
+    expect(managed).toContain("f.original_name LIKE '% · 第 % 版'")
+    expect(managed).toContain('writeFileSync(temporaryPath, Buffer.from(bodyMd, \'utf8\'))')
+    expect(managed).toContain('this.renameFile(temporaryPath, object.contentPath)')
+    expect(preload).toContain('publishToLesson')
+    expect(draft).toContain('保存为新版本')
+    expect(draft).toContain('将把当前内容发布为本课课件新版本，旧版本保留。继续？')
+    expect(draft).toContain('旧版本保留，可在课件区查看。')
+  })
+})

@@ -368,7 +368,7 @@ void app.whenReady().then(() => {
   )
   unregisterDraftIpc = registerDraftIpc(
     ipcMain,
-    { getDraftService, activityGate },
+    { getDraftService, getManagedFiles, activityGate },
     logger,
   )
   unregisterSkillIpc = registerSkillIpc(

@@ -1,4 +1,4 @@
-import { createReadStream, accessSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
+import { createReadStream, accessSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 
@@ -277,6 +277,117 @@ export class ManagedFileService {
 
   getObjectContentPath(fileId: string): string {
     return resolveManagedObjectPath(this.paths, fileId).contentPath
+  }
+
+  publishLessonDraftVersion(noteId: string): { file: ManagedFileRecord; version: number } {
+    const note = this.database
+      .prepare(
+        `SELECT id, lesson_id, body_md, note_kind, draft_status, deleted_at
+           FROM notes WHERE id = ?`,
+      )
+      .get(noteId) as
+      | {
+          readonly id: string
+          readonly lesson_id: string | null
+          readonly body_md: string
+          readonly note_kind: string
+          readonly draft_status: string | null
+          readonly deleted_at: string | null
+        }
+      | undefined
+    if (note === undefined) {
+      throw new ManagedFileError('FILE_ID_INVALID', '要发布的修改节点不存在。')
+    }
+    if (note.deleted_at !== null) {
+      throw new ManagedFileError('FILE_DELETED', '该修改节点已删除，无法发布。')
+    }
+    if (note.note_kind === 'manual' || note.draft_status === null) {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '只能发布 AI 修改节点。')
+    }
+    if (note.lesson_id === null) {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '该修改节点未绑定课次，无法发布。')
+    }
+    const body = note.body_md
+    if (body.trim() === '') {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '工作副本内容为空，无法发布。')
+    }
+    const lessonId = note.lesson_id
+    this.requireActiveLesson(lessonId)
+    const lessonTitle = this.database
+      .prepare('SELECT title FROM nodes WHERE id = ?')
+      .get(lessonId) as { readonly title: string }
+    const publishedCount = this.database
+      .prepare(
+        `SELECT COUNT(*) AS count
+           FROM lesson_files lf
+           JOIN files f ON f.id = lf.file_id
+          WHERE lf.lesson_id = ? AND f.deleted_at IS NULL
+            AND f.original_name LIKE '% · 第 % 版'`,
+      )
+      .get(lessonId) as { readonly count: number }
+    const version = publishedCount.count + 1
+    const originalName = `${lessonTitle.title} · 第 ${version} 版.md`
+    const file = this.createTextObjectAndRegister(body, originalName, { targetType: 'lesson', targetId: lessonId })
+    this.transaction(() => {
+      this.database
+        .prepare(`UPDATE notes SET draft_status = 'saved', updated_at = ? WHERE id = ?`)
+        .run(this.now(), noteId)
+    })
+    return { file, version }
+  }
+
+  private createTextObjectAndRegister(
+    bodyMd: string,
+    originalName: string,
+    link: { readonly targetType: 'lesson' | 'student'; readonly targetId: string },
+  ): ManagedFileRecord {
+    const fileId = this.idFactory()
+    const object = resolveManagedObjectPath(this.paths, fileId)
+    let objectDirectoryCreated = false
+    let registrationStarted = false
+    try {
+      mkdirSync(object.objectDirectory)
+      objectDirectoryCreated = true
+      const temporaryPath = join(object.objectDirectory, `.content-${randomUUID()}.tmp`)
+      writeFileSync(temporaryPath, Buffer.from(bodyMd, 'utf8'))
+      assertReadableFile(temporaryPath)
+      this.renameFile(temporaryPath, object.contentPath)
+      assertReadableFile(object.contentPath)
+      const contentStats = statSync(object.contentPath)
+      const createdAt = this.now()
+      registrationStarted = true
+      const record = this.transaction(() => {
+        this.database
+          .prepare(
+            `INSERT INTO files
+               (id, original_name, size_bytes, mime_type, origin_file_id,
+                mtime_ms, content_hash, created_at, updated_at, deleted_at)
+             VALUES (?, ?, ?, 'text/markdown', NULL, ?, NULL, ?, ?, NULL)`,
+          )
+          .run(fileId, originalName, contentStats.size, contentStats.mtimeMs, createdAt, createdAt)
+        this.database
+          .prepare(`INSERT INTO lesson_files (file_id, lesson_id, created_at) VALUES (?, ?, ?)`)
+          .run(fileId, link.targetId, createdAt)
+        return this.requireFile(fileId)
+      })
+      objectDirectoryCreated = false
+      return record
+    } catch (error) {
+      if (objectDirectoryCreated) {
+        try {
+          this.removePath(object.objectDirectory)
+        } catch {
+          // Unregistered leftover object is unreachable through the managed API.
+        }
+      }
+      if (error instanceof ManagedFileError) {
+        throw error
+      }
+      throw new ManagedFileError(
+        registrationStarted ? 'FILE_REGISTRATION_FAILED' : 'FILE_COPY_FAILED',
+        registrationStarted ? '文件登记失败，未保留半成品。' : '文件写入失败，未保留半成品。',
+      )
+    }
   }
 
   private copyAndRegister(

@@ -30,6 +30,8 @@ import {
   type GenerateDraftRequest,
   type GenerateDraftResult,
   type RegenerateDraftRequest,
+  type PublishDraftVersionRequest,
+  type PublishDraftVersionResult,
   type SaveDraftRequest,
   isDraftNoteMetadata,
 } from './draft-contracts'
@@ -204,7 +206,8 @@ export type {
 export { isManagedFileContent } from './file-contracts'
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
 export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
-export type { DraftIdRequest, DraftNoteMetadata, DraftSourceSelection, GenerateDraftRequest, GenerateDraftResult, RegenerateDraftRequest, SaveDraftRequest } from './draft-contracts'
+export type { DraftIdRequest, DraftNoteMetadata, DraftSourceSelection, GenerateDraftRequest, GenerateDraftResult, PublishDraftVersionRequest, PublishDraftVersionResult, RegenerateDraftRequest, SaveDraftRequest } from './draft-contracts'
+export { isPublishDraftVersionRequest, isPublishDraftVersionResult } from './draft-contracts'
 export type {
   ExternalActionResult,
   ExternalDirectoryListing,
@@ -294,6 +297,7 @@ export interface TeacherWorkbenchApi {
     regenerate: (request: RegenerateDraftRequest) => Promise<GenerateDraftResult>
     saveToLesson: (request: SaveDraftRequest) => Promise<NoteRecord>
     softDelete: (request: DraftIdRequest) => Promise<NoteRecord>
+    publishToLesson: (request: PublishDraftVersionRequest) => Promise<PublishDraftVersionResult>
   }
   skills: {
     list: () => Promise<readonly SkillRecord[]>

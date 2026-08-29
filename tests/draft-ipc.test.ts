@@ -77,7 +77,10 @@ describe('draft IPC boundary', () => {
         aiMetadata: metadata,
       }),
     } as unknown as DraftService
-    const dependencies: DraftIpcDependencies = { getDraftService: () => service }
+    const dependencies: DraftIpcDependencies = {
+      getDraftService: () => service,
+      getManagedFiles: () => ({ publishLessonDraftVersion: () => ({ file: {}, version: 1 }) }) as never,
+    }
     const ipcMain = new FakeIpcMain()
     const unregister = registerDraftIpc(ipcMain, dependencies, logger)
     expect([...ipcMain.handlers.keys()]).toEqual(DRAFT_CHANNELS)
