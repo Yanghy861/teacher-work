@@ -898,3 +898,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - D15 中继式 AI 验收（第二层）：本地中继服务挂起请求并暴露完整 prompt，实施代理按真实语义现写修改方案与讲义 v2 全文回填——方案 prompt 组装正确（含要求与课件全文），生成请求的 requirement 内嵌已确认方案，元数据 11 个分块级来源可追溯，原件 474B 未被改写，新副本为"修改中"工作副本。首次中继因回填慢于网关超时改用序号预写模式（reply-N.txt），已记录。
 - 验证：全量 `npm test` 55 files / 195 tests（新增 v1.5.2-improve-flow 4 项契约）✅、typecheck ✅、lint ✅、production build ✅、`git diff --check` ✅；隔离 Electron 实测截图留档（方案审阅卡、对比双栏、修改中节点）。未运行 portable/installer。
 - Git：由 `v1.5.2(V152-C): plan-confirm improvement flow with compare` 本地提交收束；不 push。
+
+## 2026-08-29 · V152-D 范围批准 · SCOPE_APPROVED
+
+- 产品负责人批准选项 1：为"保存为新版本"新增窄白名单通道 `drafts:publish-to-lesson`，Main 侧复用既有 managed 原子写入与路径边界；发布文件按"原标题 · 第 N 版"命名入课，旧版本保留。
+- 产品负责人同时提出增长担忧，已裁决：数据层（文本课件 KB 级）无风险；体验层版本折叠/归档记为 V1.5.3 候选，本轮不做。
+- V152-D 据此进入实施。
