@@ -873,3 +873,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 关键裁决：固定分区为"课件 / AI 备课 / 修改记录"；正式课件与工作副本严格分离；AI 先出可审阅修改方案再生成；默认不新增 schema/migration/Service/IPC，能力不足即停止确认（D10–D14）。
 - 验收分层（新增 D15）：固定 fake provider 自动门 → 中继式 AI 开发验收（本地服务挂起 prompt，实施代理按真实语义现写方案与内容回填）→ 产品负责人真实 Key 最终体验确认；三层缺一不可。
 - Git：本方案作为独立 `plan(V1.5.2)` 本地提交冻结；里程碑使用 `v1.5.2(V152-XX)`；不自动 push，不运行 portable/installer，最终体验确认前不创建 `checkpoint-V1.5.2-pass`。
+
+## 2026-08-29 · V152-A · DONE
+
+- 术语收口：教学内容三分区改为"课件 / AI 备课 / 修改记录"；课程页全局入口"待处理草稿 {N}"改为"修改记录 {N}"；未选课次的修改记录区文案改为"所有课次的 AI 修改节点"。
+- 状态术语：draft → "修改中"，saved → "已确认"；草稿箱/AI 草稿等文案全部移除（含收件箱空态、节点列表、详情 kicker、删除确认与生成提示）；Main 侧删除保护错误文案同步为"已确认的课次成果不能从修改记录删除"。
+- notes 数据完全兼容，无 schema/migration/Service/IPC 变化；无行为变化（V152-B 起再引入工作副本语义）。
+- 验证：全量 `npm test` 54 files / 190 tests ✅、typecheck ✅、lint ✅、production build ✅、`git diff --check` ✅；更新 v1.2-course-ui 与 v1.5-teaching-content-ui 契约断言（含新增 AI 备课/修改记录标签与"无草稿箱残留"断言）。未运行 portable/installer。
+- Git：由 `v1.5.2(V152-A): adopt modification workspace terminology` 本地提交收束；不 push。

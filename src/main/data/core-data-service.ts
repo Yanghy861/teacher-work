@@ -470,7 +470,7 @@ export class CoreDataService {
     return this.transaction(() => {
       const existing = this.getActiveAiResult(noteId)
       if (existing.draftStatus !== 'draft') {
-        throw new CoreDataError('INVALID_DRAFT', '已保存到课次的结果不能从草稿箱删除。')
+        throw new CoreDataError('INVALID_DRAFT', '已确认的课次成果不能从修改记录删除。')
       }
       const now = this.now()
       this.database

@@ -66,7 +66,7 @@ export default function App(): React.JSX.Element {
     setActiveItem(item)
   }
 
-  // V1.2 contract migrated: onOpenDraftInbox={() => navigate('备课')} now opens 教学内容 / 草稿箱.
+  // V1.2 contract migrated: onOpenDraftInbox now opens 教学内容 / 修改记录.
 
   function startPrep(context: LessonPrepContext): void {
     const originStudentId = courseOriginStudentId === '' ? undefined : courseOriginStudentId

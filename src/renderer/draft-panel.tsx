@@ -162,7 +162,7 @@ export default function DraftPanel({
       setShowResults(true)
       setEditing(false)
       setEditBody('')
-      setMessage(`${kindLabels[kind]}已生成并进入草稿箱。`)
+      setMessage(`已生成，可在修改记录中查看。`)
     } catch (generationError) {
       setMessage('')
       setError(toErrorMessage(generationError))
@@ -265,7 +265,7 @@ export default function DraftPanel({
 
   async function deleteDraft(note: NoteRecord): Promise<void> {
     if (note.draftStatus !== 'draft') return
-    if (!window.confirm(`确定删除这份${kindLabels[note.noteKind as DraftKind]}草稿吗？`)) return
+    if (!window.confirm(`确定删除这份尚未发布的${kindLabels[note.noteKind as DraftKind]}修改节点吗？`)) return
     setBusyAction('delete')
     setError('')
     try {
@@ -373,12 +373,12 @@ function DraftInbox({ core, busy, error, message, onOpenDraft, onDeleteDraft, on
 }): React.JSX.Element {
   const entries = listDraftInbox(core)
   return (
-    <section className="draft-inbox-panel" aria-label="草稿箱">
+    <section className="draft-inbox-panel" aria-label="修改记录">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       {message !== '' && <div className="inline-notice" role="status">{message}</div>}
       <div className="workspace-card">
         <div className="card-heading">
-          <div><p className="section-kicker">自动保存</p><h2>草稿箱</h2><p>这里只显示尚未“保存到本次课次”的 AI 草稿。</p></div>
+          <div><p className="section-kicker">AI 协作</p><h2>修改记录</h2><p>这里列出各课次尚未发布（修改中）的 AI 修改节点，点击进入对应课次的 AI 备课。</p></div>
           <span className="count-label">{entries.length} 份</span>
         </div>
         <ul className="draft-inbox-list">
@@ -386,7 +386,7 @@ function DraftInbox({ core, busy, error, message, onOpenDraft, onDeleteDraft, on
             <DraftInboxRow key={entry.note.id} entry={entry} busy={busy} onOpenDraft={onOpenDraft} onDeleteDraft={onDeleteDraft} />
           ))}
           {core === null && <li className="empty-state">正在读取草稿…</li>}
-          {core !== null && entries.length === 0 && <li className="empty-state">草稿箱为空。生成内容后会自动出现在这里。</li>}
+          {core !== null && entries.length === 0 && <li className="empty-state">暂无修改节点。生成内容后会自动出现在这里。</li>}
         </ul>
         <button className="secondary-button" type="button" onClick={onBackToCourses}>前往我的课程开始备课</button>
       </div>
@@ -405,7 +405,7 @@ function DraftInboxRow({ entry, busy, onOpenDraft, onDeleteDraft }: {
     <li>
       <button className="draft-inbox-open" type="button" disabled={busy || entry.context === null} onClick={() => entry.context !== null && onOpenDraft(entry.context, entry.note.id)}>
         <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
-        <span><strong>{kindLabels[kind]}草稿</strong><small>{entry.courseTitle} / {entry.lessonTitle}</small></span>
+        <span><strong>{kindLabels[kind]}修改节点</strong><small>{entry.courseTitle} / {entry.lessonTitle}</small></span>
         <time dateTime={entry.note.updatedAt}>{formatDateTime(entry.note.updatedAt)}</time>
       </button>
       <button className="danger-button" type="button" disabled={busy} onClick={() => onDeleteDraft(entry.note)}>删除</button>
@@ -509,8 +509,8 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
               <li key={note.id} className={selectedNote?.id === note.id ? 'is-selected' : ''}>
                 <button type="button" className="draft-result-select" onClick={() => onSelect(note)} disabled={busy}>
                   <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
-                  <span><strong>{kindLabels[kind]}{note.draftStatus === 'draft' ? '草稿' : '成果'}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
-                  <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '草稿' : '已保存'}</span>
+                  <span><strong>{kindLabels[kind]}{note.draftStatus === 'draft' ? '修改节点' : '已确认成果'}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
+                  <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
                 </button>
                 {note.draftStatus === 'draft' && <button className="danger-button" type="button" onClick={() => onDelete(note)} disabled={busy}>删除</button>}
               </li>
@@ -526,7 +526,7 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
         ) : (
           <>
             <div className="draft-content-header">
-              <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '尚未保存到本次课次' : '本次课次成果'}</p><h2>{kindLabels[selectedNote.noteKind as DraftKind]}{selectedNote.draftStatus === 'draft' ? '草稿' : '成果'}</h2></div>
+              <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{kindLabels[selectedNote.noteKind as DraftKind]}{selectedNote.draftStatus === 'draft' ? '修改节点' : '成果'}</h2></div>
               <div className="draft-content-actions">
                 {editing ? <><button className="secondary-button" type="button" onClick={onCancelEdit} disabled={busy}>取消编辑</button><button className="secondary-button" type="button" onClick={onSaveModification} disabled={busy}>保存修改</button></> : <button className="secondary-button" type="button" onClick={onEdit} disabled={busy}>编辑</button>}
                 <button className="secondary-button" type="button" onClick={onRegenerate} disabled={busy}>重新生成</button>

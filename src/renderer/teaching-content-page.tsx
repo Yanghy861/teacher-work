@@ -133,7 +133,7 @@ export default function TeachingContentPage({
         <div className="teaching-content-context">
           <span className="section-kicker">教学内容</span>
           <h1>{positionLabel}</h1>
-          <p>{target?.section === 'drafts' && target.courseId === null ? '所有待处理草稿' : '浏览和处理当前课次的教学内容，不会改变 Current Lesson。'}</p>
+          <p>{target?.section === 'drafts' && target.courseId === null ? '所有课次的 AI 修改节点' : '浏览和处理当前课次的教学内容，不会改变 Current Lesson。'}</p>
         </div>
         <div className="teaching-content-header-actions">
           {target?.originStudentId !== undefined && (
@@ -151,7 +151,7 @@ export default function TeachingContentPage({
       </header>
 
       <nav className="teaching-content-tabs" aria-label="教学内容分区">
-        {([['courseware', '课件'], ['prep', '备课'], ['drafts', '草稿箱']] as const).map(([section, label]) => (
+        {([['courseware', '课件'], ['prep', 'AI 备课'], ['drafts', '修改记录']] as const).map(([section, label]) => (
           <button className={target?.section === section ? 'is-active' : ''} type="button" key={section} onClick={() => setSection(section)}>{label}</button>
         ))}
       </nav>

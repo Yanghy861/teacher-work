@@ -15,9 +15,9 @@ describe('V12-02 course renderer contract', () => {
     expect(dashboard).toContain('<CourseList')
     expect(dashboard).toContain('<CourseDetail')
     expect(dashboard).toContain('今日待点名')
-    expect(dashboard).toContain('待处理草稿 {draftCount}')
+    expect(dashboard).toContain('修改记录 {draftCount}')
     expect(app).toContain('onOpenDraft={openDraft}')
-    expect(app).toContain("onOpenDraftInbox={() => navigate('备课')}")
+    expect(app).toContain('onOpenDraftInbox={() => openTeachingContent(createDraftInboxTarget())}')
     expect(styles).toMatch(/\.course-workspace-layout\s*\{[^}]*grid-template-columns:\s*minmax\(280px, 320px\) minmax\(0, 1fr\)/s)
   })
 

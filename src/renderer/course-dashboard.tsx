@@ -197,7 +197,7 @@ export default function CourseDashboard({
       <header className="course-page-header">
         <div className="course-page-stats">
           <span><strong>全部课程 {summaries.length}</strong></span>
-          <button type="button" onClick={onOpenDraftInbox}>待处理草稿 {draftCount}</button>
+          <button type="button" onClick={onOpenDraftInbox}>修改记录 {draftCount}</button>
         </div>
         <div className="course-page-actions">
           <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
