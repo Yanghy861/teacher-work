@@ -140,6 +140,20 @@ describe('V11-02 lesson prep renderer state', () => {
     expect(isSelectableLessonPrepFile(lecture)).toBe(true)
   })
 
+  it('nests line-wrapped SiYuan image references below their Markdown document', () => {
+    const lecture = file('lecture', '三角形基础.md', 'text/markdown')
+    const lectureImage = file('lecture-image', 'figure.webp', 'image/webp')
+
+    const tree = buildLessonMaterialTree(
+      [lecture, lectureImage],
+      new Map([[lecture.id, '!\n[图](assets/figure\n.webp)']]),
+    )
+
+    expect(tree).toHaveLength(1)
+    expect(tree[0]?.file.id).toBe(lecture.id)
+    expect(tree[0]?.children.map((child) => child.id)).toEqual([lectureImage.id])
+  })
+
   it('hides exported folder index markdown while keeping real lesson documents and feedback', () => {
     const stageIndex = file('stage', '七年级春季.md', 'text/markdown')
     const lessonIndex = file('lesson-index', '第二课.md', 'text/markdown')

@@ -975,3 +975,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - smoke 首轮两条对比标题断言为测试脚本未展开按需面板造成的假失败；截图与组件契约确认产品对比区存在，脚本已修正。期间暴露到桌面的隔离 Electron 确认框已全部关闭，测试实例与中继端口清理完毕，正式工作区未受影响。
 - 最终门：55 files / 205 tests passed，另 1 file / 1 test skipped；typecheck、lint、production build、`git diff --check` 通过。未运行 portable/installer，未 push。
 - 验收报告已增补 `docs/v1.5.3-acceptance.md` 第 7 节；V1531-B 为 `DONE / AWAITING_PRODUCT_CONFIRMATION`，产品负责人确认前不创建 `checkpoint-V1.5.3-pass`。
+
+## 2026-08-30 · V1531-B 用户实测补充修复 · DONE / AWAITING_PRODUCT_CONFIRMATION
+
+- 用户真实课件发现思源图片引用被换行拆成 `!` 与 `[alt](assets/...)` 后，正文显示原始资源路径、图片不渲染并出现横向滚动条。
+- 修复已落在公共富文本规范化、课件目录资源提取和正文图片匹配三处：兼容跨行 `!`、跨行资源路径、空格/URL 编码与可选标题；保护图片/链接/代码 token，避免文件名下划线被数学规范化误判；缺图降级只显示短替代文字。
+- 新增图片专项 14 tests 全过；typecheck、lint 通过。该修复仍归入 V1.5.3.1/V1531-B，最终标签仍等待产品负责人体验确认。

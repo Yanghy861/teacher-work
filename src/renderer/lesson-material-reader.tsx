@@ -8,7 +8,7 @@ import {
   isSelectableLessonPrepFile,
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
-import { normalizeRichText } from './rich-text'
+import { normalizeMarkdownImageReferences, normalizeRichText } from './rich-text'
 
 export default function LessonMaterialReader({
   files,
@@ -311,7 +311,7 @@ type MarkdownBlock =
   | { readonly type: 'rule' }
 
 function parseBlocks(body: string): MarkdownBlock[] {
-  const lines = body.replace(/\r\n/g, '\n').split('\n')
+  const lines = normalizeMarkdownImageReferences(body).split('\n')
   const blocks: MarkdownBlock[] = []
   let index = 0
   while (index < lines.length) {
@@ -435,7 +435,7 @@ function renderParagraphLines(
 
 function renderInline(text: string, files: readonly ManagedFileRecord[], keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = []
-  const normalizedText = normalizeRichText(text)
+  const normalizedText = normalizeInlineMarkdownText(text)
   const pattern = /(!\[[^\]]*\]\([^)]*\)|\[[^\]]+\]\([^)]*\)|`[^`]+`|\\\([^\n]+?\\\)|\\\[[^\n]+?\\\]|\$\$[^$]+?\$\$|\$[^$\n]+?\$|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/gu
   let cursor = 0
   let match: RegExpExecArray | null
@@ -470,6 +470,20 @@ function renderInline(text: string, files: readonly ManagedFileRecord[], keyPref
   }
   if (cursor < normalizedText.length) nodes.push(normalizedText.slice(cursor))
   return nodes
+}
+
+function normalizeInlineMarkdownText(text: string): string {
+  const tokenMarker = '\uE000'
+  const protectedTokens: string[] = []
+  const protectedText = normalizeMarkdownImageReferences(text).replace(
+    /(!\[[^\]]*\]\([^)]*\)|\[[^\]]+\]\([^)]*\)|`[^`]+`)/gu,
+    (token) => {
+      const index = protectedTokens.push(token) - 1
+      return `${tokenMarker}${index}${tokenMarker}`
+    },
+  )
+  const tokenPattern = new RegExp(`${tokenMarker}(\\d+)${tokenMarker}`, 'gu')
+  return normalizeRichText(protectedText).replace(tokenPattern, (_match, index: string) => protectedTokens[Number(index)] ?? '')
 }
 
 function MathSpan({ formula, display = false }: { readonly formula: string; readonly display?: boolean }): React.JSX.Element {
@@ -512,7 +526,18 @@ function isBlockStart(line: string): boolean {
 }
 
 function findReferencedFile(files: readonly ManagedFileRecord[], reference: string): ManagedFileRecord | undefined {
-  const normalized = reference.trim().split(/[?#]/u)[0].split(/[\\/]/u).at(-1)?.toLocaleLowerCase('zh-CN')
+  const rawReference = reference.trim().split(/[?#]/u)[0]
+  const withoutTitle = rawReference.split(/\s+['"]/u)[0]
+  const name = withoutTitle.startsWith('<') && withoutTitle.endsWith('>')
+    ? withoutTitle.slice(1, -1)
+    : withoutTitle
+  let normalized = name.split(/[\\/]/u).at(-1) ?? ''
+  try {
+    normalized = decodeURIComponent(normalized)
+  } catch {
+    // Keep the original path when a malformed escape appears in a document.
+  }
+  normalized = normalized.toLocaleLowerCase('zh-CN')
   if (normalized === undefined || normalized === '') return undefined
   return files.find((file) => file.originalName.toLocaleLowerCase('zh-CN') === normalized)
 }

@@ -2,7 +2,23 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import type { ManagedFileRecord } from '../src/shared/file-contracts'
 import { MarkdownDocument } from '../src/renderer/lesson-material-reader'
+
+function file(id: string, originalName: string, mimeType: string): ManagedFileRecord {
+  return {
+    id,
+    originalName,
+    sizeBytes: 10,
+    mimeType,
+    originFileId: null,
+    mtimeMs: 1,
+    contentHash: null,
+    createdAt: '2026-08-22T00:00:00.000Z',
+    updatedAt: '2026-08-22T00:00:00.000Z',
+    deletedAt: null,
+  }
+}
 
 describe('lesson material Markdown reader', () => {
   it('renders SiYuan-tolerated inline math and preserves Markdown hard breaks', () => {
@@ -29,5 +45,28 @@ describe('lesson material Markdown reader', () => {
 
     expect(markup).toContain('class="katex"')
     expect(markup).not.toContain('&amp;gt;')
+  })
+
+  it('repairs line-wrapped SiYuan image references without leaking the raw asset path', () => {
+    const image = file('figure', '65907257da1299e1a28868273761bb2dformat, fauto 20260320150348 - 2ejaeag.webp', 'image/webp')
+    const markup = renderToStaticMarkup(createElement(MarkdownDocument, {
+      body: '!\n[65907257da1299e1a28868273761bb2dformat, fauto](assets/65907257da1299e1a28868273761bb2dformat, fauto\n20260320150348 - 2ejaeag.webp)',
+      files: [image],
+    }))
+
+    expect(markup).toContain('material-image-missing')
+    expect(markup).toContain('65907257da1299e1a28868273761bb2dformat, fauto')
+    expect(markup).not.toContain('assets/')
+    expect(markup).not.toContain('20260320150348 - 2ejaeag.webp)')
+  })
+
+  it('does not treat underscores in image filenames as math scripts', () => {
+    const image = file('figure', 'figure_name.webp', 'image/webp')
+    const markup = renderToStaticMarkup(createElement(MarkdownDocument, {
+      body: '![图](assets/figure_name.webp)',
+      files: [image],
+    }))
+
+    expect(markup).toContain('material-image-missing')
   })
 })

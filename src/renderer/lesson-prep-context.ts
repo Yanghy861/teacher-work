@@ -1,5 +1,6 @@
 import type { CourseMode, NodeRecord, StudentRecord } from '../shared/core-contracts'
 import type { ManagedFileOverview, ManagedFileRecord } from '../shared/file-contracts'
+import { normalizeMarkdownImageReferences } from './rich-text'
 
 export interface LessonMaterialTreeNode {
   readonly file: ManagedFileRecord
@@ -166,8 +167,9 @@ export function buildLessonMaterialTree(
 function extractResourceReferences(body: string): string[] {
   const references: string[] = []
   const pattern = /(?:!\[[^\]]*\]|\[[^\]]+\])\((?:<([^>]+)>|([^)]*))\)/gu
+  const normalizedBody = normalizeMarkdownImageReferences(body)
   let match: RegExpExecArray | null
-  while ((match = pattern.exec(body)) !== null) {
+  while ((match = pattern.exec(normalizedBody)) !== null) {
     const rawReference = (match[1] ?? match[2] ?? '').trim()
     if (rawReference === '' || /^(?:https?:|data:|#)/iu.test(rawReference)) continue
     references.push(rawReference.split(/\s+['"]/u)[0])

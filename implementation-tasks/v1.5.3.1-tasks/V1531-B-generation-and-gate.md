@@ -25,5 +25,6 @@
 - 隔离 Electron 中继流程完成“第 1 版 → 单文件修订第 2 版 → 整课重做第 3 版”，SQLite 完整性、版本序列、节点状态、模式标记与唯一来源顺序全部通过；
 - 修复既有发布版本匹配未包含 `.md` 后缀导致重复第 1 版的问题，补充连续发布第 2、3 版服务回归；未新增 Service、IPC、schema 或 migration；
 - 最终门：55 files / 205 tests passed，另 1 file / 1 test skipped；typecheck、lint、production build、`git diff --check` 通过。
+- 用户实测补充修复：思源导出的图片引用可能在 `!`、资源路径或文件名处换行，且资源名下划线会被数学规范化误判；统一修复跨行引用、`assets/...` 匹配和图片 token 保护，图片目录挂载与正文渲染专项 14 tests 通过。
 
 **状态：** `DONE / AWAITING_PRODUCT_CONFIRMATION`。产品负责人确认前不创建 `checkpoint-V1.5.3-pass`。

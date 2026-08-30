@@ -61,6 +61,21 @@ export function normalizeRichText(text: string): string {
   return result + wrapBareMath(decoded.slice(cursor))
 }
 
+/** Repairs line-wrapped SiYuan image syntax before block and inline parsing. */
+export function normalizeMarkdownImageReferences(text: string): string {
+  let normalized = text.replace(/\r\n?/gu, '\n')
+    .replace(/!\s*(?=\[[^\]]*\]\()/gu, '!')
+  let previous = ''
+  while (normalized !== previous) {
+    previous = normalized
+    normalized = normalized.replace(/(!\[[^\]]*\]\([^)]*)\n\s*(?=[^)]*\))/gu, (match, prefix: string, offset: number, source: string) => {
+      const nextCharacter = source[offset + match.length]
+      return `${prefix}${nextCharacter !== undefined && /[.,;:!?)}\]]/u.test(nextCharacter) ? '' : ' '}`
+    })
+  }
+  return normalized
+}
+
 export function splitMathText(text: string): MathTextPart[] {
   const normalized = normalizeRichText(text)
   const parts: MathTextPart[] = []
