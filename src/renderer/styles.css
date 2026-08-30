@@ -2815,6 +2815,12 @@ button.quick-status { cursor: pointer; }
   font-weight: 700;
 }
 
+.prep-scope-truncated {
+  border-color: #fde68a;
+  color: #92400e;
+  background: #fffbeb;
+}
+
 .prep-ref-panel {
   position: sticky;
   top: 16px;

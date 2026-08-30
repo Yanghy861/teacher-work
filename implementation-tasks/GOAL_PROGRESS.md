@@ -965,3 +965,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 两栏工作台左侧改为“修改对象 / 补充参考 / 本课修改节点”，单文件用单选，整课只读展示自动范围，复选框只属于补充参考；顶部模式切换保留要求和 Skill，清除旧方案与对比。
 - 新建备课仍显示讲义 / 例题 / 作业快速生成；已有课件改进只显示模式对应的方案动作。
 - 自动门：相关 5 files / 24 tests、typecheck、lint、production build、`git diff --check` 通过；未运行 portable/installer，未 push。
+
+## 2026-08-30 · V1531-B · DONE / AWAITING_PRODUCT_CONFIRMATION
+
+- 模式化生成完成：单文件方案严格区分唯一修改对象与补充参考，输出目标文件完整 Markdown；整课方案覆盖结构、难度、例题、课堂互动与作业衔接，统一生成一份含讲义、典型例题、课堂练习、课后作业的 `lecture` 完整课件。
+- 上下文与恢复完成：正文预算基线优先、参考使用余量并显示截断提示；既有 `aiMetadata.requirement` 写入单文件/整课可读标记，结合有序 sources 恢复模式、目标、自动基线、参考、要求、Skill 与比较基线；旧无标记草稿兼容。
+- 隔离 Electron 中继流程完成“第 1 版 → 修改这份并发布第 2 版 → 以第 2 版为自动基线整课重做并发布第 3 版”；最终当前版为第 3 版、历史 2 版。SQLite `integrity_check=ok`，两个节点均为已确认，模式标记、目标、基线数量和唯一来源顺序核验通过。
+- 过程修复：真实流程发现发布版本 SQL 未包含 `.md` 后缀，已有第 1 版仍可能命名为第 1 版；修正既有 ManagedFileService 匹配并新增连续发布第 2、3 版回归，未新增 Service、IPC、schema 或 migration。
+- smoke 首轮两条对比标题断言为测试脚本未展开按需面板造成的假失败；截图与组件契约确认产品对比区存在，脚本已修正。期间暴露到桌面的隔离 Electron 确认框已全部关闭，测试实例与中继端口清理完毕，正式工作区未受影响。
+- 最终门：55 files / 205 tests passed，另 1 file / 1 test skipped；typecheck、lint、production build、`git diff --check` 通过。未运行 portable/installer，未 push。
+- 验收报告已增补 `docs/v1.5.3-acceptance.md` 第 7 节；V1531-B 为 `DONE / AWAITING_PRODUCT_CONFIRMATION`，产品负责人确认前不创建 `checkpoint-V1.5.3-pass`。

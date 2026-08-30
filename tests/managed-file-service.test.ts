@@ -115,6 +115,41 @@ describe('L02 managed file service', () => {
     ]))
   })
 
+  it('increments published lesson versions when a numbered markdown version already exists', () => {
+    const fixture = createFixture()
+    const course = fixture.core.nodes.createCourse('课程', 'class')
+    const period = fixture.core.nodes.createPeriod(course.id, '阶段')
+    const lesson = fixture.core.nodes.createLesson(period.id, '课次')
+    const existingPath = join(fixture.baseDirectory, '课次 · 第 1 版.md')
+    writeFileSync(existingPath, '# 第 1 版', 'utf8')
+    const existing = fixture.files.importToLesson(existingPath, lesson.id)
+    const metadata = {
+      noteKind: 'lecture' as const,
+      aiMetadata: {
+        kind: 'lecture' as const,
+        promptVersion: 'v1531-test',
+        provider: 'openai-compatible',
+        model: 'fake-model',
+        sources: [{ fileId: existing.id, charsSent: 1 }],
+        inputChars: 1,
+        maxChars: 100,
+        maxTokens: 100,
+      },
+    }
+
+    const secondDraft = fixture.core.createLessonDraft(lesson.id, '# 第 2 版', metadata)
+    const second = fixture.files.publishLessonDraftVersion(secondDraft.id)
+    const thirdDraft = fixture.core.createLessonDraft(lesson.id, '# 第 3 版', metadata)
+    const third = fixture.files.publishLessonDraftVersion(thirdDraft.id)
+
+    expect(second).toMatchObject({ version: 2, file: { originalName: '课次 · 第 2 版.md' } })
+    expect(third).toMatchObject({ version: 3, file: { originalName: '课次 · 第 3 版.md' } })
+    expect(fixture.core.getOverview().notes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: secondDraft.id, draftStatus: 'saved' }),
+      expect.objectContaining({ id: thirdDraft.id, draftStatus: 'saved' }),
+    ]))
+  })
+
   it('soft deletes and restores a file without removing its managed object', () => {
     const fixture = createFixture()
     const record = fixture.files.importFile(createSource(fixture))

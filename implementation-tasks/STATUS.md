@@ -106,4 +106,4 @@
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
 | V1531-A 修改范围模型与两种入口 | DONE | Renderer-only `new/single/lesson` intent、当前版/历史版分类、课件区“修改这份 / 整课重做 / 新建”入口、显式入口不抢恢复旧草稿、工作台目标/自动基线/可选参考分组与模式切换完成；5 files / 24 tests、typecheck、lint、production build、diff check 通过 |
-| V1531-B 模式化生成与最终回归 | IN_PROGRESS | 待实现：模式化方案与生成、metadata 恢复、比较/发布语义、全量门和代表性 Windows 流程；完成后仍等待产品负责人确认 V1.5.3 |
+| V1531-B 模式化生成与最终回归 | DONE / AWAITING_PRODUCT_CONFIRMATION | 单文件/整课模式化方案与完整生成、基线优先文本预算、metadata 恢复、模式化比较/发布语义完成；修复已有第 1 版发布时重复命名缺陷；隔离 Electron 完成 v1→单文件 v2→整课 v3，SQLite/来源顺序核验通过；55 files / 205 tests passed（另 1 file / 1 test skipped）、typecheck、lint、build、diff check 通过；仍等待产品负责人确认 V1.5.3 |

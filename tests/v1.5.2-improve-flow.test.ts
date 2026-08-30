@@ -22,9 +22,10 @@ describe('V152-C improvement flow contract', () => {
     expect(draft).toContain("find((note) => note.draftStatus === 'draft')")
   })
 
-  it('requires reference selection and a modification requirement before planning', () => {
+  it('requires a modification object and a modification requirement before planning', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
-    expect(draft).toContain('请先勾选要改进的课件或资料。')
+    expect(draft).toContain('请先选择要修改的文件。')
+    expect(draft).toContain('本课没有可用于整课重做的基线内容。')
     expect(draft).toContain('请先填写本次修改要求，AI 需要知道你想怎么改。')
   })
 
@@ -59,7 +60,7 @@ describe('V152-D publish version contract', () => {
     expect(managed).toContain('publishLessonDraftVersion(noteId: string)')
     expect(managed).toContain('只能发布 AI 修改节点。')
     expect(managed).toContain("UPDATE notes SET draft_status = 'saved', updated_at = ? WHERE id = ?")
-    expect(managed).toContain("f.original_name LIKE '% · 第 % 版'")
+    expect(managed).toContain("f.original_name LIKE '% · 第 % 版.md'")
     expect(managed).toContain('writeFileSync(temporaryPath, Buffer.from(bodyMd, \'utf8\'))')
     expect(managed).toContain('this.renameFile(temporaryPath, object.contentPath)')
     expect(preload).toContain('publishToLesson')

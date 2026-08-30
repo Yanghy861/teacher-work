@@ -30,6 +30,33 @@ const kindLabels: Record<DraftKind, string> = {
 
 type BusyAction = DraftKind | 'regenerate' | 'save' | 'delete' | 'publish' | ''
 
+type ModificationMode = Exclude<PrepLaunchMode, 'new'>
+
+interface ScopedTextPart {
+  readonly fileId: string
+  readonly title: string
+  readonly body: string
+}
+
+interface ScopedTextResult {
+  readonly baselineParts: readonly ScopedTextPart[]
+  readonly referenceParts: readonly ScopedTextPart[]
+  readonly truncated: boolean
+}
+
+interface ParsedModificationScope {
+  readonly mode: ModificationMode
+  readonly baselineCount: number
+  readonly targetName?: string
+  readonly teacherRequirement: string
+}
+
+const SINGLE_MODE_MARKER = '【AI修改方式：单文件】'
+const LESSON_MODE_MARKER = '【AI修改方式：整课重做】'
+const TEACHER_REQUIREMENT_MARKER = '【老师修改要求】'
+const CONFIRMED_PLAN_MARKER = '【老师已确认的修改方案（请严格按方案修改）】'
+const GENERATION_CONSTRAINT_MARKER = '【生成约束】'
+
 export default function DraftPanel({
   context,
   initialDraftId,
@@ -56,6 +83,7 @@ export default function DraftPanel({
   const [skills, setSkills] = useState<readonly SkillRecord[]>([])
   const [prepMode, setPrepMode] = useState<PrepLaunchMode>('new')
   const [targetFileId, setTargetFileId] = useState('')
+  const [lessonBaselineFileIds, setLessonBaselineFileIds] = useState<string[]>([])
   const [selectedReferenceFileIds, setSelectedReferenceFileIds] = useState<string[]>([])
   const [selectedSkillId, setSelectedSkillId] = useState('')
   const [requirement, setRequirement] = useState('')
@@ -74,6 +102,7 @@ export default function DraftPanel({
   const [improveBase, setImproveBase] = useState<{ title: string; body: string } | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
   const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
+  const [scopeTruncated, setScopeTruncated] = useState(false)
   const knownLessonFileIds = useRef<Set<string>>(new Set())
   const scopeInitialized = useRef(false)
 
@@ -86,12 +115,13 @@ export default function DraftPanel({
   }, [context, files])
   const lessonFileKey = lessonFiles.map((file) => file.id).join('|')
   const classifiedFiles = useMemo(() => classifyLessonCoursewareFiles(lessonFiles), [lessonFiles])
+  const selectableLessonFiles = lessonFiles.filter(isSelectableLessonPrepFile)
   const selectableCurrentFiles = classifiedFiles.currentMaterials.filter(isSelectableLessonPrepFile)
   const hasCourseware = selectableCurrentFiles.length > 0
-  const targetFile = selectableCurrentFiles.find((file) => file.id === targetFileId) ?? null
-  const lessonBaselineFiles = classifiedFiles.currentVersion !== null && isSelectableLessonPrepFile(classifiedFiles.currentVersion)
-    ? [classifiedFiles.currentVersion]
-    : selectableCurrentFiles
+  const targetFile = selectableLessonFiles.find((file) => file.id === targetFileId) ?? null
+  const lessonBaselineFiles = lessonBaselineFileIds
+    .map((fileId) => selectableLessonFiles.find((file) => file.id === fileId))
+    .filter((file): file is ManagedFileRecord => file !== undefined)
   const referenceCandidates = prepMode === 'single'
     ? selectableCurrentFiles.filter((file) => file.id !== targetFile?.id)
     : prepMode === 'lesson'
@@ -127,6 +157,7 @@ export default function DraftPanel({
     scopeInitialized.current = false
     setPrepMode(launchIntent?.mode ?? 'new')
     setTargetFileId(launchIntent?.targetFileId ?? '')
+    setLessonBaselineFileIds([])
     setSelectedReferenceFileIds([])
     setSelectedSkillId('')
     setRequirement('')
@@ -142,6 +173,7 @@ export default function DraftPanel({
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
+    setScopeTruncated(false)
     void (async () => {
       const loadedCore = await reload()
       if (cancelled || context === null || loadedCore === null) return
@@ -176,6 +208,11 @@ export default function DraftPanel({
           : selectableCurrentFiles[0])
       setPrepMode(nextMode)
       setTargetFileId(nextTarget?.id ?? '')
+      setLessonBaselineFileIds(nextMode === 'lesson'
+        ? classifiedFiles.currentVersion !== null && isSelectableLessonPrepFile(classifiedFiles.currentVersion)
+          ? [classifiedFiles.currentVersion.id]
+          : selectableCurrentFiles.map((file) => file.id)
+        : [])
       setSelectedReferenceFileIds(nextMode === 'new' ? selectableCurrentFiles.map((file) => file.id) : [])
       knownLessonFileIds.current = currentSet
       scopeInitialized.current = true
@@ -194,6 +231,45 @@ export default function DraftPanel({
     setEditing(false)
     setEditBody('')
   }, [lessonResults, selectedNoteId, showResults])
+
+  useEffect(() => {
+    let cancelled = false
+    if (files === null || selectedNote === undefined) return
+    const scope = parseModificationScope(selectedNote)
+    if (scope === null || selectedNote.aiMetadata === undefined) return
+
+    const orderedSourceIds = uniqueStrings(selectedNote.aiMetadata.sources.map((source) => source.fileId))
+    const baselineIds = orderedSourceIds.slice(0, scope.baselineCount)
+    const referenceIds = orderedSourceIds.slice(scope.baselineCount)
+    const baselineFiles = baselineIds
+      .map((fileId) => lessonFiles.find((file) => file.id === fileId))
+      .filter((file): file is ManagedFileRecord => file !== undefined && isSelectableLessonPrepFile(file))
+
+    setPrepMode(scope.mode)
+    setTargetFileId(scope.mode === 'single' ? baselineIds[0] ?? '' : '')
+    setLessonBaselineFileIds(scope.mode === 'lesson' ? baselineIds : [])
+    setSelectedReferenceFileIds(referenceIds)
+    setSelectedSkillId(selectedNote.aiMetadata.skill?.id ?? '')
+    setRequirement(scope.teacherRequirement)
+    setImprovePhase('')
+    setImprovePlan('')
+    setImproveError('')
+    setCompareOpen(false)
+    setScopeTruncated(false)
+
+    void (async () => {
+      const scopedText = await readScopedTextParts(baselineFiles, [], DRAFT_DEFAULT_MAX_CHARS)
+      if (cancelled) return
+      setImproveBase(buildComparisonBase(scope.mode, scopedText.baselineParts))
+      setScopeTruncated(scopedText.truncated)
+    })().catch((restoreError: unknown) => {
+      if (cancelled) return
+      setImproveBase(null)
+      setImproveError(`原始对比内容暂时无法恢复：${toErrorMessage(restoreError)}`)
+    })
+
+    return () => { cancelled = true }
+  }, [files, lessonFileKey, selectedNote?.id])
 
   async function reload(): Promise<CoreOverview | null> {
     try {
@@ -230,14 +306,20 @@ export default function DraftPanel({
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
+    setScopeTruncated(false)
     setMessage('')
   }
 
   function changePrepMode(nextMode: Exclude<PrepLaunchMode, 'new'>): void {
     if (!hasCourseware || prepMode === nextMode) return
     setPrepMode(nextMode)
-    if (nextMode === 'single' && targetFile === null) {
+    if (nextMode === 'single' && !selectableCurrentFiles.some((file) => file.id === targetFileId)) {
       setTargetFileId(classifiedFiles.currentVersion?.id ?? selectableCurrentFiles[0]?.id ?? '')
+    }
+    if (nextMode === 'lesson') {
+      setLessonBaselineFileIds(classifiedFiles.currentVersion !== null && isSelectableLessonPrepFile(classifiedFiles.currentVersion)
+        ? [classifiedFiles.currentVersion.id]
+        : selectableCurrentFiles.map((file) => file.id))
     }
     setSelectedReferenceFileIds([])
     setImprovePhase('')
@@ -245,6 +327,7 @@ export default function DraftPanel({
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
+    setScopeTruncated(false)
     setMessage('')
   }
 
@@ -284,9 +367,12 @@ export default function DraftPanel({
   }
 
   async function startImprovePlan(): Promise<void> {
-    const refs = selectedFiles.filter(isSelectableLessonPrepFile)
-    if (refs.length === 0) {
-      setImproveError('请先勾选要改进的课件或资料。')
+    if (prepMode === 'new') return
+    const baselineFiles = prepMode === 'single'
+      ? targetFile === null ? [] : [targetFile]
+      : lessonBaselineFiles
+    if (baselineFiles.length === 0) {
+      setImproveError(prepMode === 'single' ? '请先选择要修改的文件。' : '本课没有可用于整课重做的基线内容。')
       return
     }
     if (requirement.trim() === '') {
@@ -297,34 +383,31 @@ export default function DraftPanel({
     setImproveError('')
     setMessage('正在生成修改方案…')
     try {
-      const refParts: { title: string; body: string }[] = []
-      for (const file of refs) {
-        const content = await window.teacherWorkbench.files.readContent({ fileId: file.id })
-        if (content.kind !== 'text') continue
-        refParts.push({ title: file.originalName, body: content.content })
-      }
-      if (refParts.length === 0) {
-        setImproveError('所选资料没有可读文本，无法生成修改方案。')
+      const scopedText = await readScopedTextParts(
+        baselineFiles,
+        selectedReferenceFiles,
+        DRAFT_DEFAULT_MAX_CHARS,
+      )
+      if (scopedText.baselineParts.length === 0) {
+        setImproveError(prepMode === 'single'
+          ? '修改对象没有可读文本，无法生成修改方案。'
+          : '本课基线没有可读文本，无法生成整课重做方案。')
         setMessage('')
-        setImproveBusy(false)
         return
       }
-      const prompt = [
-        '你是一位备课助理。老师正在改进一节课的已有课件，请基于课件内容和老师的修改要求，输出一份可审阅的修改方案。',
-        '要求：分条说明每处「改什么、为什么、怎么改」；不要输出修改后的全文；全文控制在 500 字以内；使用中文。',
-        `老师修改要求：${requirement.trim()}`,
-        '当前课件内容：',
-        ...refParts.map((part) => `【${part.title}】${String.fromCharCode(10)}${part.body}`),
-      ].join(String.fromCharCode(10, 10))
+      const prompt = buildPlanPrompt(prepMode, requirement.trim(), scopedText)
       const result = await window.teacherWorkbench.ai.requestText({
         requestId: globalThis.crypto.randomUUID(),
         prompt,
         maxTokens: DRAFT_DEFAULT_MAX_TOKENS,
       })
       setImprovePlan(result.text)
-      setImproveBase(refParts[0])
+      setImproveBase(buildComparisonBase(prepMode, scopedText.baselineParts))
+      setScopeTruncated(scopedText.truncated)
       setImprovePhase('review')
-      setMessage('修改方案已生成，请审阅确认后再生成新副本。')
+      setMessage(prepMode === 'single'
+        ? '单文件修改方案已生成，请审阅确认后再生成新副本。'
+        : '整课重做方案已生成，请审阅确认后再生成完整新版本。')
     } catch (planError) {
       setMessage('')
       setImproveError(toErrorMessage(planError))
@@ -334,30 +417,37 @@ export default function DraftPanel({
   }
 
   async function confirmPlanAndGenerate(kind: DraftKind): Promise<void> {
-    if (context === null || improvePlan.trim() === '') return
-    const refs = selectedFiles.filter(isSelectableLessonPrepFile)
-    if (refs.length === 0) {
-      setImproveError('参考资料已变化，请重新发起改进。')
+    if (context === null || improvePlan.trim() === '' || prepMode === 'new') return
+    const baselineFiles = prepMode === 'single'
+      ? targetFile === null ? [] : [targetFile]
+      : lessonBaselineFiles
+    if (baselineFiles.length === 0) {
+      setImproveError('修改对象或整课基线已变化，请重新发起修改。')
       return
     }
+    const orderedSources = uniqueFiles([...baselineFiles, ...selectedReferenceFiles])
+    const generatedKind = prepMode === 'lesson' ? DRAFT_KINDS.lecture : kind
     setImproveBusy(true)
     setImproveError('')
-    setMessage(`正在按确认的方案生成${kindLabels[kind]}…`)
+    setMessage(prepMode === 'single'
+      ? `正在按确认的方案修订《${baselineFiles[0].originalName}》…`
+      : '正在按确认的方案重做整课课件…')
     try {
-      const planBudget = DRAFT_REQUIREMENT_MAX_CHARS - requirement.trim().length - 40
-      const embeddedRequirement = [
+      const embeddedRequirement = buildModeRequirement(
+        prepMode,
+        baselineFiles[0],
+        baselineFiles.length,
         requirement.trim(),
-        '【老师已确认的修改方案（请严格按方案修改）】',
-        improvePlan.trim().slice(0, Math.max(0, planBudget)),
-      ].join(String.fromCharCode(10))
+        improvePlan.trim(),
+      )
       const result = await window.teacherWorkbench.drafts.generate({
         requestId: globalThis.crypto.randomUUID(),
-        kind,
+        kind: generatedKind,
         lessonId: context.lessonId,
         ...(context.studentId === undefined ? {} : { studentId: context.studentId }),
         ...(selectedSkillId === '' ? {} : { skillId: selectedSkillId }),
         requirement: embeddedRequirement,
-        sources: refs.map((file) => ({ fileId: file.id })),
+        sources: orderedSources.map((file) => ({ fileId: file.id })),
         maxChars: DRAFT_DEFAULT_MAX_CHARS,
         maxTokens: DRAFT_DEFAULT_MAX_TOKENS,
       })
@@ -370,7 +460,9 @@ export default function DraftPanel({
       setCompareOpen(true)
       setImprovePhase('')
       setImprovePlan('')
-      setMessage(`${kindLabels[kind]}已按方案生成，可用“新旧对比”查看差异。`)
+      setMessage(prepMode === 'single'
+        ? `《${baselineFiles[0].originalName}》已按方案生成完整修订稿，可用“新旧对比”查看差异。`
+        : '整课完整新版本已生成，包含讲义、例题、课堂练习与课后作业，可用“新旧对比”审阅。')
     } catch (generationError) {
       setMessage('')
       setImproveError(toErrorMessage(generationError))
@@ -381,7 +473,7 @@ export default function DraftPanel({
 
   async function publishVersion(): Promise<void> {
     if (selectedNote === undefined) return
-    if (!window.confirm('将把当前内容发布为本课课件新版本，旧版本保留。继续？')) return
+    if (!window.confirm(buildPublishConfirmation(selectedNote))) return
     setBusyAction('publish')
     setMessage('')
     setError('')
@@ -412,6 +504,12 @@ export default function DraftPanel({
     setSelectedNoteId(note.id)
     setEditing(false)
     setEditBody('')
+    setImprovePhase('')
+    setImprovePlan('')
+    setImproveError('')
+    setImproveBase(null)
+    setCompareOpen(false)
+    setScopeTruncated(false)
     setMessage('')
     setError('')
   }
@@ -538,7 +636,7 @@ export default function DraftPanel({
     <section className="lesson-prep-workspace" aria-live="polite">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       {message !== '' && <div className="inline-notice" role="status">{message}</div>}
-      {hasCourseware && (
+      {prepMode !== 'new' && (
         <div className="prep-mode-bar">
           <div><strong>这次想怎么改？</strong><span>先确定修改对象，再选择可选参考</span></div>
           <div className="segmented-control prep-mode-switch" aria-label="AI 修改方式">
@@ -590,7 +688,7 @@ export default function DraftPanel({
                 <li key={note.id} className={selectedNote?.id === note.id ? 'is-selected' : ''}>
                   <button type="button" className="draft-result-select" onClick={() => selectResult(note)} disabled={busyAction !== ''}>
                     <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
-                    <span><strong>{kindLabels[kind]}{note.draftStatus === 'draft' ? '修改节点' : '已确认成果'}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
+                    <span><strong>{modificationNodeLabel(note)}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
                     <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
                   </button>
                   {note.draftStatus === 'draft' && <button className="danger-button" type="button" onClick={() => void deleteDraft(note)} disabled={busyAction !== ''}>删除</button>}
@@ -623,6 +721,11 @@ export default function DraftPanel({
               ))}
             </div>
             {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
+            {scopeTruncated && prepMode !== 'new' && (
+              <div className="inline-notice prep-scope-truncated" role="status">
+                内容超过本次读取上限。AI 已优先读取修改对象或整课基线，后部内容及补充参考可能被截断。
+              </div>
+            )}
           </div>
           {improvePhase === 'review' && (
             <div className="improve-review-card">
@@ -653,7 +756,7 @@ export default function DraftPanel({
                 </div>
               )}
               <div className="draft-content-header">
-                <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{kindLabels[selectedNote.noteKind as DraftKind]}{selectedNote.draftStatus === 'draft' ? '修改节点' : '成果'}</h2></div>
+                <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{modificationNodeLabel(selectedNote)}</h2></div>
                 <div className="draft-content-actions">
                   {editing ? <><button className="secondary-button" type="button" onClick={cancelEditing} disabled={busyAction !== ''}>取消编辑</button><button className="secondary-button" type="button" onClick={() => void saveModification()} disabled={busyAction !== ''}>保存修改</button></> : <button className="secondary-button" type="button" onClick={startEditing} disabled={busyAction !== ''}>编辑</button>}
                   <button className="secondary-button" type="button" onClick={() => void regenerate()} disabled={busyAction !== ''}>重新生成</button>
@@ -754,12 +857,169 @@ function DraftInboxRow({ entry, busy, onOpenDraft, onDeleteDraft }: {
     <li>
       <button className="draft-inbox-open" type="button" disabled={busy || entry.context === null} onClick={() => entry.context !== null && onOpenDraft(entry.context, entry.note.id)}>
         <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
-        <span><strong>{kindLabels[kind]}修改节点</strong><small>{entry.courseTitle} / {entry.lessonTitle}</small></span>
+        <span><strong>{modificationNodeLabel(entry.note)}</strong><small>{entry.courseTitle} / {entry.lessonTitle}</small></span>
         <time dateTime={entry.note.updatedAt}>{formatDateTime(entry.note.updatedAt)}</time>
       </button>
       <button className="danger-button" type="button" disabled={busy} onClick={() => onDeleteDraft(entry.note)}>删除</button>
     </li>
   )
+}
+
+async function readScopedTextParts(
+  baselineFiles: readonly ManagedFileRecord[],
+  referenceFiles: readonly ManagedFileRecord[],
+  maxChars: number,
+): Promise<ScopedTextResult> {
+  let remaining = maxChars
+  let truncated = false
+
+  async function readGroup(group: readonly ManagedFileRecord[]): Promise<ScopedTextPart[]> {
+    const parts: ScopedTextPart[] = []
+    for (const file of group) {
+      if (remaining <= 0) {
+        truncated = true
+        break
+      }
+      const content = await window.teacherWorkbench.files.readContent({ fileId: file.id })
+      if (content.kind !== 'text' || content.content.trim() === '') continue
+      const body = content.content.slice(0, remaining)
+      if (body.length < content.content.length) truncated = true
+      if (body.trim() === '') continue
+      parts.push({ fileId: file.id, title: file.originalName, body })
+      remaining -= body.length
+    }
+    return parts
+  }
+
+  const baselineParts = await readGroup(baselineFiles)
+  const referenceParts = await readGroup(referenceFiles)
+  return { baselineParts, referenceParts, truncated }
+}
+
+function buildPlanPrompt(
+  mode: ModificationMode,
+  teacherRequirement: string,
+  scopedText: ScopedTextResult,
+): string {
+  const baselineHeading = mode === 'single' ? '唯一修改对象' : '自动整课基线'
+  const roleInstruction = mode === 'single'
+    ? '老师要修改一份指定课件。只能把「唯一修改对象」视为待修改文件；补充参考只用于理解要求，不能变成额外修改对象。'
+    : '老师要按新要求重做整节课。请把「自动整课基线」视为原课完整范围；补充参考只用于辅助，不得替代基线。'
+  const planInstruction = mode === 'single'
+    ? '分条说明对目标文件每处「改什么、为什么、怎么改」；未被要求修改的内容应保持；不要输出修改后的全文。'
+    : '先概括整课结构与难度调整，再分条说明讲义、典型例题、课堂互动练习、课后作业及其衔接各自「改什么、为什么、怎么改」；不要输出重做后的全文。'
+  return [
+    '你是一位备课助理。请基于老师的明确要求，输出一份可审阅的修改方案。',
+    roleInstruction,
+    `${planInstruction} 全文控制在 500 字以内，使用中文。`,
+    `老师修改要求：${teacherRequirement}`,
+    `${baselineHeading}：`,
+    ...scopedText.baselineParts.map(formatScopedTextPart),
+    ...(scopedText.referenceParts.length === 0
+      ? ['补充参考：无']
+      : ['补充参考（只辅助理解）：', ...scopedText.referenceParts.map(formatScopedTextPart)]),
+  ].join(String.fromCharCode(10, 10))
+}
+
+function buildModeRequirement(
+  mode: ModificationMode,
+  targetFile: ManagedFileRecord,
+  baselineCount: number,
+  teacherRequirement: string,
+  confirmedPlan: string,
+): string {
+  const modeLines = mode === 'single'
+    ? [SINGLE_MODE_MARKER, `【修改对象：${targetFile.originalName}】`]
+    : [LESSON_MODE_MARKER, `【自动基线数量：${baselineCount}】`]
+  const generationConstraint = mode === 'single'
+    ? `只修改《${targetFile.originalName}》，补充参考不得成为额外修改对象。输出修改后的完整文件 Markdown，不要只输出差异或说明；未被要求修改的内容保持不变。`
+    : '输出一份可直接发布的完整课件 Markdown，不要拆成多个文件。必须包含讲义、例题、课堂练习、课后作业四个清晰板块，并按确认方案统一重组整节课。'
+  const prefix = [
+    ...modeLines,
+    GENERATION_CONSTRAINT_MARKER,
+    generationConstraint,
+    TEACHER_REQUIREMENT_MARKER,
+  ].join(String.fromCharCode(10)) + String.fromCharCode(10)
+  const separator = `${String.fromCharCode(10)}${CONFIRMED_PLAN_MARKER}${String.fromCharCode(10)}`
+  const available = Math.max(0, DRAFT_REQUIREMENT_MAX_CHARS - prefix.length - separator.length)
+  const planReserve = Math.min(confirmedPlan.length, 800)
+  const requirementBudget = Math.max(0, available - planReserve)
+  const boundedRequirement = teacherRequirement.slice(0, requirementBudget)
+  const boundedPlan = confirmedPlan.slice(0, Math.max(0, available - boundedRequirement.length))
+  return `${prefix}${boundedRequirement}${separator}${boundedPlan}`
+}
+
+function parseModificationScope(note: NoteRecord): ParsedModificationScope | null {
+  const storedRequirement = note.aiMetadata?.requirement
+  if (storedRequirement === undefined) return null
+  const mode: ModificationMode | null = storedRequirement.includes(SINGLE_MODE_MARKER)
+    ? 'single'
+    : storedRequirement.includes(LESSON_MODE_MARKER)
+      ? 'lesson'
+      : null
+  if (mode === null) return null
+  const targetName = storedRequirement.match(/【修改对象：([^\r\n】]+)】/u)?.[1]
+  const parsedBaselineCount = Number(storedRequirement.match(/【自动基线数量：(\d+)】/u)?.[1] ?? '1')
+  const teacherRequirement = extractMarkedSection(
+    storedRequirement,
+    TEACHER_REQUIREMENT_MARKER,
+    CONFIRMED_PLAN_MARKER,
+  )
+  return {
+    mode,
+    baselineCount: mode === 'single' ? 1 : Math.max(1, parsedBaselineCount),
+    ...(targetName === undefined ? {} : { targetName }),
+    teacherRequirement,
+  }
+}
+
+function extractMarkedSection(value: string, startMarker: string, endMarker: string): string {
+  const start = value.indexOf(startMarker)
+  if (start < 0) return ''
+  const contentStart = start + startMarker.length
+  const end = value.indexOf(endMarker, contentStart)
+  return value.slice(contentStart, end < 0 ? undefined : end).trim()
+}
+
+function buildComparisonBase(
+  mode: ModificationMode,
+  baselineParts: readonly ScopedTextPart[],
+): { title: string; body: string } | null {
+  if (baselineParts.length === 0) return null
+  if (mode === 'single') {
+    return { title: baselineParts[0].title, body: baselineParts[0].body }
+  }
+  return {
+    title: `整课原始基线（${baselineParts.length} 份）`,
+    body: baselineParts.map((part) => `## ${part.title}${String.fromCharCode(10, 10)}${part.body}`).join(String.fromCharCode(10, 10)),
+  }
+}
+
+function modificationNodeLabel(note: NoteRecord): string {
+  const scope = parseModificationScope(note)
+  if (scope?.mode === 'single') return '单文件修订'
+  if (scope?.mode === 'lesson') return '整课重做'
+  const kind = note.noteKind as DraftKind
+  return `${kindLabels[kind]}${note.draftStatus === 'draft' ? '修改节点' : '已确认成果'}`
+}
+
+function buildPublishConfirmation(note: NoteRecord): string {
+  const scope = parseModificationScope(note)
+  if (scope?.mode === 'single') {
+    return `将把对《${scope.targetName ?? '目标文件'}》的单文件修订发布为本课课件新版本，旧版本保留。继续？`
+  }
+  if (scope?.mode === 'lesson') {
+    return '将把整课重做内容发布为本课课件新版本，旧版本保留。继续？'
+  }
+  return '将把当前内容发布为本课课件新版本，旧版本保留。继续？'
+}
+
+function formatScopedTextPart(part: ScopedTextPart): string {
+  return `【${part.title}】${String.fromCharCode(10)}${part.body}`
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values)]
 }
 
 

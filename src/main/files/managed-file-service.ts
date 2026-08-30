@@ -319,10 +319,10 @@ export class ManagedFileService {
     const publishedCount = this.database
       .prepare(
         `SELECT COUNT(*) AS count
-           FROM lesson_files lf
-           JOIN files f ON f.id = lf.file_id
-          WHERE lf.lesson_id = ? AND f.deleted_at IS NULL
-            AND f.original_name LIKE '% · 第 % 版'`,
+          FROM lesson_files lf
+          JOIN files f ON f.id = lf.file_id
+         WHERE lf.lesson_id = ? AND f.deleted_at IS NULL
+            AND f.original_name LIKE '% · 第 % 版.md'`,
       )
       .get(lessonId) as { readonly count: number }
     const version = publishedCount.count + 1
