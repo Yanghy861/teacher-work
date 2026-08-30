@@ -99,4 +99,4 @@
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
 | V153-A 课件动作化与 AI 修改工作台 | DONE | 两分区（课件/修改记录）+ 课件区上下文 AI 入口（AI 新建备课/✦AI 修改）+ 工作台顶栏（AI 修改/退出修改回课件）+ 提示词常驻工作台 + 课件列表单当前版+历史折叠；55 files / 197 tests、typecheck、lint、build、diff check 通过 |
-| V153-B V1.5.3 全量回归与版本验收 | TODO | 前置 V153-A `DONE`；最终体验确认前不创建 `checkpoint-V1.5.3-pass` |
+| V153-B V1.5.3 全量回归与版本验收 | DONE / AWAITING_PRODUCT_CONFIRMATION | 全量 54 files / 197 tests、typecheck、lint、build、diff check 通过；真实思源课件隔离全流程（入口→工作台→中继生成→发布→课件区单当前版+历史折叠+正文默认最新）通过；报告 `docs/v1.5.3-acceptance.md`；产品负责人最终体验确认后创建 `checkpoint-V1.5.3-pass` |
