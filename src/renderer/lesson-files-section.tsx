@@ -2,8 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { NodeRecord, NoteRecord } from '../shared/core-contracts'
 import type { ManagedFileOverview } from '../shared/file-contracts'
-import { filterLessonMaterialFiles, listLessonPrepFiles, type LessonPrepContext } from './lesson-prep-context'
+import {
+  classifyLessonCoursewareFiles,
+  filterLessonMaterialFiles,
+  isSelectableLessonPrepFile,
+  listLessonPrepFiles,
+  type LessonPrepContext,
+} from './lesson-prep-context'
 import LessonMaterialReader from './lesson-material-reader'
+import type { PrepLaunchIntent } from './teaching-content-context'
 
 // Legacy V1.2 boundary retained: 不包含整门课程资料或学生文件。
 
@@ -25,7 +32,7 @@ export default function LessonFilesSection({
   readonly readOnly?: boolean
   readonly immersive?: boolean
   readonly onToggleImmersive?: () => void
-  readonly onStartPrep: (context: LessonPrepContext) => void
+  readonly onStartPrep: (context: LessonPrepContext, intent?: PrepLaunchIntent) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
 }): React.JSX.Element {
   const [overview, setOverview] = useState<ManagedFileOverview | null>(null)
@@ -39,24 +46,13 @@ export default function LessonFilesSection({
     ),
     [lesson, overview, periodTitle],
   )
-  const hasCourseware = lessonFiles.length > 0
-  const versionPattern = / · 第 (\d+) 版\.md$/u
-  const versioned = lessonFiles
-    .map((file) => {
-      const match = versionPattern.exec(file.originalName)
-      return match === null ? null : { file, version: Number(match[1]) }
-    })
-    .filter((item): item is { file: typeof lessonFiles[number]; version: number } => item !== null)
-    .sort((left, right) => right.version - left.version)
-  const currentVersionFile = versioned[0]?.file ?? null
-  const historyFiles = versioned.slice(1).map((item) => item.file)
-  const olderVersionIds = new Set(historyFiles.map((file) => file.id))
-  const displayFiles = currentVersionFile === null
-    ? lessonFiles
-    : [
-        currentVersionFile,
-        ...lessonFiles.filter((file) => file.id !== currentVersionFile.id && !olderVersionIds.has(file.id)),
-      ]
+  const classifiedFiles = useMemo(() => classifyLessonCoursewareFiles(lessonFiles), [lessonFiles])
+  const currentVersionFile = classifiedFiles.currentVersion
+  const historyFiles = classifiedFiles.history
+  const displayFiles = classifiedFiles.currentMaterials
+  const hasCourseware = displayFiles.some(isSelectableLessonPrepFile)
+  const selectedFile = displayFiles.find((file) => file.id === selectedFileId) ?? null
+  const canModifySelectedFile = selectedFile !== null && isSelectableLessonPrepFile(selectedFile)
 
   useEffect(() => {
     if (currentVersionFile !== null && selectedFileId === '') {
@@ -93,10 +89,20 @@ export default function LessonFilesSection({
     }
   }
 
-  function openPrep(): void {
+  function openNewPrep(): void {
     if (prepContext === null) return
-    if (draft === null) onStartPrep(prepContext)
+    if (draft === null) onStartPrep(prepContext, { mode: 'new' })
     else onOpenDraft(prepContext, draft.id)
+  }
+
+  function modifySelectedFile(): void {
+    if (prepContext === null || selectedFile === null || !isSelectableLessonPrepFile(selectedFile)) return
+    onStartPrep(prepContext, { mode: 'single', targetFileId: selectedFile.id })
+  }
+
+  function rebuildLesson(): void {
+    if (prepContext === null) return
+    onStartPrep(prepContext, { mode: 'lesson' })
   }
 
   if (lesson === null) {
@@ -120,7 +126,10 @@ export default function LessonFilesSection({
         <div className="lesson-files-actions">
           <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
           {onToggleImmersive !== undefined && <button className="secondary-button" type="button" onClick={onToggleImmersive}>{immersive ? '退出沉浸阅读' : '沉浸阅读'}</button>}
-          {!readOnly && <button className="primary-button" type="button" disabled={busy} onClick={openPrep}>{hasCourseware ? '✦ AI 修改' : 'AI 新建备课'}</button>}
+          {!readOnly && !hasCourseware && <button className="primary-button" type="button" disabled={busy} onClick={openNewPrep}>{draft === null ? 'AI 新建备课' : '继续上次备课'}</button>}
+          {!readOnly && hasCourseware && draft !== null && <button className="secondary-button" type="button" disabled={busy} onClick={() => prepContext !== null && onOpenDraft(prepContext, draft.id)}>继续上次修改</button>}
+          {!readOnly && hasCourseware && <button className="primary-button" type="button" disabled={busy || !canModifySelectedFile} title={canModifySelectedFile ? `修改${selectedFile.originalName}` : '请选择一份可读文档'} onClick={modifySelectedFile}>✦ 修改这份</button>}
+          {!readOnly && hasCourseware && <button className="secondary-button" type="button" disabled={busy} onClick={rebuildLesson}>整课重做</button>}
         </div>
       </header>
       {overview === null ? (

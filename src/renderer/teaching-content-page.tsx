@@ -6,6 +6,7 @@ import { buildCourseSummaries, type CourseSummary } from './course-view-model'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
 import DraftPanel from './draft-panel'
 import {
+  type PrepLaunchIntent,
   type TeachingContentSection,
   type TeachingContentTarget,
 } from './teaching-content-context'
@@ -115,7 +116,7 @@ export default function TeachingContentPage({
     if (nextLesson !== undefined) selectLesson(summary, nextLesson)
   }
 
-  function openPrep(context: LessonPrepContext): void {
+  function openPrep(context: LessonPrepContext, intent?: PrepLaunchIntent): void {
     if (!confirmLeavePrep()) return
     prepDirtyRef.current = false
     setInitialDraftId(null)
@@ -123,6 +124,8 @@ export default function TeachingContentPage({
       courseId: context.courseId,
       lessonId: context.lessonId,
       section: 'prep',
+      ...(intent === undefined ? {} : { prepMode: intent.mode }),
+      ...(intent?.targetFileId === undefined ? {} : { prepTargetFileId: intent.targetFileId }),
       ...(target?.originStudentId === undefined ? {} : { originStudentId: target.originStudentId }),
     })
   }
@@ -193,6 +196,10 @@ export default function TeachingContentPage({
         <DraftPanel
           context={prepContext}
           initialDraftId={initialDraftId}
+          launchIntent={target?.prepMode === undefined ? undefined : {
+            mode: target.prepMode,
+            ...(target.prepTargetFileId === undefined ? {} : { targetFileId: target.prepTargetFileId }),
+          }}
           onOpenDraft={openDraft}
           onBrowseExternal={() => onOpenExternal(prepContext)}
           onBrowseMaterials={() => onOpenMaterials(prepContext)}

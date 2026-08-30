@@ -10,7 +10,8 @@ function source(relativePath: string): string {
 describe('V152-C improvement flow contract', () => {
   it('proposes a reviewable plan before generating and embeds the confirmed plan', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
-    expect(draft).toContain('✦ 生成修改方案')
+    expect(draft).toContain('✦ 生成单文件修改方案')
+    expect(draft).toContain('✦ 生成整课重做方案')
     expect(draft).toContain('修改方案（先审阅，再生成）')
     expect(draft).toContain('确认方案并生成')
     expect(draft).toContain('重新出方案')

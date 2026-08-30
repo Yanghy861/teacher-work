@@ -4,6 +4,7 @@ import type { NodeRecord, StudentRecord } from '../src/shared/core-contracts'
 import type { ManagedFileOverview, ManagedFileRecord } from '../src/shared/file-contracts'
 import {
   buildLessonMaterialTree,
+  classifyLessonCoursewareFiles,
   createLessonPrepContext,
   filterLessonMaterialFiles,
   isSelectableLessonPrepFile,
@@ -161,5 +162,22 @@ describe('V11-02 lesson prep renderer state', () => {
       [bareIndex, bareCourseIndex, realLecture, anotherReal],
       { periodTitle: '七升八暑假', lessonLabel: '第 1 讲' },
     ).map((item) => item.id)).toEqual([realLecture.id, anotherReal.id])
+  })
+
+  it('classifies the latest published lesson version without mixing history into current materials (V1531-A)', () => {
+    const sourceLecture = file('source', '三角形基础.md', 'text/markdown')
+    const firstVersion = file('v1', '三角形基础 · 第 1 版.md', 'text/markdown')
+    const latestVersion = file('v2', '三角形基础 · 第 2 版.md', 'text/markdown')
+    const image = file('image', 'triangle.png', 'image/png')
+
+    const classified = classifyLessonCoursewareFiles([sourceLecture, firstVersion, image, latestVersion])
+
+    expect(classified.currentVersion?.id).toBe(latestVersion.id)
+    expect(classified.history.map((item) => item.id)).toEqual([firstVersion.id])
+    expect(classified.currentMaterials.map((item) => item.id)).toEqual([
+      latestVersion.id,
+      sourceLecture.id,
+      image.id,
+    ])
   })
 })

@@ -23,6 +23,14 @@ export interface LessonMaterialFilterOptions {
   readonly periodTitle?: string
 }
 
+export interface LessonCoursewareFiles {
+  readonly currentVersion: ManagedFileRecord | null
+  readonly history: readonly ManagedFileRecord[]
+  readonly currentMaterials: readonly ManagedFileRecord[]
+}
+
+const lessonVersionPattern = / · 第 (\d+) 版\.md$/u
+
 export function createLessonPrepContext(
   course: NodeRecord,
   lesson: NodeRecord,
@@ -70,6 +78,28 @@ export function reconcileSelectedLessonFileIds(
 
 export function isSelectableLessonPrepFile(file: ManagedFileRecord): boolean {
   return !file.mimeType.startsWith('image/')
+}
+
+export function classifyLessonCoursewareFiles(
+  files: readonly ManagedFileRecord[],
+): LessonCoursewareFiles {
+  const versioned = files
+    .map((file) => {
+      const match = lessonVersionPattern.exec(file.originalName)
+      return match === null ? null : { file, version: Number(match[1]) }
+    })
+    .filter((item): item is { file: ManagedFileRecord; version: number } => item !== null)
+    .sort((left, right) => right.version - left.version)
+  const currentVersion = versioned[0]?.file ?? null
+  const history = versioned.slice(1).map((item) => item.file)
+  const historyIds = new Set(history.map((file) => file.id))
+  const currentMaterials = currentVersion === null
+    ? files.filter((file) => !historyIds.has(file.id))
+    : [
+        currentVersion,
+        ...files.filter((file) => file.id !== currentVersion.id && !historyIds.has(file.id)),
+      ]
+  return { currentVersion, history, currentMaterials }
 }
 
 export function filterLessonMaterialFiles(

@@ -105,5 +105,5 @@
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
-| V1531-A 修改范围模型与两种入口 | IN_PROGRESS | 待实现：修改这份 / 整课重做入口、Renderer-only launch intent、当前版/历史版分类、修改对象与补充参考分组 |
-| V1531-B 模式化生成与最终回归 | PENDING | 待实现：模式化方案与生成、metadata 恢复、比较/发布语义、全量门和代表性 Windows 流程；完成后仍等待产品负责人确认 V1.5.3 |
+| V1531-A 修改范围模型与两种入口 | DONE | Renderer-only `new/single/lesson` intent、当前版/历史版分类、课件区“修改这份 / 整课重做 / 新建”入口、显式入口不抢恢复旧草稿、工作台目标/自动基线/可选参考分组与模式切换完成；5 files / 24 tests、typecheck、lint、production build、diff check 通过 |
+| V1531-B 模式化生成与最终回归 | IN_PROGRESS | 待实现：模式化方案与生成、metadata 恢复、比较/发布语义、全量门和代表性 Windows 流程；完成后仍等待产品负责人确认 V1.5.3 |

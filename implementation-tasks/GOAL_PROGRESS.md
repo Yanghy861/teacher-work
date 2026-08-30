@@ -956,3 +956,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 产品语义：已有课件时先确定修改对象；补充参考才使用复选框；无课件的新建流程才显示讲义 / 例题 / 作业快速生成。整课重做输出一份包含讲义、例题、练习和作业板块的完整课件 Markdown 新版本。
 - 技术边界：只使用 Renderer 会话状态、既有 `aiMetadata`、Draft/AI/notes/publish 能力；不新增 schema、migration、Service 或 IPC；不运行 portable/installer，不自动 push。
 - 设计基准：`docs/v1.5.3.1-design.md` 与 `tmp/v1.5.3-ai-modify-scope-mockup.png`。
+
+## 2026-08-30 · V1531-A · DONE
+
+- 课件分区入口完成分流：无课件为“AI 新建备课”，已有课件提供“✦ 修改这份”和“整课重做”，已有未发布节点另有“继续上次修改”；当前选中图片时单文件入口禁用。
+- 新增 Renderer-only `PrepLaunchIntent`，将 `new / single / lesson` 与单文件 targetFileId 从 LessonFilesSection 经 TeachingContentTarget 传到 DraftPanel；显式新意图不自动恢复无关最近草稿，修改记录入口仍恢复指定节点。
+- 抽取 `classifyLessonCoursewareFiles`，统一识别最高正式版本、历史版本和当前材料；历史版不再进入新修改范围。
+- 两栏工作台左侧改为“修改对象 / 补充参考 / 本课修改节点”，单文件用单选，整课只读展示自动范围，复选框只属于补充参考；顶部模式切换保留要求和 Skill，清除旧方案与对比。
+- 新建备课仍显示讲义 / 例题 / 作业快速生成；已有课件改进只显示模式对应的方案动作。
+- 自动门：相关 5 files / 24 tests、typecheck、lint、production build、`git diff --check` 通过；未运行 portable/installer，未 push。

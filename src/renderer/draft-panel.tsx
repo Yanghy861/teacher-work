@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { CoreOverview, NoteRecord } from '../shared/core-contracts'
-import type { ManagedFileOverview } from '../shared/file-contracts'
+import type { ManagedFileOverview, ManagedFileRecord } from '../shared/file-contracts'
 import {
   DRAFT_DEFAULT_MAX_CHARS,
   DRAFT_DEFAULT_MAX_TOKENS,
@@ -11,6 +11,7 @@ import {
 } from '../shared/draft-contracts'
 import type { SkillRecord } from '../shared/skill-contracts'
 import {
+  classifyLessonCoursewareFiles,
   isSelectableLessonPrepFile,
   filterLessonMaterialFiles,
   listLessonPrepFiles,
@@ -18,7 +19,8 @@ import {
   type LessonPrepContext,
 } from './lesson-prep-context'
 import { listDraftInbox, listLessonAiResults, type DraftInboxEntry } from './draft-view-model'
-import { LessonMaterialTree, MarkdownDocument } from './lesson-material-reader'
+import { MarkdownDocument } from './lesson-material-reader'
+import type { PrepLaunchIntent, PrepLaunchMode } from './teaching-content-context'
 
 const kindLabels: Record<DraftKind, string> = {
   lecture: '讲义',
@@ -31,6 +33,7 @@ type BusyAction = DraftKind | 'regenerate' | 'save' | 'delete' | 'publish' | ''
 export default function DraftPanel({
   context,
   initialDraftId,
+  launchIntent,
   onOpenDraft,
   onBackToCourses,
   onBrowseExternal,
@@ -40,6 +43,7 @@ export default function DraftPanel({
 }: {
   readonly context: LessonPrepContext | null
   readonly initialDraftId: string | null
+  readonly launchIntent?: PrepLaunchIntent
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
   readonly onBackToCourses: () => void
   readonly onBrowseExternal: () => void
@@ -50,7 +54,9 @@ export default function DraftPanel({
   const [files, setFiles] = useState<ManagedFileOverview | null>(null)
   const [core, setCore] = useState<CoreOverview | null>(null)
   const [skills, setSkills] = useState<readonly SkillRecord[]>([])
-  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
+  const [prepMode, setPrepMode] = useState<PrepLaunchMode>('new')
+  const [targetFileId, setTargetFileId] = useState('')
+  const [selectedReferenceFileIds, setSelectedReferenceFileIds] = useState<string[]>([])
   const [selectedSkillId, setSelectedSkillId] = useState('')
   const [requirement, setRequirement] = useState('')
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
@@ -69,6 +75,7 @@ export default function DraftPanel({
   const [compareOpen, setCompareOpen] = useState(false)
   const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
   const knownLessonFileIds = useRef<Set<string>>(new Set())
+  const scopeInitialized = useRef(false)
 
   const lessonFiles = useMemo(() => {
     if (files === null || context === null) return []
@@ -78,9 +85,29 @@ export default function DraftPanel({
     })
   }, [context, files])
   const lessonFileKey = lessonFiles.map((file) => file.id).join('|')
-  const selectedFiles = lessonFiles.filter((file) =>
-    isSelectableLessonPrepFile(file) && selectedFileIds.includes(file.id),
-  )
+  const classifiedFiles = useMemo(() => classifyLessonCoursewareFiles(lessonFiles), [lessonFiles])
+  const selectableCurrentFiles = classifiedFiles.currentMaterials.filter(isSelectableLessonPrepFile)
+  const hasCourseware = selectableCurrentFiles.length > 0
+  const targetFile = selectableCurrentFiles.find((file) => file.id === targetFileId) ?? null
+  const lessonBaselineFiles = classifiedFiles.currentVersion !== null && isSelectableLessonPrepFile(classifiedFiles.currentVersion)
+    ? [classifiedFiles.currentVersion]
+    : selectableCurrentFiles
+  const referenceCandidates = prepMode === 'single'
+    ? selectableCurrentFiles.filter((file) => file.id !== targetFile?.id)
+    : prepMode === 'lesson'
+      ? selectableCurrentFiles.filter((file) => !lessonBaselineFiles.some((base) => base.id === file.id))
+      : selectableCurrentFiles
+  const selectedReferenceFiles = referenceCandidates.filter((file) => selectedReferenceFileIds.includes(file.id))
+  const selectedFiles = uniqueFiles(prepMode === 'single'
+    ? [...(targetFile === null ? [] : [targetFile]), ...selectedReferenceFiles]
+    : prepMode === 'lesson'
+      ? [...lessonBaselineFiles, ...selectedReferenceFiles]
+      : selectedReferenceFiles)
+  const plannedDraftKind = prepMode === 'lesson'
+    ? DRAFT_KINDS.lecture
+    : prepMode === 'single'
+      ? inferDraftKind(targetFile)
+      : improveKind
   const lessonResults = useMemo(
     () => context === null ? [] : listLessonAiResults(core, context.lessonId),
     [context, core],
@@ -97,7 +124,10 @@ export default function DraftPanel({
   useEffect(() => {
     let cancelled = false
     knownLessonFileIds.current = new Set()
-    setSelectedFileIds([])
+    scopeInitialized.current = false
+    setPrepMode(launchIntent?.mode ?? 'new')
+    setTargetFileId(launchIntent?.targetFileId ?? '')
+    setSelectedReferenceFileIds([])
     setSelectedSkillId('')
     setRequirement('')
     setSelectedNoteId(initialDraftId)
@@ -119,6 +149,7 @@ export default function DraftPanel({
         setRestoreNoticeVisible(true)
         return
       }
+      if (launchIntent !== undefined) return
       const latestDraft = listLessonAiResults(loadedCore, context.lessonId)
         .find((note) => note.draftStatus === 'draft')
       if (latestDraft === undefined) return
@@ -127,16 +158,34 @@ export default function DraftPanel({
       setRestoreNoticeVisible(true)
     })()
     return () => { cancelled = true }
-  }, [context?.lessonId, initialDraftId])
+  }, [context?.lessonId, initialDraftId, launchIntent?.mode, launchIntent?.targetFileId])
 
   useEffect(() => {
+    if (files === null) return
     const currentSet = new Set(lessonFiles.map((file) => file.id))
     const previousKnown = knownLessonFileIds.current
-    setSelectedFileIds((current) =>
+    if (!scopeInitialized.current) {
+      const requestedMode = launchIntent?.mode
+      const nextMode: PrepLaunchMode = selectableCurrentFiles.length === 0
+        ? 'new'
+        : requestedMode === 'lesson' ? 'lesson' : 'single'
+      const requestedTarget = selectableCurrentFiles.find((file) => file.id === launchIntent?.targetFileId)
+      const nextTarget = requestedTarget
+        ?? (classifiedFiles.currentVersion !== null && isSelectableLessonPrepFile(classifiedFiles.currentVersion)
+          ? classifiedFiles.currentVersion
+          : selectableCurrentFiles[0])
+      setPrepMode(nextMode)
+      setTargetFileId(nextTarget?.id ?? '')
+      setSelectedReferenceFileIds(nextMode === 'new' ? selectableCurrentFiles.map((file) => file.id) : [])
+      knownLessonFileIds.current = currentSet
+      scopeInitialized.current = true
+      return
+    }
+    setSelectedReferenceFileIds((current) =>
       reconcileSelectedLessonFileIds(current, previousKnown, lessonFiles),
     )
     knownLessonFileIds.current = currentSet
-  }, [lessonFileKey])
+  }, [files, lessonFileKey, launchIntent?.mode, launchIntent?.targetFileId])
 
   useEffect(() => {
     if (!showResults) return
@@ -164,12 +213,39 @@ export default function DraftPanel({
     }
   }
 
-  function toggleFile(fileId: string): void {
-    const file = lessonFiles.find((candidate) => candidate.id === fileId)
-    if (file === undefined || !isSelectableLessonPrepFile(file)) return
-    setSelectedFileIds((current) => current.includes(fileId)
+  function toggleReferenceFile(fileId: string): void {
+    const file = referenceCandidates.find((candidate) => candidate.id === fileId)
+    if (file === undefined) return
+    setSelectedReferenceFileIds((current) => current.includes(fileId)
       ? current.filter((id) => id !== fileId)
       : [...current, fileId])
+  }
+
+  function selectTargetFile(fileId: string): void {
+    if (!selectableCurrentFiles.some((file) => file.id === fileId)) return
+    setTargetFileId(fileId)
+    setSelectedReferenceFileIds((current) => current.filter((id) => id !== fileId))
+    setImprovePhase('')
+    setImprovePlan('')
+    setImproveError('')
+    setImproveBase(null)
+    setCompareOpen(false)
+    setMessage('')
+  }
+
+  function changePrepMode(nextMode: Exclude<PrepLaunchMode, 'new'>): void {
+    if (!hasCourseware || prepMode === nextMode) return
+    setPrepMode(nextMode)
+    if (nextMode === 'single' && targetFile === null) {
+      setTargetFileId(classifiedFiles.currentVersion?.id ?? selectableCurrentFiles[0]?.id ?? '')
+    }
+    setSelectedReferenceFileIds([])
+    setImprovePhase('')
+    setImprovePlan('')
+    setImproveError('')
+    setImproveBase(null)
+    setCompareOpen(false)
+    setMessage('')
   }
 
   async function generate(kind: DraftKind): Promise<void> {
@@ -462,18 +538,45 @@ export default function DraftPanel({
     <section className="lesson-prep-workspace" aria-live="polite">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       {message !== '' && <div className="inline-notice" role="status">{message}</div>}
+      {hasCourseware && (
+        <div className="prep-mode-bar">
+          <div><strong>这次想怎么改？</strong><span>先确定修改对象，再选择可选参考</span></div>
+          <div className="segmented-control prep-mode-switch" aria-label="AI 修改方式">
+            <button className={prepMode === 'single' ? 'is-active' : ''} type="button" onClick={() => changePrepMode('single')} disabled={busyAction !== '' || improveBusy}>修改当前文件</button>
+            <button className={prepMode === 'lesson' ? 'is-active' : ''} type="button" onClick={() => changePrepMode('lesson')} disabled={busyAction !== '' || improveBusy}>整课重做</button>
+          </div>
+        </div>
+      )}
       <div className="lesson-prep-workspace-grid">
         <aside className="workspace-card prep-ref-panel">
-          <div className="card-heading"><div><p className="section-kicker">参考资料</p><h2>勾选作为生成依据</h2></div><span className="count-label">{lessonFiles.filter(isSelectableLessonPrepFile).length} 份文档</span></div>
-          {files === null ? <div className="material-reader-state">正在读取本次资料…</div> : (
-            <LessonMaterialTree
-              files={lessonFiles}
-              selectedFileId={''}
-              onSelectFile={() => undefined}
-              selectedFileIds={selectedFileIds}
-              onToggleFile={toggleFile}
-              showHeading={false}
-            />
+          {prepMode === 'new' ? (
+            <>
+              <div className="card-heading"><div><p className="section-kicker">新建备课</p><h2>选择生成依据</h2></div><span className="count-label">{referenceCandidates.length} 份</span></div>
+              {files === null ? <div className="material-reader-state">正在读取本次资料…</div> : (
+                <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} emptyText="先从外部资料或素材库添加生成依据。" />
+              )}
+            </>
+          ) : prepMode === 'single' ? (
+            <>
+              <div className="card-heading"><div><p className="section-kicker">修改对象</p><h2>选择一份文件</h2></div><span className="count-label">单选</span></div>
+              <ScopeFileList files={selectableCurrentFiles} selection="radio" selectedIds={targetFile === null ? [] : [targetFile.id]} onSelect={selectTargetFile} currentVersionId={classifiedFiles.currentVersion?.id} emptyText="本课没有可修改的文本文件。" />
+            </>
+          ) : (
+            <>
+              <div className="card-heading"><div><p className="section-kicker">修改对象</p><h2>本课全部内容</h2></div><span className="count-label">自动</span></div>
+              <div className="prep-auto-scope">
+                <strong>{classifiedFiles.currentVersion === null ? '本课现有可读内容' : '当前正式课件'}</strong>
+                <p>{classifiedFiles.currentVersion === null ? '系统自动纳入进入工作台时已有的文本内容。' : '系统自动使用最新正式版本，历史版本不会参与。'}</p>
+                <ScopeFileList files={lessonBaselineFiles} selection="summary" selectedIds={[]} onSelect={() => undefined} currentVersionId={classifiedFiles.currentVersion?.id} emptyText="本课没有可重做的文本内容。" />
+              </div>
+            </>
+          )}
+          {prepMode !== 'new' && (
+            <div className="prep-reference-section">
+              <div className="card-heading"><div><p className="section-kicker">可选</p><h2>补充参考</h2></div><span className="count-label">{selectedReferenceFiles.length} 份</span></div>
+              <p className="prep-reference-hint">只帮助 AI 理解要求，不会改变修改对象。</p>
+              <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} emptyText="没有额外参考；可从外部资料或素材库添加。" />
+            </div>
           )}
           <div className="prep-source-actions">
             <button className="secondary-button" type="button" onClick={onBrowseExternal}>从外部资料添加</button>
@@ -498,8 +601,14 @@ export default function DraftPanel({
           </ul>
         </aside>
         <section className="workspace-card prep-work-panel">
+          {prepMode !== 'new' && (
+            <div className="prep-scope-strip">
+              <div><strong>{prepMode === 'single' ? `修改对象：${targetFile?.originalName ?? '尚未选择'}` : '修改范围：本课完整课件'}</strong><span>{prepMode === 'single' ? 'AI 只改这份文件，未提及部分保持不变。' : `系统自动纳入 ${lessonBaselineFiles.length} 份基线内容，输出一份完整新版本。`}</span></div>
+              <span className="prep-scope-status">{prepMode === 'single' ? kindLabels[plannedDraftKind] : '整课'}</span>
+            </div>
+          )}
           <div className="draft-prompt-block">
-            <div className="kicker">修改要求（你的提示词，每次生成都以它为准）</div>
+            <div className="kicker">{prepMode === 'new' ? '生成要求' : prepMode === 'single' ? '单文件修改要求' : '整课重做要求'}（每次生成都以它为准）</div>
             <textarea value={requirement} onChange={(event) => setRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={3} placeholder="例如：每个概念后配一道即时练习；平方根易错点整理成辨析表；结尾加下一讲衔接。" disabled={busyAction !== ''} />
             <div className="draft-prompt-actions">
               <label className="improve-kind-label">Skill：
@@ -508,8 +617,8 @@ export default function DraftPanel({
                   {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
                 </select>
               </label>
-              <button className="primary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy || busyAction !== '' || selectedFiles.length === 0}>{improveBusy ? '正在生成修改方案…' : '✦ 生成修改方案'}</button>
-              {([DRAFT_KINDS.lecture, DRAFT_KINDS.example, DRAFT_KINDS.homework] as DraftKind[]).map((kind) => (
+              {prepMode !== 'new' && <button className="primary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy || busyAction !== '' || selectedFiles.length === 0}>{improveBusy ? '正在生成修改方案…' : prepMode === 'single' ? '✦ 生成单文件修改方案' : '✦ 生成整课重做方案'}</button>}
+              {prepMode === 'new' && ([DRAFT_KINDS.lecture, DRAFT_KINDS.example, DRAFT_KINDS.homework] as DraftKind[]).map((kind) => (
                 <button key={kind} className="btn-ghost small" type="button" onClick={() => void generate(kind)} disabled={busyAction !== '' || selectedFiles.length === 0}>{busyAction === kind ? '生成中…' : `生成${kindLabels[kind]}`}</button>
               ))}
             </div>
@@ -520,14 +629,14 @@ export default function DraftPanel({
               <div className="card-heading"><div><p className="section-kicker">改进流程</p><h2>修改方案（先审阅，再生成）</h2></div></div>
               <div className="improve-plan-body"><MarkdownDocument body={improvePlan} files={[]} /></div>
               <div className="improve-review-actions">
-                <label className="improve-kind-label">生成类型
+                {prepMode === 'new' && <label className="improve-kind-label">生成类型
                   <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={improveBusy}>
                     <option value="lecture">讲义</option>
                     <option value="example">例题</option>
                     <option value="homework">作业</option>
                   </select>
-                </label>
-                <button className="primary-button" type="button" onClick={() => void confirmPlanAndGenerate(improveKind)} disabled={improveBusy}>{improveBusy ? '生成中…' : '确认方案并生成'}</button>
+                </label>}
+                <button className="primary-button" type="button" onClick={() => void confirmPlanAndGenerate(plannedDraftKind)} disabled={improveBusy}>{improveBusy ? '生成中…' : prepMode === 'lesson' ? '确认并生成完整新版本' : '确认方案并生成'}</button>
                 <button className="secondary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy}>重新出方案</button>
                 <button className="secondary-button" type="button" onClick={abandonImprove} disabled={improveBusy}>放弃改进</button>
               </div>
@@ -568,6 +677,37 @@ export default function DraftPanel({
         </section>
       </div>
     </section>
+  )
+}
+
+function ScopeFileList({ files, selection, selectedIds, onSelect, currentVersionId, emptyText }: {
+  readonly files: readonly ManagedFileRecord[]
+  readonly selection: 'checkbox' | 'radio' | 'summary'
+  readonly selectedIds: readonly string[]
+  readonly onSelect: (fileId: string) => void
+  readonly currentVersionId?: string
+  readonly emptyText: string
+}): React.JSX.Element {
+  if (files.length === 0) return <p className="empty-state prep-scope-empty">{emptyText}</p>
+  return (
+    <ul className="prep-scope-file-list">
+      {files.map((file) => (
+        <li key={file.id}>
+          <label className={selectedIds.includes(file.id) ? 'is-selected' : ''}>
+            {selection !== 'summary' && (
+              <input
+                type={selection}
+                name={selection === 'radio' ? 'prep-target-file' : undefined}
+                checked={selectedIds.includes(file.id)}
+                onChange={() => onSelect(file.id)}
+              />
+            )}
+            <span className="prep-scope-file-name">{file.originalName}</span>
+            {file.id === currentVersionId && <span className="prep-current-badge">当前</span>}
+          </label>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -624,6 +764,22 @@ function DraftInboxRow({ entry, busy, onOpenDraft, onDeleteDraft }: {
 
 
 function kindIcon(kind: DraftKind): string { return kind === 'lecture' ? '讲' : kind === 'example' ? '例' : '作' }
+
+function inferDraftKind(file: ManagedFileRecord | null): DraftKind {
+  if (file === null) return DRAFT_KINDS.lecture
+  if (/作业|课后|习题/u.test(file.originalName)) return DRAFT_KINDS.homework
+  if (/例题|练习|题目/u.test(file.originalName)) return DRAFT_KINDS.example
+  return DRAFT_KINDS.lecture
+}
+
+function uniqueFiles(files: readonly ManagedFileRecord[]): ManagedFileRecord[] {
+  const seen = new Set<string>()
+  return files.filter((file) => {
+    if (seen.has(file.id)) return false
+    seen.add(file.id)
+    return true
+  })
+}
 
 function formatDateTime(value: string): string {
   const parsed = new Date(value)
