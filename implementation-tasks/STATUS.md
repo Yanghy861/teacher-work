@@ -93,3 +93,10 @@
 | V152-C 已有课件改进流程 | DONE | 基于课件改进入口 + 参考范围/修改要求校验 + AI 方案审阅（确认/重新出方案/放弃）+ 确认后按方案生成 + 新旧对比；4 项契约测试；55 files / 195 tests、typecheck、lint、build、diff check 通过；D15 中继式 AI 验收通过（方案与生成均为真实语义现写内容） |
 | V152-D 修改记录与版本发布 | DONE | 按批准的窄通道 `draft:publish-to-lesson` 实现"保存为新版本"：原子写入 managed 新课件（"标题 · 第 N 版"命名）、关联课次、节点转"已确认"、旧版本保留；55 files / 196 tests、typecheck、lint、build、diff check 通过 |
 | V152-E V1.5.2 全量回归与版本验收 | DONE |  全量 54 files / 197 tests、typecheck、lint、build、diff check 通过；真实思源课件全流程（导入→方案→确认→生成→对比→发布→课件区 v1/v2 并存）通过；修复结构性文件过滤误判；报告见 `docs/v1.5.2-acceptance.md`；产品负责人已确认以中继式测试结束 V1.5.2（真实 provider 自测为遗留项）；`checkpoint-V1.5.2-pass` 已创建 |
+
+## V1.5.3 活动里程碑（课件动作化）
+
+| 里程碑 | 状态 | 完成/阻塞记录 |
+|---|---|---|
+| V153-A 课件动作化与 AI 修改工作台 | IN_PROGRESS | 两分区 + 课件 AI 入口 + 两栏工作台（提示词常驻）+ 单当前版/历史折叠；设计基准已获产品负责人确认 |
+| V153-B V1.5.3 全量回归与版本验收 | TODO | 前置 V153-A `DONE`；最终体验确认前不创建 `checkpoint-V1.5.3-pass` |
