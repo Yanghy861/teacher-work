@@ -10,6 +10,7 @@ import {
   type LessonPrepContext,
 } from './lesson-prep-context'
 import LessonMaterialReader from './lesson-material-reader'
+import { useAppDialog } from './app-confirm-dialog'
 import type { PrepLaunchIntent } from './teaching-content-context'
 
 // Legacy V1.2 boundary retained: 不包含整门课程资料或学生文件。
@@ -35,6 +36,7 @@ export default function LessonFilesSection({
   readonly onStartPrep: (context: LessonPrepContext, intent?: PrepLaunchIntent) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
 }): React.JSX.Element {
+  const { confirm } = useAppDialog()
   const [overview, setOverview] = useState<ManagedFileOverview | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -94,9 +96,12 @@ export default function LessonFilesSection({
     if (lesson === null) return
     const file = lessonFiles.find((candidate) => candidate.id === fileId)
     if (file === undefined) return
-    const confirmed = window.confirm(
-      `确定从“${lesson.title}”移除“${file.originalName}”吗？\n\n只移除本课的独立副本，不会影响素材库原件或外部资料。`,
-    )
+    const confirmed = await confirm({
+      title: '从本课移除资料？',
+      description: <>“{file.originalName}”将从“{lesson.title}”移除。<br />只移除本课的独立副本，不会影响素材库原件或外部资料。</>,
+      confirmLabel: '从本课移除',
+      destructive: true,
+    })
     if (!confirmed) return
     setBusy(true)
     setError('')

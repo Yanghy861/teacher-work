@@ -15,6 +15,7 @@ import {
   type QuickRosterEntry,
   type RosterResolution,
 } from './quick-course-wizard-model'
+import { useAppDialog } from './app-confirm-dialog'
 
 const wizardSteps = ['课程与学生', '阶段与课次', '上课安排', '检查并创建'] as const
 
@@ -23,7 +24,7 @@ export default function QuickCourseWizardBasics({
   busy = false,
   initialState,
   initialRosterText,
-  confirmDiscard = () => window.confirm('放弃当前快速建课内容吗？'),
+  confirmDiscard,
   onClose,
   onDraftChange,
   onContinueToSchedule,
@@ -32,11 +33,12 @@ export default function QuickCourseWizardBasics({
   readonly busy?: boolean
   readonly initialState?: QuickCourseWizardState
   readonly initialRosterText?: string
-  readonly confirmDiscard?: () => boolean
+  readonly confirmDiscard?: () => boolean | Promise<boolean>
   readonly onClose: () => void
   readonly onDraftChange?: (state: QuickCourseWizardState) => void
   readonly onContinueToSchedule: (state: QuickCourseWizardState) => void
 }): React.JSX.Element {
+  const { confirm } = useAppDialog()
   const [state, setState] = useState<QuickCourseWizardState>(
     initialState ?? createInitialQuickCourseWizardState(),
   )
@@ -68,12 +70,24 @@ export default function QuickCourseWizardBasics({
     commitState({ ...state, ...patch })
   }
 
-  function requestClose(): void {
+  async function requestClose(): Promise<void> {
     const hasContent =
       state.courseTitle.trim() !== '' ||
       rosterText.trim() !== '' ||
       state.lessons.length > 0
-    if (!hasContent || confirmDiscard()) onClose()
+    if (!hasContent) {
+      onClose()
+      return
+    }
+    const confirmed = confirmDiscard !== undefined
+      ? await confirmDiscard()
+      : await confirm({
+        title: '放弃快速建课？',
+        description: '当前已填写的课程、学生或课次内容尚未创建，放弃后不会保留。',
+        confirmLabel: '放弃并关闭',
+        destructive: true,
+      })
+    if (confirmed) onClose()
   }
 
   function updateRoster(value: string): void {
@@ -147,7 +161,7 @@ export default function QuickCourseWizardBasics({
 
   return (
     <div className="modal-backdrop quick-course-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) requestClose()
+      if (event.target === event.currentTarget) void requestClose()
     }}>
       <section
         className="quick-course-wizard"
@@ -157,7 +171,7 @@ export default function QuickCourseWizardBasics({
       >
         <header className="quick-course-heading">
           <h2 id="quick-course-title">快速建课</h2>
-          <button className="modal-close" type="button" aria-label="关闭" onClick={requestClose}>×</button>
+          <button className="modal-close" type="button" aria-label="关闭" onClick={() => void requestClose()}>×</button>
         </header>
 
         <ol className="quick-course-steps" aria-label="快速建课步骤">
@@ -210,7 +224,7 @@ export default function QuickCourseWizardBasics({
             className="secondary-button"
             type="button"
             disabled={busy}
-            onClick={step === 1 ? requestClose : () => updateState({ currentStep: 1 })}
+            onClick={step === 1 ? () => void requestClose() : () => updateState({ currentStep: 1 })}
           >
             {step === 1 ? '取消' : '上一步'}
           </button>

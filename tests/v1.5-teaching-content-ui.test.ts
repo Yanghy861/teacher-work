@@ -65,7 +65,7 @@ describe('V15 teaching content workspace contract', () => {
   it('offers a courseware return after saving a lesson result', () => {
     const page = source('../src/renderer/teaching-content-page.tsx')
     const draft = source('../src/renderer/draft-panel.tsx')
-    expect(page).toContain("onOpenCourseware={() => setSection('courseware')}")
+    expect(page).toContain("onOpenCourseware={() => { void setSection('courseware') }}")
     expect(draft).toContain('onOpenCourseware?: () => void')
     expect(draft).toContain('查看课件')
   })
@@ -85,6 +85,7 @@ describe('V15 teaching content workspace contract', () => {
     expect(draft).toContain("find((note) => note.draftStatus === 'draft')")
     expect(draft).toContain('已恢复最近的工作副本：修改尚未发布，不会改变正式课件与已确认成果。')
     expect(page).toContain('prepDirtyRef.current = value')
-    expect(page).toContain('AI 备课中有未保存的修改，离开后将丢失本次编辑。确定离开吗？')
+    expect(page).toContain("title: '离开 AI 修改？'")
+    expect(page).toContain('AI 修改中有未保存的编辑，离开后将丢失本次编辑。')
     expect(page).toContain('onDirtyChange={handlePrepDirtyChange}')
   })

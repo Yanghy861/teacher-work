@@ -5,6 +5,7 @@ import LessonFilesSection from './lesson-files-section'
 import { buildCourseSummaries, type CourseSummary } from './course-view-model'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
 import DraftPanel from './draft-panel'
+import { useAppDialog } from './app-confirm-dialog'
 import {
   type PrepLaunchIntent,
   type TeachingContentSection,
@@ -28,6 +29,7 @@ export default function TeachingContentPage({
   readonly onOpenExternal: (context: LessonPrepContext) => void
   readonly onOpenMaterials: (context: LessonPrepContext) => void
 }): React.JSX.Element {
+  const { confirm } = useAppDialog()
   const [overview, setOverview] = useState<CoreOverview | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [initialDraftId, setInitialDraftId] = useState<string | null>(externalInitialDraftId)
@@ -38,9 +40,14 @@ export default function TeachingContentPage({
     prepDirtyRef.current = value
   }, [])
 
-  function confirmLeavePrep(): boolean {
+  async function confirmLeavePrep(): Promise<boolean> {
     if (target?.section !== 'prep' || !prepDirtyRef.current) return true
-    return window.confirm('AI 备课中有未保存的修改，离开后将丢失本次编辑。确定离开吗？')
+    return confirm({
+      title: '离开 AI 修改？',
+      description: 'AI 修改中有未保存的编辑，离开后将丢失本次编辑。',
+      confirmLabel: '离开并放弃编辑',
+      destructive: true,
+    })
   }
 
   useEffect(() => {
@@ -83,8 +90,8 @@ export default function TeachingContentPage({
     ? '尚未选择课次'
     : `${summary.course.title} / ${period?.title ?? '未分组'} / ${lesson.title}`
 
-  function setSection(section: TeachingContentSection): void {
-    if (target?.section === 'prep' && section !== 'prep' && !confirmLeavePrep()) return
+  async function setSection(section: TeachingContentSection): Promise<void> {
+    if (target?.section === 'prep' && section !== 'prep' && !await confirmLeavePrep()) return
     prepDirtyRef.current = false
     if (target === null) {
       onTargetChange({ courseId: null, lessonId: null, section })
@@ -95,8 +102,8 @@ export default function TeachingContentPage({
     onTargetChange({ ...target, section })
   }
 
-  function selectLesson(course: CourseSummary, selectedLesson: NodeRecord): void {
-    if (!confirmLeavePrep()) return
+  async function selectLesson(course: CourseSummary, selectedLesson: NodeRecord): Promise<void> {
+    if (!await confirmLeavePrep()) return
     prepDirtyRef.current = false
     setInitialDraftId(null)
     setImmersive(false)
@@ -113,11 +120,11 @@ export default function TeachingContentPage({
     if (summary === null || lesson === null) return
     const index = summary.lessons.findIndex((candidate) => candidate.id === lesson.id)
     const nextLesson = summary.lessons[index + offset]
-    if (nextLesson !== undefined) selectLesson(summary, nextLesson)
+    if (nextLesson !== undefined) void selectLesson(summary, nextLesson)
   }
 
-  function openPrep(context: LessonPrepContext, intent?: PrepLaunchIntent): void {
-    if (!confirmLeavePrep()) return
+  async function openPrep(context: LessonPrepContext, intent?: PrepLaunchIntent): Promise<void> {
+    if (!await confirmLeavePrep()) return
     prepDirtyRef.current = false
     setInitialDraftId(null)
     onTargetChange({
@@ -130,8 +137,8 @@ export default function TeachingContentPage({
     })
   }
 
-  function openDraft(context: LessonPrepContext, noteId: string): void {
-    if (!confirmLeavePrep()) return
+  async function openDraft(context: LessonPrepContext, noteId: string): Promise<void> {
+    if (!await confirmLeavePrep()) return
     prepDirtyRef.current = false
     setInitialDraftId(noteId)
     onTargetChange({
@@ -157,7 +164,9 @@ export default function TeachingContentPage({
         </div>
         <div className="teaching-content-header-actions">
           {target?.originStudentId !== undefined && (
-            <button className="link-button" type="button" onClick={() => { if (confirmLeavePrep()) onBackToStudent(target.originStudentId!) }}>返回学生</button>
+            <button className="link-button" type="button" onClick={() => {
+              void (async () => { if (await confirmLeavePrep()) onBackToStudent(target.originStudentId!) })()
+            }}>返回学生</button>
           )}
           <button className="secondary-button" type="button" onClick={() => setDrawerOpen(true)}>切换课程 / 课次</button>
           {target !== null && target.lessonId !== null && (
@@ -166,15 +175,15 @@ export default function TeachingContentPage({
               <button className="link-button" type="button" onClick={() => moveLesson(1)}>下一课</button>
             </>
           )}
-          {target?.section === 'prep' && <button className="link-button" type="button" onClick={() => { if (confirmLeavePrep()) setSection('courseware') }}>退出修改，回到课件</button>}
-          {target?.courseId !== null && target?.courseId !== undefined && target?.section !== 'prep' && <button className="link-button" type="button" onClick={() => { if (confirmLeavePrep()) onBackToCourses(target) }}>返回课程</button>}
+          {target?.section === 'prep' && <button className="link-button" type="button" onClick={() => { void setSection('courseware') }}>退出修改，回到课件</button>}
+          {target?.courseId !== null && target?.courseId !== undefined && target?.section !== 'prep' && <button className="link-button" type="button" onClick={() => onBackToCourses(target)}>返回课程</button>}
         </div>
       </header>
 
       {target?.section !== 'prep' && (
         <nav className="teaching-content-tabs" aria-label="教学内容分区">
           {([['courseware', '课件'], ['drafts', '修改记录']] as const).map(([section, label]) => (
-            <button className={target?.section === section ? 'is-active' : ''} type="button" key={section} onClick={() => setSection(section)}>{label}</button>
+            <button className={target?.section === section ? 'is-active' : ''} type="button" key={section} onClick={() => { void setSection(section) }}>{label}</button>
           ))}
         </nav>
       )}
@@ -183,7 +192,7 @@ export default function TeachingContentPage({
         <DraftPanel
           context={null}
           initialDraftId={null}
-          onOpenDraft={openDraft}
+          onOpenDraft={(context, noteId) => { void openDraft(context, noteId) }}
           onBackToCourses={() => target === null ? undefined : onBackToCourses(target)}
           onBrowseExternal={() => undefined}
           onBrowseMaterials={() => undefined}
@@ -191,7 +200,7 @@ export default function TeachingContentPage({
       ) : prepContext === null || lesson === null ? (
         <TeachingContentEmpty onChoose={() => setDrawerOpen(true)} />
       ) : summary?.ended && target?.section === 'prep' ? (
-        <section className="teaching-content-empty workspace-card"><h2>历史课程只读</h2><p>已结束课程可以继续浏览已有课件，但不能在这里开始新的备课。</p><button className="secondary-button" type="button" onClick={() => setSection('courseware')}>查看课件</button></section>
+          <section className="teaching-content-empty workspace-card"><h2>历史课程只读</h2><p>已结束课程可以继续浏览已有课件，但不能在这里开始新的备课。</p><button className="secondary-button" type="button" onClick={() => { void setSection('courseware') }}>查看课件</button></section>
       ) : target?.section === 'prep' ? (
         <DraftPanel
           context={prepContext}
@@ -200,12 +209,14 @@ export default function TeachingContentPage({
             mode: target.prepMode,
             ...(target.prepTargetFileId === undefined ? {} : { targetFileId: target.prepTargetFileId }),
           }}
-          onOpenDraft={openDraft}
+          onOpenDraft={(context, noteId) => { void openDraft(context, noteId) }}
           onBrowseExternal={() => onOpenExternal(prepContext)}
           onBrowseMaterials={() => onOpenMaterials(prepContext)}
-          onOpenCourseware={() => setSection('courseware')}
+          onOpenCourseware={() => { void setSection('courseware') }}
           onDirtyChange={handlePrepDirtyChange}
-          onBackToCourses={() => { if (confirmLeavePrep()) onBackToCourses(target) }}
+          onBackToCourses={() => {
+            void (async () => { if (await confirmLeavePrep()) onBackToCourses(target) })()
+          }}
         />
       ) : (
         <LessonFilesSection
@@ -216,8 +227,8 @@ export default function TeachingContentPage({
           readOnly={summary?.ended ?? false}
           immersive={immersive}
           onToggleImmersive={() => setImmersive((current) => !current)}
-          onStartPrep={openPrep}
-          onOpenDraft={openDraft}
+          onStartPrep={(context, intent) => { void openPrep(context, intent) }}
+          onOpenDraft={(context, noteId) => { void openDraft(context, noteId) }}
         />
       )}
 
@@ -226,7 +237,7 @@ export default function TeachingContentPage({
           summaries={summaries}
           selectedCourseId={target?.courseId ?? ''}
           selectedLessonId={target?.lessonId ?? ''}
-          onSelectLesson={selectLesson}
+          onSelectLesson={(course, selectedLesson) => { void selectLesson(course, selectedLesson) }}
           onClose={() => setDrawerOpen(false)}
         />
       )}

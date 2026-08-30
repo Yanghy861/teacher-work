@@ -628,6 +628,10 @@ button:disabled {
   margin-left: 8px;
 }
 
+.material-folder-branch > .material-library-tree-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .material-folder-select {
   display: grid;
   grid-template-columns: 14px minmax(0, 1fr) auto;
@@ -655,6 +659,42 @@ button:disabled {
   color: #94a3b8;
   background: transparent;
   cursor: pointer;
+}
+
+.folder-action-control {
+  position: relative;
+}
+
+.folder-action-menu {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 4px);
+  right: 0;
+  display: grid;
+  min-width: 96px;
+  overflow: hidden;
+  border: 1px solid #dbe3ef;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgb(15 23 42 / 14%);
+}
+
+.folder-action-menu button {
+  border: 0;
+  padding: 8px 10px;
+  color: #334155;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.folder-action-menu button:hover {
+  background: #f8fafc;
+}
+
+.folder-action-menu .is-danger {
+  color: #b91c1c;
 }
 
 .material-type-filter {
@@ -2355,7 +2395,7 @@ button:disabled {
 .modal-card-wide { width: min(720px, 100%); }
 .modal-heading { align-items: flex-start; margin-bottom: 15px; }
 .modal-heading h2 { margin: 0 0 4px; color: #172554; font-size: 18px; }
-.modal-heading p { margin: 0; color: #64748b; font-size: 12px; }
+.modal-heading p { margin: 0; color: #64748b; font-size: 12px; white-space: pre-line; }
 .modal-close { border: 0; border-radius: 7px; padding: 2px 8px; color: #64748b; background: #f1f5f9; cursor: pointer; font-size: 22px; }
 .modal-form { display: grid; gap: 13px; }
 .modal-field { display: grid; gap: 6px; color: #475569; font-size: 12px; font-weight: 700; }

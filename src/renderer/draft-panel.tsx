@@ -20,6 +20,7 @@ import {
 } from './lesson-prep-context'
 import { listDraftInbox, listLessonAiResults, type DraftInboxEntry } from './draft-view-model'
 import { MarkdownDocument } from './lesson-material-reader'
+import { useAppDialog } from './app-confirm-dialog'
 import type { PrepLaunchIntent, PrepLaunchMode } from './teaching-content-context'
 
 const kindLabels: Record<DraftKind, string> = {
@@ -78,6 +79,7 @@ export default function DraftPanel({
   readonly onOpenCourseware?: () => void
   readonly onDirtyChange?: (dirty: boolean) => void
 }): React.JSX.Element {
+  const { confirm } = useAppDialog()
   const [files, setFiles] = useState<ManagedFileOverview | null>(null)
   const [core, setCore] = useState<CoreOverview | null>(null)
   const [skills, setSkills] = useState<readonly SkillRecord[]>([])
@@ -473,7 +475,11 @@ export default function DraftPanel({
 
   async function publishVersion(): Promise<void> {
     if (selectedNote === undefined) return
-    if (!window.confirm(buildPublishConfirmation(selectedNote))) return
+    if (!await confirm({
+      title: '保存为新版本？',
+      description: buildPublishConfirmation(selectedNote),
+      confirmLabel: '保存为新版本',
+    })) return
     setBusyAction('publish')
     setMessage('')
     setError('')
@@ -498,8 +504,13 @@ export default function DraftPanel({
     setMessage('')
   }
 
-  function selectResult(note: NoteRecord): void {
-    if (dirty && !window.confirm('当前修改尚未保存，确定切换到其他结果吗？')) return
+  async function selectResult(note: NoteRecord): Promise<void> {
+    if (dirty && !await confirm({
+      title: '切换修改记录？',
+      description: '当前修改尚未保存，切换后将丢失本次编辑。',
+      confirmLabel: '继续切换',
+      destructive: true,
+    })) return
     setRestoreNoticeVisible(false)
     setSelectedNoteId(note.id)
     setEditing(false)
@@ -575,7 +586,12 @@ export default function DraftPanel({
 
   async function regenerate(): Promise<void> {
     if (selectedNote === undefined) return
-    if (dirty && !window.confirm('当前修改尚未保存。重新生成会保留旧草稿，但不会保存这次编辑，是否继续？')) return
+    if (dirty && !await confirm({
+      title: '重新生成修改稿？',
+      description: '当前修改尚未保存。重新生成会保留旧草稿，但不会保存这次编辑。',
+      confirmLabel: '重新生成',
+      destructive: true,
+    })) return
     setBusyAction('regenerate')
     setMessage('正在重新生成，旧结果会继续保留…')
     setError('')
@@ -599,7 +615,12 @@ export default function DraftPanel({
 
   async function deleteDraft(note: NoteRecord): Promise<void> {
     if (note.draftStatus !== 'draft') return
-    if (!window.confirm(`确定删除这份尚未发布的${kindLabels[note.noteKind as DraftKind]}修改节点吗？`)) return
+    if (!await confirm({
+      title: '删除未发布修改？',
+      description: `这份${kindLabels[note.noteKind as DraftKind]}修改节点尚未发布，删除后无法恢复。`,
+      confirmLabel: '删除修改',
+      destructive: true,
+    })) return
     setBusyAction('delete')
     setError('')
     try {
@@ -686,7 +707,7 @@ export default function DraftPanel({
               const kind = note.noteKind as DraftKind
               return (
                 <li key={note.id} className={selectedNote?.id === note.id ? 'is-selected' : ''}>
-                  <button type="button" className="draft-result-select" onClick={() => selectResult(note)} disabled={busyAction !== ''}>
+                  <button type="button" className="draft-result-select" onClick={() => { void selectResult(note) }} disabled={busyAction !== ''}>
                     <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
                     <span><strong>{modificationNodeLabel(note)}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
                     <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>

@@ -33,6 +33,7 @@ import {
   DuplicateStudentDialog,
   PeriodLessonsStep,
 } from './quick-course-wizard'
+import { useAppDialog } from './app-confirm-dialog'
 
 const wizardSteps = ['课程与学生', '阶段与课次', '上课安排', '检查并创建'] as const
 
@@ -40,13 +41,14 @@ export default function QuickCourseWizard({
   overview,
   onClose,
   onCreated,
-  confirm = (message) => window.confirm(message),
+  confirm,
 }: {
   readonly overview: CoreOverview
   readonly onClose: () => void
   readonly onCreated: (result: CreateCourseSetupResult) => Promise<void> | void
-  readonly confirm?: (message: string) => boolean
+  readonly confirm?: (message: string) => boolean | Promise<boolean>
 }): React.JSX.Element {
+  const { confirm: appConfirm } = useAppDialog()
   const initial = useMemo(() => createInitialQuickCourseWizardState(), [])
   const today = useMemo(() => toLocalDateKey(new Date()), [])
   const [state, setState] = useState<QuickCourseWizardState>(initial)
@@ -82,9 +84,18 @@ export default function QuickCourseWizard({
     commitState({ ...state, ...patch })
   }
 
-  function requestClose(): void {
+  async function requestClose(): Promise<void> {
     const hasContent = state.courseTitle.trim() !== '' || rosterText.trim() !== '' || state.lessons.length > 0
-    if (!hasContent || confirm('放弃当前快速建课内容吗？')) onClose()
+    if (!hasContent) { onClose(); return }
+    const confirmed = confirm !== undefined
+      ? await confirm('放弃当前快速建课内容吗？')
+      : await appConfirm({
+        title: '放弃快速建课？',
+        description: '当前已填写的课程、学生或课次内容尚未创建，放弃后不会保留。',
+        confirmLabel: '放弃并关闭',
+        destructive: true,
+      })
+    if (confirmed) onClose()
   }
 
   function updateRoster(value: string): void {
@@ -255,7 +266,7 @@ export default function QuickCourseWizard({
     regenerateRegular({ excluded: next })
   }
 
-  function applyFreeDates(dates: readonly string[]): boolean {
+  async function applyFreeDates(dates: readonly string[]): Promise<boolean> {
     try {
       if (dates.length === 0) throw new Error('请至少选择一个上课日期。')
       const duration = parseDuration(durationText)
@@ -263,13 +274,27 @@ export default function QuickCourseWizard({
       let lessons = [...state.lessons]
       let remainderAccepted = false
       if (mismatch.type === 'sync_empty_lessons') {
-        if (!confirm(`已选 ${dates.length} 个日期，是否把空课次数从 ${mismatch.lessonCount} 节同步为 ${mismatch.dateCount} 节？`)) {
+        const confirmed = confirm !== undefined
+          ? await confirm(`已选 ${dates.length} 个日期，是否把空课次数从 ${mismatch.lessonCount} 节同步为 ${mismatch.dateCount} 节？`)
+          : await appConfirm({
+            title: '同步课次数量？',
+            description: `已选 ${dates.length} 个日期，是否把空课次数从 ${mismatch.lessonCount} 节同步为 ${mismatch.dateCount} 节？`,
+            confirmLabel: '同步数量',
+          })
+        if (!confirmed) {
           return false
         }
         lessons = syncEmptyLessonsToDateCount(dates.length, duration)
         setEmptyCountText(dates.length.toString())
       } else if (mismatch.type === 'choose_more_or_keep_unscheduled') {
-        if (!confirm(`还有 ${mismatch.missingCount} 节教学计划没有日期，是否保留为未排课课次？`)) return false
+        const confirmed = confirm !== undefined
+          ? await confirm(`还有 ${mismatch.missingCount} 节教学计划没有日期，是否保留为未排课课次？`)
+          : await appConfirm({
+            title: '保留未排课课次？',
+            description: `还有 ${mismatch.missingCount} 节教学计划没有日期，是否保留为未排课课次？`,
+            confirmLabel: '保留未排课',
+          })
+        if (!confirmed) return false
         remainderAccepted = true
       } else if (mismatch.type === 'too_many_dates') {
         throw new Error(`上课日期比教学计划多 ${mismatch.extraCount} 天，请取消多余日期。`)
@@ -339,12 +364,12 @@ export default function QuickCourseWizard({
 
   return (
     <div className="modal-backdrop quick-course-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget && !busy) requestClose()
+      if (event.target === event.currentTarget && !busy) void requestClose()
     }}>
       <section className="quick-course-wizard" role="dialog" aria-modal="true" aria-labelledby="quick-course-full-title">
         <header className="quick-course-heading">
           <h2 id="quick-course-full-title">快速建课</h2>
-          <button className="modal-close" type="button" disabled={busy} aria-label="关闭" onClick={requestClose}>×</button>
+          <button className="modal-close" type="button" disabled={busy} aria-label="关闭" onClick={() => { void requestClose() }}>×</button>
         </header>
 
         <ol className="quick-course-steps" aria-label="快速建课步骤">
@@ -420,7 +445,7 @@ export default function QuickCourseWizard({
 
         <footer className="quick-course-footer">
           <button className="secondary-button" type="button" disabled={busy} onClick={() => {
-            if (state.currentStep === 1) requestClose()
+            if (state.currentStep === 1) void requestClose()
             else updateState({ currentStep: (state.currentStep - 1) as 1 | 2 | 3 })
           }}>{state.currentStep === 1 ? '取消' : '上一步'}</button>
           <div>
@@ -636,7 +661,7 @@ export function FreeDateCalendarDialog({ initialDates, initialMonth, busy, onClo
   readonly initialMonth: string
   readonly busy: boolean
   readonly onClose: () => void
-  readonly onApply: (dates: readonly string[]) => boolean
+  readonly onApply: (dates: readonly string[]) => boolean | Promise<boolean>
 }): React.JSX.Element {
   const [selected, setSelected] = useState<string[]>([...initialDates])
   const [month, setMonth] = useState(initialMonth)
@@ -649,7 +674,7 @@ export function FreeDateCalendarDialog({ initialDates, initialMonth, busy, onClo
         <div className="quick-calendar-weekdays" aria-hidden="true">{['一', '二', '三', '四', '五', '六', '日'].map((day) => <span key={day}>{day}</span>)}</div>
         <div className="quick-calendar-grid">{days.map((day, index) => day === null ? <span key={`empty-${index}`} /> : <button className={selected.includes(day) ? 'is-selected' : ''} type="button" disabled={busy} aria-pressed={selected.includes(day)} key={day} onClick={() => setSelected(toggleSelectedDate(selected, day))}>{Number(day.slice(-2))}</button>)}</div>
         <div className="quick-selected-dates"><strong>已选 {selected.length} 天</strong><span>{selected.join('、') || '尚未选择日期'}</span></div>
-        <footer className="modal-actions"><button className="secondary-button" type="button" disabled={busy} onClick={onClose}>取消</button><button className="primary-button" type="button" disabled={busy || selected.length === 0} onClick={() => onApply(selected)}>添加 {selected.length} 节课</button></footer>
+        <footer className="modal-actions"><button className="secondary-button" type="button" disabled={busy} onClick={onClose}>取消</button><button className="primary-button" type="button" disabled={busy || selected.length === 0} onClick={() => { void onApply(selected) }}>添加 {selected.length} 节课</button></footer>
       </section>
     </div>
   )

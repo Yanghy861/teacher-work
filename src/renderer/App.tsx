@@ -11,6 +11,7 @@ import type { LessonPrepContext } from './lesson-prep-context'
 import StudentsPage from './students-page'
 import QuestionBankPage from './question-bank-page'
 import TeachingContentPage from './teaching-content-page'
+import { AppDialogProvider } from './app-confirm-dialog'
 import {
   createDraftInboxTarget,
   createTeachingContentTarget,
@@ -33,6 +34,14 @@ type NavigationLabel = NavigationItem['label']
 type NavigationIconName = NavigationItem['icon']
 
 export default function App(): React.JSX.Element {
+  return (
+    <AppDialogProvider>
+      <AppContent />
+    </AppDialogProvider>
+  )
+}
+
+function AppContent(): React.JSX.Element {
   const [activeItem, setActiveItem] = useState<NavigationLabel>('课程')
   const [workspaceError, setWorkspaceError] = useState('')
   const [prepContext, setPrepContext] = useState<LessonPrepContext | null>(null)
