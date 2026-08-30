@@ -50,12 +50,22 @@ export default function LessonFilesSection({
     .sort((left, right) => right.version - left.version)
   const currentVersionFile = versioned[0]?.file ?? null
   const historyFiles = versioned.slice(1).map((item) => item.file)
+  const olderVersionIds = new Set(historyFiles.map((file) => file.id))
   const displayFiles = currentVersionFile === null
     ? lessonFiles
-    : lessonFiles.filter((file) => file.id !== currentVersionFile.id)
+    : [
+        currentVersionFile,
+        ...lessonFiles.filter((file) => file.id !== currentVersionFile.id && !olderVersionIds.has(file.id)),
+      ]
 
   useEffect(() => {
-    setSelectedFileId('')
+    if (currentVersionFile !== null && selectedFileId === '') {
+      setSelectedFileId(currentVersionFile.id)
+    }
+  }, [currentVersionFile, selectedFileId])
+
+  useEffect(() => {
+    setSelectedFileId(currentVersionFile?.id ?? '')
     void reload()
   }, [lesson?.id])
 
