@@ -18,7 +18,7 @@ import {
   type LessonPrepContext,
 } from './lesson-prep-context'
 import { listDraftInbox, listLessonAiResults, type DraftInboxEntry } from './draft-view-model'
-import LessonMaterialReader, { LessonMaterialTree, MarkdownDocument } from './lesson-material-reader'
+import { LessonMaterialTree, MarkdownDocument } from './lesson-material-reader'
 
 const kindLabels: Record<DraftKind, string> = {
   lecture: '讲义',
@@ -51,7 +51,6 @@ export default function DraftPanel({
   const [core, setCore] = useState<CoreOverview | null>(null)
   const [skills, setSkills] = useState<readonly SkillRecord[]>([])
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
-  const [previewFileId, setPreviewFileId] = useState('')
   const [selectedSkillId, setSelectedSkillId] = useState('')
   const [requirement, setRequirement] = useState('')
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
@@ -68,6 +67,7 @@ export default function DraftPanel({
   const [improveError, setImproveError] = useState('')
   const [improveBase, setImproveBase] = useState<{ title: string; body: string } | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
+  const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
   const knownLessonFileIds = useRef<Set<string>>(new Set())
 
   const lessonFiles = useMemo(() => {
@@ -98,7 +98,6 @@ export default function DraftPanel({
     let cancelled = false
     knownLessonFileIds.current = new Set()
     setSelectedFileIds([])
-    setPreviewFileId('')
     setSelectedSkillId('')
     setRequirement('')
     setSelectedNoteId(initialDraftId)
@@ -445,15 +444,6 @@ export default function DraftPanel({
     }
   }
 
-  function returnToSetup(): void {
-    if (dirty && !window.confirm('当前修改尚未保存，确定返回备课设置吗？')) return
-    setShowResults(false)
-    setEditing(false)
-    setEditBody('')
-    setMessage('')
-    setError('')
-  }
-
   if (context === null) {
     return (
       <DraftInbox
@@ -469,81 +459,114 @@ export default function DraftPanel({
   }
 
   return (
-    <section className="lesson-prep-panel" aria-label="本次课次备课">
+    <section className="lesson-prep-workspace" aria-live="polite">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       {message !== '' && <div className="inline-notice" role="status">{message}</div>}
-      <div className="prep-context-bar">
-        <div><p className="section-kicker">本次备课课次</p><h2>{context.courseTitle} / {context.lessonTitle}</h2></div>
-        <div className="prep-context-actions">
-          <span className="selection-label">{formatStudentContext(context)}</span>
-          <button className="secondary-button" type="button" onClick={onBackToCourses} disabled={busyAction !== ''}>返回课程</button>
-        </div>
+      <div className="lesson-prep-workspace-grid">
+        <aside className="workspace-card prep-ref-panel">
+          <div className="card-heading"><div><p className="section-kicker">参考资料</p><h2>勾选作为生成依据</h2></div><span className="count-label">{lessonFiles.filter(isSelectableLessonPrepFile).length} 份文档</span></div>
+          {files === null ? <div className="material-reader-state">正在读取本次资料…</div> : (
+            <LessonMaterialTree
+              files={lessonFiles}
+              selectedFileId={''}
+              onSelectFile={() => undefined}
+              selectedFileIds={selectedFileIds}
+              onToggleFile={toggleFile}
+              showHeading={false}
+            />
+          )}
+          <div className="prep-source-actions">
+            <button className="secondary-button" type="button" onClick={onBrowseExternal}>从外部资料添加</button>
+            <button className="secondary-button" type="button" onClick={onBrowseMaterials}>从素材库添加</button>
+          </div>
+          <div className="card-heading" style={{ marginTop: 14 }}><div><p className="section-kicker">修改记录</p><h2>本课修改节点</h2></div><span className="count-label">{lessonResults.length} 份</span></div>
+          <ul className="draft-result-list">
+            {lessonResults.map((note) => {
+              const kind = note.noteKind as DraftKind
+              return (
+                <li key={note.id} className={selectedNote?.id === note.id ? 'is-selected' : ''}>
+                  <button type="button" className="draft-result-select" onClick={() => selectResult(note)} disabled={busyAction !== ''}>
+                    <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
+                    <span><strong>{kindLabels[kind]}{note.draftStatus === 'draft' ? '修改节点' : '已确认成果'}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
+                    <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
+                  </button>
+                  {note.draftStatus === 'draft' && <button className="danger-button" type="button" onClick={() => void deleteDraft(note)} disabled={busyAction !== ''}>删除</button>}
+                </li>
+              )
+            })}
+            {lessonResults.length === 0 && <li className="empty-state">本课还没有修改节点，右侧生成后出现在这里。</li>}
+          </ul>
+        </aside>
+        <section className="workspace-card prep-work-panel">
+          <div className="draft-prompt-block">
+            <div className="kicker">修改要求（你的提示词，每次生成都以它为准）</div>
+            <textarea value={requirement} onChange={(event) => setRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={3} placeholder="例如：每个概念后配一道即时练习；平方根易错点整理成辨析表；结尾加下一讲衔接。" disabled={busyAction !== ''} />
+            <div className="draft-prompt-actions">
+              <label className="improve-kind-label">Skill：
+                <select value={selectedSkillId} onChange={(event) => setSelectedSkillId(event.target.value)} disabled={busyAction !== ''}>
+                  <option value="">不使用 Skill</option>
+                  {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
+                </select>
+              </label>
+              <button className="primary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy || busyAction !== '' || selectedFiles.length === 0}>{improveBusy ? '正在生成修改方案…' : '✦ 生成修改方案'}</button>
+              {([DRAFT_KINDS.lecture, DRAFT_KINDS.example, DRAFT_KINDS.homework] as DraftKind[]).map((kind) => (
+                <button key={kind} className="btn-ghost small" type="button" onClick={() => void generate(kind)} disabled={busyAction !== '' || selectedFiles.length === 0}>{busyAction === kind ? '生成中…' : `生成${kindLabels[kind]}`}</button>
+              ))}
+            </div>
+            {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
+          </div>
+          {improvePhase === 'review' && (
+            <div className="improve-review-card">
+              <div className="card-heading"><div><p className="section-kicker">改进流程</p><h2>修改方案（先审阅，再生成）</h2></div></div>
+              <div className="improve-plan-body"><MarkdownDocument body={improvePlan} files={[]} /></div>
+              <div className="improve-review-actions">
+                <label className="improve-kind-label">生成类型
+                  <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={improveBusy}>
+                    <option value="lecture">讲义</option>
+                    <option value="example">例题</option>
+                    <option value="homework">作业</option>
+                  </select>
+                </label>
+                <button className="primary-button" type="button" onClick={() => void confirmPlanAndGenerate(improveKind)} disabled={improveBusy}>{improveBusy ? '生成中…' : '确认方案并生成'}</button>
+                <button className="secondary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy}>重新出方案</button>
+                <button className="secondary-button" type="button" onClick={abandonImprove} disabled={improveBusy}>放弃改进</button>
+              </div>
+            </div>
+          )}
+          {selectedNote === undefined ? (
+            <div className="draft-content-empty"><p>左侧选择修改节点，或在上方生成新内容。正式课件的阅读在「课件」分区。</p></div>
+          ) : (
+            <>
+              {restoreNoticeVisible && selectedNote.draftStatus === 'draft' && (
+                <div className="draft-restore-notice" role="status">
+                  <span>已恢复最近的工作副本：修改尚未发布，不会改变正式课件与已确认成果。</span>
+                  <button className="secondary-button" type="button" onClick={() => setRestoreNoticeVisible(false)}>知道了</button>
+                </div>
+              )}
+              <div className="draft-content-header">
+                <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{kindLabels[selectedNote.noteKind as DraftKind]}{selectedNote.draftStatus === 'draft' ? '修改节点' : '成果'}</h2></div>
+                <div className="draft-content-actions">
+                  {editing ? <><button className="secondary-button" type="button" onClick={cancelEditing} disabled={busyAction !== ''}>取消编辑</button><button className="secondary-button" type="button" onClick={() => void saveModification()} disabled={busyAction !== ''}>保存修改</button></> : <button className="secondary-button" type="button" onClick={startEditing} disabled={busyAction !== ''}>编辑</button>}
+                  <button className="secondary-button" type="button" onClick={() => void regenerate()} disabled={busyAction !== ''}>重新生成</button>
+                  {improveBase !== null && <button className="secondary-button" type="button" onClick={() => setCompareOpen((current) => !current)} disabled={busyAction !== ''}>{compareOpen ? '关闭新旧对比' : '新旧对比'}</button>}
+                  {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={() => void saveToLesson()} disabled={busyAction !== ''}>保存到本次课次</button>}
+                  <button className="secondary-button" type="button" onClick={() => void publishVersion()} disabled={busyAction !== ''}>保存为新版本</button>
+                  {onOpenCourseware !== undefined && <button className="secondary-button" type="button" onClick={onOpenCourseware} disabled={busyAction !== ''}>查看课件</button>}
+                </div>
+              </div>
+              {compareOpen && improveBase !== null && (
+                <div className="draft-compare-grid">
+                  <div className="draft-compare-pane"><p className="section-kicker">参考课件：{improveBase.title}</p><MarkdownDocument body={improveBase.body} files={[]} /></div>
+                  <div className="draft-compare-pane"><p className="section-kicker">新工作副本（未发布）</p>{editing ? <textarea aria-label="编辑新工作副本" value={editBody} onChange={(event) => setEditBody(event.target.value)} rows={16} disabled={busyAction !== ''} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}</div>
+                </div>
+              )}
+              <div className={`draft-content-body${editing ? ' is-editing' : ' is-preview'}`}>
+                {editing ? <textarea aria-label="编辑生成结果" value={editBody} onChange={(event) => setEditBody(event.target.value)} rows={24} disabled={busyAction !== ''} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}
+              </div>
+            </>
+          )}
+        </section>
       </div>
-      {showResults ? (
-        <ResultWorkspace
-          notes={lessonResults}
-          selectedNote={selectedNote}
-          editing={editing}
-          editBody={editBody}
-          busy={busyAction !== ''}
-          onSelect={selectResult}
-          onEdit={startEditing}
-          onEditBody={setEditBody}
-          onCancelEdit={cancelEditing}
-          onSaveModification={() => void saveModification()}
-          onSaveToLesson={() => void saveToLesson()}
-          onOpenCourseware={onOpenCourseware}
-          onRegenerate={() => void regenerate()}
-          onDelete={(note) => void deleteDraft(note)}
-          onReturnToSetup={returnToSetup}
-          restoreNoticeVisible={restoreNoticeVisible}
-          onDismissRestoreNotice={() => setRestoreNoticeVisible(false)}
-          compareBase={improveBase}
-          compareOpen={compareOpen}
-          promptVisible={improveBase === null}
-          requirement={requirement}
-          onRequirement={setRequirement}
-          skills={skills}
-          selectedSkillId={selectedSkillId}
-          onSelectSkill={setSelectedSkillId}
-          selectedFilesCount={selectedFiles.length}
-          onGeneratePlan={() => void startImprovePlan()}
-          onGenerate={(kind) => void generate(kind)}
-          improveBusy={improveBusy}
-          onPublishToLesson={() => void publishVersion()}
-          onToggleCompare={() => setCompareOpen((current) => !current)}
-          compareToggleVisible={improveBase !== null}
-        />
-      ) : (
-        <PrepSetup
-          files={files}
-          lessonFiles={lessonFiles}
-          selectedFileIds={selectedFileIds}
-          previewFileId={previewFileId}
-          selectedFilesCount={selectedFiles.length}
-          skills={skills}
-          selectedSkillId={selectedSkillId}
-          requirement={requirement}
-          resultCount={lessonResults.length}
-          busyAction={busyAction}
-          onToggleFile={toggleFile}
-          onPreviewFile={setPreviewFileId}
-          onBrowseExternal={onBrowseExternal}
-          onBrowseMaterials={onBrowseMaterials}
-          onSelectSkill={setSelectedSkillId}
-          onRequirement={setRequirement}
-          onGenerate={(kind) => void generate(kind)}
-          onShowResults={() => { setSelectedNoteId(lessonResults[0]?.id ?? null); setShowResults(true) }}
-          improvePhase={improvePhase}
-          improvePlan={improvePlan}
-          improveBusy={improveBusy}
-          improveError={improveError}
-          improveAvailable={selectedFiles.some(isSelectableLessonPrepFile)}
-          onStartImprove={() => void startImprovePlan()}
-          onConfirmImprove={(kind) => void confirmPlanAndGenerate(kind)}
-          onAbandonImprove={abandonImprove}
-        />
-      )}
     </section>
   )
 }
@@ -599,222 +622,8 @@ function DraftInboxRow({ entry, busy, onOpenDraft, onDeleteDraft }: {
   )
 }
 
-function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selectedFilesCount, skills, selectedSkillId, requirement, resultCount, busyAction, onToggleFile, onPreviewFile, onBrowseExternal, onBrowseMaterials, onSelectSkill, onRequirement, onGenerate, onShowResults, improvePhase, improvePlan, improveBusy, improveError, improveAvailable, onStartImprove, onConfirmImprove, onAbandonImprove }: {
-  readonly files: ManagedFileOverview | null
-  readonly lessonFiles: ManagedFileOverview['files']
-  readonly selectedFileIds: readonly string[]
-  readonly previewFileId: string
-  readonly selectedFilesCount: number
-  readonly skills: readonly SkillRecord[]
-  readonly selectedSkillId: string
-  readonly requirement: string
-  readonly resultCount: number
-  readonly busyAction: BusyAction
-  readonly onToggleFile: (fileId: string) => void
-  readonly onPreviewFile: (fileId: string) => void
-  readonly onBrowseExternal: () => void
-  readonly onBrowseMaterials: () => void
-  readonly onSelectSkill: (skillId: string) => void
-  readonly onRequirement: (value: string) => void
-  readonly onGenerate: (kind: DraftKind) => void
-  readonly onShowResults: () => void
-  readonly improvePhase: '' | 'review'
-  readonly improvePlan: string
-  readonly improveBusy: boolean
-  readonly improveError: string
-  readonly improveAvailable: boolean
-  readonly onStartImprove: () => void
-  readonly onConfirmImprove: (kind: DraftKind) => void
-  readonly onAbandonImprove: () => void
-}): React.JSX.Element {
-  const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
-  return (
-    <div className="lesson-prep-layout lesson-prep-layout-reader">
-      <aside className="workspace-card prep-materials-panel">
-        <div className="card-heading"><div><p className="section-kicker">资料目录</p><h2>本次备课资料</h2></div><span className="count-label">{lessonFiles.filter(isSelectableLessonPrepFile).length} 份文档</span></div>
-        {files === null ? <div className="material-reader-state">正在读取本次资料…</div> : (
-          <LessonMaterialTree
-            files={lessonFiles}
-            selectedFileId={previewFileId}
-            onSelectFile={onPreviewFile}
-            selectedFileIds={selectedFileIds}
-            onToggleFile={onToggleFile}
-            showHeading={false}
-          />
-        )}
-      </aside>
-      <section className="workspace-card prep-reader-card">
-        <div className="card-heading"><div><p className="section-kicker">正文阅读</p><h2>像笔记一样阅读资料</h2></div><span className="selection-label">先读，再勾选生成</span></div>
-        <LessonMaterialReader
-          files={lessonFiles}
-          selectedFileId={previewFileId}
-          onSelectFile={onPreviewFile}
-          hideTree
-        />
-      </section>
-      <div className="prep-workspace-column prep-ai-column">
-        <section className="workspace-card prep-ai-card">
-          <div className="card-heading"><div><p className="section-kicker">备课动作</p><h2>AI 备课</h2></div><span className="selection-label">已选 {selectedFilesCount} 份文档</span></div>
-          <p className="prep-guidance">图片和其他素材会跟随 Markdown 正文阅读；勾选要作为本次生成依据的文档。</p>
-          <div className="prep-input-grid">
-            <label>我的 Skill（可选）<select value={selectedSkillId} onChange={(event) => onSelectSkill(event.target.value)} disabled={busyAction !== ''}><option value="">不使用 Skill</option>{skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</select></label>
-            <label>本次要求（可选）<textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={4} placeholder="例如：今天少讲理论，多安排基础题，重点讲圆的面积。" disabled={busyAction !== ''} /><small className="field-counter">{requirement.length} / {DRAFT_REQUIREMENT_MAX_CHARS}</small></label>
-          </div>
-          <div className="prep-generate-actions">
-            {([DRAFT_KINDS.lecture, DRAFT_KINDS.example, DRAFT_KINDS.homework] as DraftKind[]).map((kind) => (
-              <button key={kind} className={kind === 'lecture' ? 'primary-button' : 'secondary-button'} type="button" onClick={() => onGenerate(kind)} disabled={busyAction !== '' || selectedFilesCount === 0}>{busyAction === kind ? '生成中…' : `生成${kindLabels[kind]}`}</button>
-            ))}
-          </div>
-          {improvePhase === 'review' ? (
-            <div className="improve-review-card">
-              <div className="card-heading"><div><p className="section-kicker">改进流程</p><h2>修改方案（先审阅，再生成）</h2></div></div>
-              <div className="improve-plan-body"><MarkdownDocument body={improvePlan} files={[]} /></div>
-              <div className="improve-review-actions">
-                <label className="improve-kind-label">生成类型
-                  <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={improveBusy}>
-                    <option value="lecture">讲义</option>
-                    <option value="example">例题</option>
-                    <option value="homework">作业</option>
-                  </select>
-                </label>
-                <button className="primary-button" type="button" onClick={() => onConfirmImprove(improveKind)} disabled={improveBusy}>{improveBusy ? '生成中…' : '确认方案并生成'}</button>
-                <button className="secondary-button" type="button" onClick={onStartImprove} disabled={improveBusy}>重新出方案</button>
-                <button className="secondary-button" type="button" onClick={onAbandonImprove} disabled={improveBusy}>放弃改进</button>
-              </div>
-            </div>
-          ) : (
-            <button className="secondary-button improve-entry-button" type="button" onClick={onStartImprove} disabled={busyAction !== '' || !improveAvailable || improveBusy}>{improveBusy ? '正在生成修改方案…' : '基于课件改进（AI 先出修改方案）'}</button>
-          )}
-          {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
-        </section>
-        <div className="prep-source-actions prep-ai-sources">
-          <button className="secondary-button" type="button" onClick={onBrowseExternal}>从外部资料添加</button>
-          <button className="secondary-button" type="button" onClick={onBrowseMaterials}>从素材库添加</button>
-        </div>
-        {resultCount > 0 && <button className="secondary-button result-entry-button" type="button" onClick={onShowResults}>查看本次课次生成结果（{resultCount}）</button>}
-      </div>
-    </div>
-  )
-}
-
-function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup, restoreNoticeVisible, onDismissRestoreNotice, compareBase, compareOpen, onToggleCompare, compareToggleVisible, onPublishToLesson, promptVisible, requirement, onRequirement, skills, selectedSkillId, onSelectSkill, selectedFilesCount, onGeneratePlan, onGenerate, improveBusy }: {
-  readonly notes: readonly NoteRecord[]
-  readonly selectedNote: NoteRecord | undefined
-  readonly editing: boolean
-  readonly editBody: string
-  readonly busy: boolean
-  readonly onSelect: (note: NoteRecord) => void
-  readonly onEdit: () => void
-  readonly onEditBody: (body: string) => void
-  readonly onCancelEdit: () => void
-  readonly onSaveModification: () => void
-  readonly onSaveToLesson: () => void
-  readonly onOpenCourseware?: () => void
-  readonly onRegenerate: () => void
-  readonly onDelete: (note: NoteRecord) => void
-  readonly onReturnToSetup: () => void
-  readonly restoreNoticeVisible: boolean
-  readonly onDismissRestoreNotice: () => void
-  readonly compareBase: { title: string; body: string } | null
-  readonly compareOpen: boolean
-  readonly onToggleCompare: () => void
-  readonly compareToggleVisible: boolean
-  readonly onPublishToLesson?: () => void
-  readonly promptVisible: boolean
-  readonly requirement: string
-  readonly onRequirement: (value: string) => void
-  readonly skills: readonly SkillRecord[]
-  readonly selectedSkillId: string
-  readonly onSelectSkill: (skillId: string) => void
-  readonly selectedFilesCount: number
-  readonly onGeneratePlan: () => void
-  readonly onGenerate: (kind: DraftKind) => void
-  readonly improveBusy: boolean
-}): React.JSX.Element {
-  return (
-    <div className="draft-result-layout">
-      <aside className="workspace-card draft-result-list-panel">
-        <div className="card-heading"><div><p className="section-kicker">本次课次</p><h2>生成结果</h2></div><span className="count-label">{notes.length} 份</span></div>
-        <ul className="draft-result-list">
-          {notes.map((note) => {
-            const kind = note.noteKind as DraftKind
-            return (
-              <li key={note.id} className={selectedNote?.id === note.id ? 'is-selected' : ''}>
-                <button type="button" className="draft-result-select" onClick={() => onSelect(note)} disabled={busy}>
-                  <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
-                  <span><strong>{kindLabels[kind]}{note.draftStatus === 'draft' ? '修改节点' : '已确认成果'}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
-                  <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
-                </button>
-                {note.draftStatus === 'draft' && <button className="danger-button" type="button" onClick={() => onDelete(note)} disabled={busy}>删除</button>}
-              </li>
-            )
-          })}
-          {notes.length === 0 && <li className="empty-state">本次课次还没有生成结果。</li>}
-        </ul>
-        <button className="secondary-button" type="button" onClick={onReturnToSetup} disabled={busy}>返回备课设置</button>
-      </aside>
-      <section className="workspace-card draft-content-panel" aria-label="生成结果内容区">
-        {selectedNote === undefined ? (
-          <div className="draft-content-empty"><p>请选择左侧结果，或返回备课设置生成新内容。</p></div>
-        ) : (
-          <>
-            {promptVisible && (
-              <div className="draft-prompt-block">
-                <div className="kicker">修改要求（你的提示词，每次出方案都以它为准）</div>
-                <textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={3} placeholder="例如：每个概念后配一道即时练习；平方根易错点整理成辨析表。" disabled={busy} />
-                <div className="draft-prompt-actions">
-                  <label className="improve-kind-label">Skill：
-                    <select value={selectedSkillId} onChange={(event) => onSelectSkill(event.target.value)} disabled={busy}>
-                      <option value="">不使用 Skill</option>
-                      {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
-                    </select>
-                  </label>
-                  <button className="secondary-button" type="button" onClick={onGeneratePlan} disabled={improveBusy || selectedFilesCount === 0}>{improveBusy ? '正在生成修改方案…' : '✦ 生成修改方案'}</button>
-                  {([DRAFT_KINDS.lecture, DRAFT_KINDS.example, DRAFT_KINDS.homework] as DraftKind[]).map((kind) => (
-                    <button key={kind} className="btn-ghost small" type="button" onClick={() => onGenerate(kind)} disabled={busy || selectedFilesCount === 0}>生成{kindLabels[kind]}</button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {restoreNoticeVisible && selectedNote.draftStatus === 'draft' && (
-              <div className="draft-restore-notice" role="status">
-                <span>已恢复最近的工作副本：修改尚未发布，不会改变正式课件与已确认成果。</span>
-                <button className="secondary-button" type="button" onClick={onDismissRestoreNotice}>知道了</button>
-              </div>
-            )}
-            <div className="draft-content-header">
-              <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{kindLabels[selectedNote.noteKind as DraftKind]}{selectedNote.draftStatus === 'draft' ? '修改节点' : '成果'}</h2></div>
-              <div className="draft-content-actions">
-                {editing ? <><button className="secondary-button" type="button" onClick={onCancelEdit} disabled={busy}>取消编辑</button><button className="secondary-button" type="button" onClick={onSaveModification} disabled={busy}>保存修改</button></> : <button className="secondary-button" type="button" onClick={onEdit} disabled={busy}>编辑</button>}
-                <button className="secondary-button" type="button" onClick={onRegenerate} disabled={busy}>重新生成</button>
-                {compareToggleVisible && compareBase !== null && <button className="secondary-button" type="button" onClick={onToggleCompare} disabled={busy}>{compareOpen ? '关闭新旧对比' : '新旧对比'}</button>}
-                {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={onSaveToLesson} disabled={busy}>保存到本次课次</button>}
-                {onPublishToLesson !== undefined && <button className="secondary-button" type="button" onClick={onPublishToLesson} disabled={busy}>保存为新版本</button>}
-                {onOpenCourseware !== undefined && <button className="secondary-button" type="button" onClick={onOpenCourseware} disabled={busy}>查看课件</button>}
-              </div>
-            </div>
-            {compareOpen && compareBase !== null && (
-              <div className="draft-compare-grid">
-                <div className="draft-compare-pane"><p className="section-kicker">参考课件：{compareBase.title}</p><MarkdownDocument body={compareBase.body} files={[]} /></div>
-                <div className="draft-compare-pane"><p className="section-kicker">新工作副本（未发布）</p>{editing ? <textarea aria-label="编辑新工作副本" value={editBody} onChange={(event) => onEditBody(event.target.value)} rows={16} disabled={busy} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}</div>
-              </div>
-            )}
-            <div className={`draft-content-body${editing ? ' is-editing' : ' is-preview'}`}>
-              {editing ? <textarea aria-label="编辑生成结果" value={editBody} onChange={(event) => onEditBody(event.target.value)} rows={24} disabled={busy} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}
-            </div>
-          </>
-        )}
-      </section>
-    </div>
-  )
-}
 
 function kindIcon(kind: DraftKind): string { return kind === 'lecture' ? '讲' : kind === 'example' ? '例' : '作' }
-
-function formatStudentContext(context: LessonPrepContext): string {
-  if (context.courseMode === 'class') return context.studentNames.length === 0 ? '班课 · 无需选择学生' : `班课 · ${context.studentNames.length} 位关联学生`
-  return context.studentNames.length === 0 ? '一对一 · 暂无关联学生' : `一对一 · ${context.studentNames.join('、')}`
-}
 
 function formatDateTime(value: string): string {
   const parsed = new Date(value)

@@ -2645,3 +2645,35 @@ button.quick-status { cursor: pointer; }
   align-items: center;
   gap: 8px;
 }
+
+.lesson-prep-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.prep-ref-panel {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+}
+
+.prep-work-panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .lesson-prep-workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prep-ref-panel {
+    position: static;
+    max-height: none;
+  }
+}

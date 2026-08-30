@@ -36,7 +36,7 @@ describe('V12-04 lesson files and prep renderer contract', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
     const managed = source('../src/renderer/managed-files-panel.tsx')
     const service = source('../src/main/files/managed-file-service.ts')
-    expect(draft).toContain('本次备课课次')
+    expect(draft).toContain('勾选作为生成依据')
     expect(draft).toContain('保存到本次课次')
     expect(draft).toContain('lessonId: context.lessonId')
     expect(managed).not.toContain('copyToStudent')
