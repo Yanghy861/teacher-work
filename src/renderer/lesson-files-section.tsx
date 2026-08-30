@@ -38,6 +38,7 @@ export default function LessonFilesSection({
   const [overview, setOverview] = useState<ManagedFileOverview | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [selectedFileId, setSelectedFileId] = useState('')
   const lessonFiles = useMemo(
     () => overview === null || lesson === null ? [] : filterLessonMaterialFiles(
@@ -89,6 +90,29 @@ export default function LessonFilesSection({
     }
   }
 
+  async function removeFile(fileId: string): Promise<void> {
+    if (lesson === null) return
+    const file = lessonFiles.find((candidate) => candidate.id === fileId)
+    if (file === undefined) return
+    const confirmed = window.confirm(
+      `确定从“${lesson.title}”移除“${file.originalName}”吗？\n\n只移除本课的独立副本，不会影响素材库原件或外部资料。`,
+    )
+    if (!confirmed) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await window.teacherWorkbench.files.softDeleteFile({ fileId })
+      setSelectedFileId('')
+      await reload()
+      setNotice(`已从本课移除“${file.originalName}”。`)
+    } catch (removeError) {
+      setError(toErrorMessage(removeError))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function openNewPrep(): void {
     if (prepContext === null) return
     if (draft === null) onStartPrep(prepContext, { mode: 'new' })
@@ -117,6 +141,7 @@ export default function LessonFilesSection({
   return (
     <div className={`lesson-files-section${immersive ? ' is-immersive' : ''}`} aria-live="polite">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
+      {notice !== '' && <div className="inline-notice" role="status">{notice}</div>}
       <header className="lesson-files-header">
         <div>
           <p className="section-kicker">本课课件</p>
@@ -141,6 +166,7 @@ export default function LessonFilesSection({
           onSelectFile={setSelectedFileId}
           onOpenFile={(fileId) => { void openFile(fileId) }}
           onShowInFolder={(fileId) => { void openFile(fileId, true) }}
+          onRemoveFile={readOnly ? undefined : (fileId) => { void removeFile(fileId) }}
           hideTree={immersive}
           treeTitle={lesson.title}
         />

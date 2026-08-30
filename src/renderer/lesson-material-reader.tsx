@@ -16,6 +16,7 @@ export default function LessonMaterialReader({
   onSelectFile,
   onOpenFile,
   onShowInFolder,
+  onRemoveFile,
   hideTree = false,
   treeTitle = '本课资料',
 }: {
@@ -24,6 +25,7 @@ export default function LessonMaterialReader({
   readonly onSelectFile: (fileId: string) => void
   readonly onOpenFile?: (fileId: string) => void
   readonly onShowInFolder?: (fileId: string) => void
+  readonly onRemoveFile?: (fileId: string) => void
   readonly hideTree?: boolean
   readonly treeTitle?: string
 }): React.JSX.Element {
@@ -87,6 +89,7 @@ export default function LessonMaterialReader({
             <div className="material-reader-actions">
               {onOpenFile !== undefined && <button className="link-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>系统打开</button>}
               {onShowInFolder !== undefined && <button className="link-button" type="button" onClick={() => onShowInFolder(selectedFile.id)}>所在文件夹</button>}
+              {onRemoveFile !== undefined && <button className="danger-button" type="button" onClick={() => onRemoveFile(selectedFile.id)}>从本课移除</button>}
             </div>
           )}
         </header>

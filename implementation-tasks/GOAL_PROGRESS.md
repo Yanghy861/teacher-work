@@ -976,6 +976,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 最终门：55 files / 205 tests passed，另 1 file / 1 test skipped；typecheck、lint、production build、`git diff --check` 通过。未运行 portable/installer，未 push。
 - 验收报告已增补 `docs/v1.5.3-acceptance.md` 第 7 节；V1531-B 为 `DONE / AWAITING_PRODUCT_CONFIRMATION`，产品负责人确认前不创建 `checkpoint-V1.5.3-pass`。
 
+## 2026-08-30 · V1531-B 用户反馈补充 · DONE / AWAITING_PRODUCT_CONFIRMATION
+
+- 课次正文资料阅读器新增“从本课移除”：二次确认后复用既有 managed 软删除，只移除本课独立副本，不影响素材库原件或外部资料；历史课程只读入口不显示该动作。
+- 素材库改为只展示没有课程/学生关联的可复用原件，排除课次副本与学生附件；新增“全部素材 / 最近添加 / 文档 / 图片 / 其他”轻量目录和按文件名查找，保留加入当前课次、系统打开、所在文件夹和恢复/彻底删除动作。
+- 新增 `material-library` 纯函数与 UI 契约测试，覆盖来源隔离、分类筛选和课次移除提示；自动门为 56 files / 211 tests passed（另 1 file / 1 test skipped），typecheck、lint、production build、`git diff --check` 通过。真实用户体验确认仍待产品负责人完成，最终标签规则不变。
+
 ## 2026-08-30 · V1531-B 用户实测补充修复 · DONE / AWAITING_PRODUCT_CONFIRMATION
 
 - 用户真实课件发现思源图片引用被换行拆成 `!` 与 `[alt](assets/...)` 后，正文显示原始资源路径、图片不渲染并出现横向滚动条。

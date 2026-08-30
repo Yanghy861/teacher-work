@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { CoreOverview } from '../shared/core-contracts'
 import type { ManagedFileOverview, ManagedFileRecord } from '../shared/file-contracts'
+import {
+  filterMaterialLibraryFiles,
+  listRemovedMaterialFiles,
+  listReusableMaterialFiles,
+  materialKind,
+  type MaterialLibraryView,
+} from './material-library'
 
 interface ManagedFilesPanelProps {
   readonly compact?: boolean
@@ -23,15 +30,29 @@ export default function ManagedFilesPanel({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [libraryView, setLibraryView] = useState<MaterialLibraryView>('all')
+  const [search, setSearch] = useState('')
 
   const lessons = useMemo(
     () => coreOverview?.nodes.filter((node) => node.kind === 'lesson') ?? [],
     [coreOverview],
   )
   const activeLessonId = lessonId ?? selectedLessonId
-  const files = overview?.files ?? []
-  const activeFiles = files.filter((file) => file.deletedAt === null)
-  const deletedFiles = files.filter((file) => file.deletedAt !== null)
+  const reusableFiles = useMemo(
+    () => overview === null ? [] : listReusableMaterialFiles(overview),
+    [overview],
+  )
+  const removedFiles = useMemo(
+    () => overview === null ? [] : listRemovedMaterialFiles(overview),
+    [overview],
+  )
+  const visibleFiles = useMemo(
+    () => filterMaterialLibraryFiles(reusableFiles, libraryView, search),
+    [libraryView, reusableFiles, search],
+  )
+  const documentCount = reusableFiles.filter((file) => materialKind(file) === 'documents').length
+  const imageCount = reusableFiles.filter((file) => materialKind(file) === 'images').length
+  const otherCount = reusableFiles.filter((file) => materialKind(file) === 'other').length
 
   useEffect(() => {
     void reload()
@@ -144,13 +165,49 @@ export default function ManagedFilesPanel({
           </p>
         )}
 
-        <FileList
-          files={activeFiles}
-          deletedFiles={deletedFiles}
-          busy={busy}
-          lessonId={activeLessonId}
-          onAction={runAction}
-        />
+        <p className="material-library-intro">
+          这里只保留你主动导入或保存的可复用原件。已经加入课程或学生的独立副本不会自动出现在这里，外部资料也仍然保持只读。
+        </p>
+        <div className="material-library-toolbar">
+          <label className="material-library-search">
+            <span>查找素材</span>
+            <input
+              aria-label="查找素材"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="按文件名查找"
+            />
+          </label>
+        </div>
+        <div className="material-library-layout">
+          <aside className="material-library-tree" aria-label="素材库目录">
+            <div className="material-library-tree-heading">
+              <strong>素材目录</strong>
+              <small>{reusableFiles.length} 项</small>
+            </div>
+            <nav className="material-library-tree-list" aria-label="素材分类">
+              <LibraryViewButton label="全部素材" count={reusableFiles.length} active={libraryView === 'all'} onClick={() => setLibraryView('all')} />
+              <LibraryViewButton label="最近添加" count={reusableFiles.length} active={libraryView === 'recent'} onClick={() => setLibraryView('recent')} />
+              <LibraryViewButton label="文档" count={documentCount} active={libraryView === 'documents'} onClick={() => setLibraryView('documents')} />
+              <LibraryViewButton label="图片" count={imageCount} active={libraryView === 'images'} onClick={() => setLibraryView('images')} />
+              <LibraryViewButton label="其他" count={otherCount} active={libraryView === 'other'} onClick={() => setLibraryView('other')} />
+            </nav>
+          </aside>
+          <section className="material-library-results" aria-label="素材列表">
+            <div className="material-library-results-heading">
+              <strong>{libraryViewLabel(libraryView)}</strong>
+              <span>{visibleFiles.length} 项</span>
+            </div>
+            <FileList
+              files={visibleFiles}
+              deletedFiles={removedFiles}
+              busy={busy}
+              lessonId={activeLessonId}
+              onAction={runAction}
+              emptyText={search.trim() === '' ? '这里还没有可复用的素材。可先导入一份资料。' : '没有找到匹配的素材。'}
+            />
+          </section>
+        </div>
       </section>
     </div>
   )
@@ -162,12 +219,14 @@ function FileList({
   busy,
   lessonId,
   onAction,
+  emptyText,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly deletedFiles: readonly ManagedFileRecord[]
   readonly busy: boolean
   readonly lessonId: string
   readonly onAction: (action: () => Promise<unknown>, successMessage?: string) => Promise<void>
+  readonly emptyText: string
 }): React.JSX.Element {
   return (
     <>
@@ -191,7 +250,7 @@ function FileList({
             </div>
           </li>
         ))}
-        {files.length === 0 && <li className="empty-state">素材库中还没有可用资料。</li>}
+        {files.length === 0 && <li className="empty-state">{emptyText}</li>}
       </ul>
       {deletedFiles.length > 0 && (
         <details className="deleted-files">
@@ -241,6 +300,34 @@ function FileSummary({ file }: { readonly file: ManagedFileRecord }): React.JSX.
       <small>{formatBytes(file.sizeBytes)} · {source} · {verification}</small>
     </div>
   )
+}
+
+function LibraryViewButton({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  readonly label: string
+  readonly count: number
+  readonly active: boolean
+  readonly onClick: () => void
+}): React.JSX.Element {
+  return (
+    <button className={`material-library-tree-row${active ? ' is-selected' : ''}`} type="button" aria-current={active ? 'page' : undefined} onClick={onClick}>
+      <span className="material-library-tree-icon" aria-hidden="true">{active ? '▾' : '▸'}</span>
+      <span>{label}</span>
+      <small>{count}</small>
+    </button>
+  )
+}
+
+function libraryViewLabel(view: MaterialLibraryView): string {
+  if (view === 'recent') return '最近添加'
+  if (view === 'documents') return '文档'
+  if (view === 'images') return '图片'
+  if (view === 'other') return '其他'
+  return '全部素材'
 }
 
 function formatBytes(size: number): string {
