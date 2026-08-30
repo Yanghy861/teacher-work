@@ -39,6 +39,7 @@ export default function LessonFilesSection({
     ),
     [lesson, overview, periodTitle],
   )
+  const hasCourseware = lessonFiles.length > 0
 
   useEffect(() => {
     setSelectedFileId('')
@@ -96,7 +97,7 @@ export default function LessonFilesSection({
         <div className="lesson-files-actions">
           <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
           {onToggleImmersive !== undefined && <button className="secondary-button" type="button" onClick={onToggleImmersive}>{immersive ? '退出沉浸阅读' : '沉浸阅读'}</button>}
-          {!readOnly && <button className="primary-button" type="button" disabled={busy} onClick={openPrep}>{draft === null ? '开始备课' : '继续备课'}</button>}
+          {!readOnly && <button className="primary-button" type="button" disabled={busy} onClick={openPrep}>{hasCourseware ? '✦ AI 修改' : 'AI 新建备课'}</button>}
         </div>
       </header>
       {overview === null ? (

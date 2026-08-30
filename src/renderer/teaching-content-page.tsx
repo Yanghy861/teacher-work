@@ -168,7 +168,7 @@ export default function TeachingContentPage({
       </header>
 
       <nav className="teaching-content-tabs" aria-label="教学内容分区">
-        {([['courseware', '课件'], ['prep', 'AI 备课'], ['drafts', '修改记录']] as const).map(([section, label]) => (
+        {([['courseware', '课件'], ['drafts', '修改记录']] as const).map(([section, label]) => (
           <button className={target?.section === section ? 'is-active' : ''} type="button" key={section} onClick={() => setSection(section)}>{label}</button>
         ))}
       </nav>
