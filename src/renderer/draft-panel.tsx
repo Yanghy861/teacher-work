@@ -500,6 +500,16 @@ export default function DraftPanel({
           onDismissRestoreNotice={() => setRestoreNoticeVisible(false)}
           compareBase={improveBase}
           compareOpen={compareOpen}
+          promptVisible={improveBase === null}
+          requirement={requirement}
+          onRequirement={setRequirement}
+          skills={skills}
+          selectedSkillId={selectedSkillId}
+          onSelectSkill={setSelectedSkillId}
+          selectedFilesCount={selectedFiles.length}
+          onGeneratePlan={() => void startImprovePlan()}
+          onGenerate={(kind) => void generate(kind)}
+          improveBusy={improveBusy}
           onPublishToLesson={() => void publishVersion()}
           onToggleCompare={() => setCompareOpen((current) => !current)}
           compareToggleVisible={improveBase !== null}
@@ -687,7 +697,7 @@ function PrepSetup({ files, lessonFiles, selectedFileIds, previewFileId, selecte
   )
 }
 
-function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup, restoreNoticeVisible, onDismissRestoreNotice, compareBase, compareOpen, onToggleCompare, compareToggleVisible, onPublishToLesson }: {
+function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelect, onEdit, onEditBody, onCancelEdit, onSaveModification, onSaveToLesson, onOpenCourseware, onRegenerate, onDelete, onReturnToSetup, restoreNoticeVisible, onDismissRestoreNotice, compareBase, compareOpen, onToggleCompare, compareToggleVisible, onPublishToLesson, promptVisible, requirement, onRequirement, skills, selectedSkillId, onSelectSkill, selectedFilesCount, onGeneratePlan, onGenerate, improveBusy }: {
   readonly notes: readonly NoteRecord[]
   readonly selectedNote: NoteRecord | undefined
   readonly editing: boolean
@@ -710,6 +720,16 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
   readonly onToggleCompare: () => void
   readonly compareToggleVisible: boolean
   readonly onPublishToLesson?: () => void
+  readonly promptVisible: boolean
+  readonly requirement: string
+  readonly onRequirement: (value: string) => void
+  readonly skills: readonly SkillRecord[]
+  readonly selectedSkillId: string
+  readonly onSelectSkill: (skillId: string) => void
+  readonly selectedFilesCount: number
+  readonly onGeneratePlan: () => void
+  readonly onGenerate: (kind: DraftKind) => void
+  readonly improveBusy: boolean
 }): React.JSX.Element {
   return (
     <div className="draft-result-layout">
@@ -738,6 +758,24 @@ function ResultWorkspace({ notes, selectedNote, editing, editBody, busy, onSelec
           <div className="draft-content-empty"><p>请选择左侧结果，或返回备课设置生成新内容。</p></div>
         ) : (
           <>
+            {promptVisible && (
+              <div className="draft-prompt-block">
+                <div className="kicker">修改要求（你的提示词，每次出方案都以它为准）</div>
+                <textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={3} placeholder="例如：每个概念后配一道即时练习；平方根易错点整理成辨析表。" disabled={busy} />
+                <div className="draft-prompt-actions">
+                  <label className="improve-kind-label">Skill：
+                    <select value={selectedSkillId} onChange={(event) => onSelectSkill(event.target.value)} disabled={busy}>
+                      <option value="">不使用 Skill</option>
+                      {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
+                    </select>
+                  </label>
+                  <button className="secondary-button" type="button" onClick={onGeneratePlan} disabled={improveBusy || selectedFilesCount === 0}>{improveBusy ? '正在生成修改方案…' : '✦ 生成修改方案'}</button>
+                  {([DRAFT_KINDS.lecture, DRAFT_KINDS.example, DRAFT_KINDS.homework] as DraftKind[]).map((kind) => (
+                    <button key={kind} className="btn-ghost small" type="button" onClick={() => onGenerate(kind)} disabled={busy || selectedFilesCount === 0}>生成{kindLabels[kind]}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             {restoreNoticeVisible && selectedNote.draftStatus === 'draft' && (
               <div className="draft-restore-notice" role="status">
                 <span>已恢复最近的工作副本：修改尚未发布，不会改变正式课件与已确认成果。</span>

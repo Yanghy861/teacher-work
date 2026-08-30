@@ -19,9 +19,9 @@ describe('V15 teaching content workspace contract', () => {
     expect(target).toContain('courseId: string | null')
     expect(target).toContain('section: TeachingContentSection')
     expect(page).toContain("['courseware', '课件']")
-    expect(page).toContain("['prep', 'AI 备课']")
-    expect(page).toContain("['prep', 'AI 备课']")
-    expect(page).toContain("['drafts', '修改记录']")
+    expect(page).toContain("target?.section === 'prep' ? 'AI 修改' : '教学内容'")
+    expect(page).toContain("['courseware', '课件'], ['drafts', '修改记录']")
+    expect(page).not.toContain("'prep', 'AI 备课'")
     expect(page).not.toContain('草稿箱')
   })
 

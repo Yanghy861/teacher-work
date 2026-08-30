@@ -26,7 +26,7 @@ describe('V12-04 lesson files and prep renderer contract', () => {
     expect(dashboard).toContain('onOpenDraft={onOpenDraft}')
     expect(detail).toContain('latestLessonDraft(overview, viewedLesson.id)')
     expect(detail).toContain("viewedDraft === null ? '开始备课' : '继续备课'")
-    expect(files).toContain("draft === null ? '开始备课' : '继续备课'")
+    expect(files).toContain("hasCourseware ? '✦ AI 修改' : 'AI 新建备课'")
     expect(files).not.toContain('setCurrentLesson')
     expect(files).not.toContain('startPeriod')
     expect(files).not.toContain('confirmLessonTaught')

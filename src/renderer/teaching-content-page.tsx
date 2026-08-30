@@ -148,7 +148,7 @@ export default function TeachingContentPage({
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       <header className="teaching-content-header">
         <div className="teaching-content-context">
-          <span className="section-kicker">教学内容</span>
+          <span className="section-kicker">{target?.section === 'prep' ? 'AI 修改' : '教学内容'}</span>
           <h1>{positionLabel}</h1>
           <p>{target?.section === 'drafts' && target.courseId === null ? '所有课次的 AI 修改节点' : '浏览和处理当前课次的教学内容，不会改变 Current Lesson。'}</p>
         </div>
@@ -163,15 +163,18 @@ export default function TeachingContentPage({
               <button className="link-button" type="button" onClick={() => moveLesson(1)}>下一课</button>
             </>
           )}
-          {target?.courseId !== null && target?.courseId !== undefined && <button className="link-button" type="button" onClick={() => { if (confirmLeavePrep()) onBackToCourses(target) }}>返回课程</button>}
+          {target?.section === 'prep' && <button className="link-button" type="button" onClick={() => { if (confirmLeavePrep()) setSection('courseware') }}>退出修改，回到课件</button>}
+          {target?.courseId !== null && target?.courseId !== undefined && target?.section !== 'prep' && <button className="link-button" type="button" onClick={() => { if (confirmLeavePrep()) onBackToCourses(target) }}>返回课程</button>}
         </div>
       </header>
 
-      <nav className="teaching-content-tabs" aria-label="教学内容分区">
-        {([['courseware', '课件'], ['drafts', '修改记录']] as const).map(([section, label]) => (
-          <button className={target?.section === section ? 'is-active' : ''} type="button" key={section} onClick={() => setSection(section)}>{label}</button>
-        ))}
-      </nav>
+      {target?.section !== 'prep' && (
+        <nav className="teaching-content-tabs" aria-label="教学内容分区">
+          {([['courseware', '课件'], ['drafts', '修改记录']] as const).map(([section, label]) => (
+            <button className={target?.section === section ? 'is-active' : ''} type="button" key={section} onClick={() => setSection(section)}>{label}</button>
+          ))}
+        </nav>
+      )}
 
       {target?.section === 'drafts' ? (
         <DraftPanel

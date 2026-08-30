@@ -40,6 +40,19 @@ export default function LessonFilesSection({
     [lesson, overview, periodTitle],
   )
   const hasCourseware = lessonFiles.length > 0
+  const versionPattern = / · 第 (\d+) 版\.md$/u
+  const versioned = lessonFiles
+    .map((file) => {
+      const match = versionPattern.exec(file.originalName)
+      return match === null ? null : { file, version: Number(match[1]) }
+    })
+    .filter((item): item is { file: typeof lessonFiles[number]; version: number } => item !== null)
+    .sort((left, right) => right.version - left.version)
+  const currentVersionFile = versioned[0]?.file ?? null
+  const historyFiles = versioned.slice(1).map((item) => item.file)
+  const displayFiles = currentVersionFile === null
+    ? lessonFiles
+    : lessonFiles.filter((file) => file.id !== currentVersionFile.id)
 
   useEffect(() => {
     setSelectedFileId('')
@@ -104,7 +117,7 @@ export default function LessonFilesSection({
         <div className="material-reader-state">正在读取本课次资料…</div>
       ) : (
         <LessonMaterialReader
-          files={lessonFiles}
+          files={displayFiles}
           selectedFileId={selectedFileId}
           onSelectFile={setSelectedFileId}
           onOpenFile={(fileId) => { void openFile(fileId) }}
@@ -112,6 +125,19 @@ export default function LessonFilesSection({
           hideTree={immersive}
           treeTitle={lesson.title}
         />
+      )}
+      {historyFiles.length > 0 && (
+        <details className="lesson-history-block">
+          <summary>🕘 历史版本（{historyFiles.length}）——点开可系统打开查看，旧版永不丢失</summary>
+          <ul className="lesson-history-list">
+            {historyFiles.map((file) => (
+              <li key={file.id}>
+                <span>{file.originalName}</span>
+                <button className="secondary-button" type="button" onClick={() => { void openFile(file.id) }}>系统打开</button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   )
