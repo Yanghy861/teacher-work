@@ -37,3 +37,16 @@ V15 任务必须按编号顺序执行；同一时刻最多一个里程碑为 `IN
 | [V152-E](v1.5.2-tasks/V152-E-final-gate.md) | V152-A–D | 全量回归 + 代表性 Windows 流程 + 分层 AI 验收 | 最终验收；确认后创建 `checkpoint-V1.5.2-pass` |
 
 任务按编号顺序执行；同一时刻最多一个 `IN_PROGRESS`。V1.5.2 不运行 portable/installer packaging。
+
+## V1.5.3.2 候选后续分支（待确认，不是当前活动链）
+
+方案：[`docs/v1.5.3.2-material-library-plan.md`](../docs/v1.5.3.2-material-library-plan.md)
+
+该分支将“素材库”实现为老师维护的逻辑目录树；外部资料仍映射真实文件夹树，课程/学生副本继续与素材库原件隔离。产品负责人确认方案和版本归属前，不得将以下任务标记为 `IN_PROGRESS`，不得新增 schema/migration/Service/IPC：
+
+| 里程碑 | 前置 | 核心产物 | 验收 |
+|---|---|---|---|
+| [V1532-A](v1.5.3.2-tasks/V1532-A-material-library-model.md) | 方案确认 | 目录模型、单父级约束、现有资料一次性整理 | 模型/迁移测试 + typecheck + lint + build |
+| [V1532-B](v1.5.3.2-tasks/V1532-B-material-library-ipc.md) | V1532-A | 目录查询、新建、重命名、移动、删除、排序与复制流转 IPC | IPC/安全契约 + typecheck + lint + 风险 build |
+| [V1532-C](v1.5.3.2-tasks/V1532-C-material-library-ui.md) | V1532-B | 逻辑目录树、文件区、详情、搜索路径和明确资料流转文案 | Renderer 测试 + typecheck + lint + build + UI smoke |
+| [V1532-D](v1.5.3.2-tasks/V1532-D-final-gate.md) | V1532-A–C | 全量回归、迁移/隔离 Windows 流程与最终体验确认 | 最终验收；确认后按裁决创建标签 |
