@@ -100,3 +100,10 @@
 |---|---|---|
 | V153-A 课件动作化与 AI 修改工作台 | DONE | 更正后真实现：两分区 + 课件区上下文 AI 入口 + **两栏工作台**（左=参考资料/本课修改节点，右=提示词常驻+方案审阅+对比+发布；移除旧三栏与"AI 备课"卡片）+ 课件列表单当前版+历史折叠+正文默认当前版；实机复验通过；55 files / 197 tests、typecheck、lint、build、diff check 通过 |
 | V153-B V1.5.3 全量回归与版本验收 | DONE / AWAITING_PRODUCT_CONFIRMATION | 全量 54 files / 197 tests、typecheck、lint、build、diff check 通过；真实思源课件隔离全流程（入口→工作台→中继生成→发布→课件区单当前版+历史折叠+正文默认最新）通过；报告 `docs/v1.5.3-acceptance.md`；产品负责人最终体验确认后创建 `checkpoint-V1.5.3-pass` |
+
+## V1.5.3.1 活动修正（AI 修改范围分流）
+
+| 里程碑 | 状态 | 完成/阻塞记录 |
+|---|---|---|
+| V1531-A 修改范围模型与两种入口 | IN_PROGRESS | 待实现：修改这份 / 整课重做入口、Renderer-only launch intent、当前版/历史版分类、修改对象与补充参考分组 |
+| V1531-B 模式化生成与最终回归 | PENDING | 待实现：模式化方案与生成、metadata 恢复、比较/发布语义、全量门和代表性 Windows 流程；完成后仍等待产品负责人确认 V1.5.3 |

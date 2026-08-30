@@ -2,7 +2,7 @@
 
 Lean V1 的 T01–T08 与 L01–L12、V1.1 的 V11-01–V11-05、V1.2 的 V12-01–V12-05、V1.3 的 V13-01–V13-05、V1.4 的 V14-01–V14-03、V1.5 的 V15-01–V15-03 均已完成；稳定基线依次为 `checkpoint-L12-pass`、`checkpoint-V1.1-pass`、`checkpoint-V1.2-pass`、`checkpoint-V1.3-pass`、`checkpoint-V1.4-pass`、`checkpoint-V1.5-pass`。旧 `tasks/T09-*` 至 `tasks/T42-*` 已退役，只保留历史参考；所有已完成状态和验收记录不得因后续增量重新实现或改写。
 
-V1.5（增量 V1.5.1）与 V1.5.2（AI 修改工作区，V152-A–E）均已分别冻结在 `checkpoint-V1.5-pass` 与 `checkpoint-V1.5.2-pass`。当前活动增量是 V1.5.3（课件动作化与 AI 修改工作台）：设计基准 `tmp/v1.5.3-mockup.png` 与决策 D16，唯一活动链为 `implementation-tasks/v1.5.3-tasks/` 中的 V153-A–V153-B；同一时刻最多一个任务 `IN_PROGRESS`，不新增 schema/migration/Service/IPC。V1.5/V1.5.2 的历史状态与验收记录不得改写；与冻结文字方案冲突时以文字为准。
+V1.5（增量 V1.5.1）与 V1.5.2（AI 修改工作区，V152-A–E）均已分别冻结在 `checkpoint-V1.5-pass` 与 `checkpoint-V1.5.2-pass`。V1.5.3 的 V153-A–V153-B 已完成但尚未创建最终通过标签；当前活动修正是 V1.5.3.1（AI 修改范围分流），设计基准 `docs/v1.5.3.1-design.md`、`tmp/v1.5.3-ai-modify-scope-mockup.png` 与决策 D17，唯一活动链为 `implementation-tasks/v1.5.3.1-tasks/` 中的 V1531-A–V1531-B；同一时刻最多一个任务 `IN_PROGRESS`，不新增 schema/migration/Service/IPC。V1.5/V1.5.2 与已完成 V153-A/B 的历史状态、验收记录不得改写；V1.5.3.1 完成并获产品负责人体验确认后仍创建 `checkpoint-V1.5.3-pass`，不创建独立的 V1.5.3.1 checkpoint。
 
 当用户指定当前实现任务时：
 
