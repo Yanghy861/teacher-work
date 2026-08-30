@@ -101,6 +101,17 @@ export const QUESTION_BANK_IPC_CHANNELS = {
   copyToLesson: 'question-bank:copy-to-lesson',
 } as const
 
+export const MATERIAL_LIBRARY_IPC_CHANNELS = {
+  getOverview: 'material-library:get-overview',
+  createFolder: 'material-library:create-folder',
+  renameFolder: 'material-library:rename-folder',
+  deleteFolder: 'material-library:delete-folder',
+  reorderFolder: 'material-library:reorder-folder',
+  moveFile: 'material-library:move-file',
+  saveExternal: 'material-library:save-external',
+  saveFileAsMaterial: 'material-library:save-file-as-material',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -117,6 +128,7 @@ export type IpcChannel =
   | (typeof BACKUP_IPC_CHANNELS)[keyof typeof BACKUP_IPC_CHANNELS]
   | (typeof EXTERNAL_LIBRARY_IPC_CHANNELS)[keyof typeof EXTERNAL_LIBRARY_IPC_CHANNELS]
   | (typeof QUESTION_BANK_IPC_CHANNELS)[keyof typeof QUESTION_BANK_IPC_CHANNELS]
+  | (typeof MATERIAL_LIBRARY_IPC_CHANNELS)[keyof typeof MATERIAL_LIBRARY_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -135,6 +147,7 @@ export const IPC_ERROR_CODES = {
   WORKSPACE_BUSY: 'WORKSPACE_BUSY',
   EXTERNAL_LIBRARY_ERROR: 'EXTERNAL_LIBRARY_ERROR',
   QUESTION_BANK_ERROR: 'QUESTION_BANK_ERROR',
+  MATERIAL_LIBRARY_ERROR: 'MATERIAL_LIBRARY_ERROR',
 } as const
 
 export type IpcErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES]

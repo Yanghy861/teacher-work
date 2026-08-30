@@ -107,3 +107,12 @@
 |---|---|---|
 | V1531-A 修改范围模型与两种入口 | DONE | Renderer-only `new/single/lesson` intent、当前版/历史版分类、课件区“修改这份 / 整课重做 / 新建”入口、显式入口不抢恢复旧草稿、工作台目标/自动基线/可选参考分组与模式切换完成；5 files / 24 tests、typecheck、lint、production build、diff check 通过 |
 | V1531-B 模式化生成与最终回归 | DONE / AWAITING_PRODUCT_CONFIRMATION | 单文件/整课模式化方案与完整生成、基线优先文本预算、metadata 恢复、模式化比较/发布语义完成；修复已有第 1 版发布时重复命名缺陷与思源跨行图片引用解析；新增课次正文“从本课移除”入口与素材库独立原件筛选/目录式查找；隔离 Electron 完成 v1→单文件 v2→整课 v3，SQLite/来源顺序核验通过；56 files / 211 tests passed（另 1 file / 1 test skipped），typecheck、lint、build、diff check 通过；仍等待产品负责人确认 V1.5.3 |
+
+## V1.5.3.2 活动实现（素材库逻辑目录）
+
+| 里程碑 | 状态 | 完成/阻塞记录 |
+|---|---|---|
+| V1532-A 素材库目录模型与迁移 | DONE | 新增 schema v15 的 material_folders / material_folder_items；独立素材进入待整理虚拟入口，课程/学生副本隔离；嵌套目录、单父级归属和空目录删除规则完成；专项模型测试通过 |
+| V1532-B 素材库服务与安全 IPC | DONE | 新增目录查询、新建、重命名、移动、排序、删除和保存为素材 IPC；Renderer 仅通过 Preload 白名单访问，外部根目录校验和托管文件原子复制继续复用 |
+| V1532-C 素材库树形工作台 UI | DONE | 素材库页面改为系统入口 + 老师自建层级树 + 文件区；类型仅作辅助筛选；导入、复制到课次、移除/恢复和逻辑目录操作文案明确；外部资料入口同步为“保存到素材库” |
+| V1532-D 最终回归 | IN_PROGRESS | 需产品负责人实际走查两棵树、目录维护和资料流转后，再决定是否创建 V1.5.3 最终通过标签；当前未创建新 checkpoint |

@@ -974,6 +974,15 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 过程修复：真实流程发现发布版本 SQL 未包含 `.md` 后缀，已有第 1 版仍可能命名为第 1 版；修正既有 ManagedFileService 匹配并新增连续发布第 2、3 版回归，未新增 Service、IPC、schema 或 migration。
 - smoke 首轮两条对比标题断言为测试脚本未展开按需面板造成的假失败；截图与组件契约确认产品对比区存在，脚本已修正。期间暴露到桌面的隔离 Electron 确认框已全部关闭，测试实例与中继端口清理完毕，正式工作区未受影响。
 - 最终门：55 files / 205 tests passed，另 1 file / 1 test skipped；typecheck、lint、production build、`git diff --check` 通过。未运行 portable/installer，未 push。
+
+## 2026-08-30 · V1532-A～C · DONE
+
+- 关键改动：素材库从按文件类型平铺改为老师维护的逻辑目录树；新增 schema v15 的目录与归属表，未关联课程/学生的素材进入“待整理”虚拟入口；新增目录查询、新建、重命名、移动、排序、删除空目录、保存外部资料/课次资料为素材的类型化 IPC；Renderer 页面改为系统入口 + 自建层级树 + 文件区，类型仅作辅助筛选，外部资料按钮统一为“保存到素材库”。
+- 修改文件：`src/main/db/migrations.ts`、`src/main/files/material-library-service.ts`、`src/main/ipc/material-library-ipc.ts`、`src/shared/material-library-contracts.ts`、`src/shared/ipc-contracts.ts`、`src/shared/preload-api.ts`、`src/preload/index.ts`、`src/main/index.ts`、`src/renderer/managed-files-panel.tsx`、`src/renderer/external-library-panel.tsx`、`src/renderer/styles.css`、相关测试与状态文件。
+- 验证命令与结果：`npm test` ✅（57 files / 213 tests passed，1 skipped）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。
+- Git 任务提交：待按 V1532-A～D 拆分审阅后创建本地里程碑提交；未 push，未创建 `checkpoint-V1.5.3-pass`。
+- 已知限制：外部资料首次保存默认进入“待整理”，再由素材库移动到老师目录；最终仍需产品负责人走查目录维护、资料流转和窄屏表现。
+- 下一任务可依赖的接口：`window.teacherWorkbench.materialLibrary` 类型化 API 与 `MaterialLibraryService` 逻辑目录模型。
 - 验收报告已增补 `docs/v1.5.3-acceptance.md` 第 7 节；V1531-B 为 `DONE / AWAITING_PRODUCT_CONFIRMATION`，产品负责人确认前不创建 `checkpoint-V1.5.3-pass`。
 
 ## 2026-08-30 · V1531-B 用户反馈补充 · DONE / AWAITING_PRODUCT_CONFIRMATION

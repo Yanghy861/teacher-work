@@ -13,8 +13,10 @@ import { registerExternalLibraryIpc } from './ipc/external-library-ipc'
 import { registerSkillIpc } from './ipc/skill-ipc'
 import { registerAttendanceIpc } from './ipc/attendance-ipc'
 import { registerQuestionBankIpc } from './ipc/question-bank-ipc'
+import { registerMaterialLibraryIpc } from './ipc/material-library-ipc'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
+import { MaterialLibraryService } from './files/material-library-service'
 import { openSearchDatabase, type SearchDatabase } from './search/search-database'
 import { SearchService } from './search/search-service'
 import { DocumentIndexWorker } from './parser/document-parser'
@@ -57,6 +59,7 @@ let unregisterExternalLibraryIpc: (() => void) | null = null
 let unregisterSkillIpc: (() => void) | null = null
 let unregisterAttendanceIpc: (() => void) | null = null
 let unregisterQuestionBankIpc: (() => void) | null = null
+let unregisterMaterialLibraryIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
@@ -64,6 +67,7 @@ let backupRestoreService: BackupRestoreService | null = null
 let externalLibraryService: ExternalLibraryService | null = null
 let skillService: SkillService | null = null
 let questionBankService: QuestionBankService | null = null
+let materialLibraryService: MaterialLibraryService | null = null
 const deferredIndexIds = new Set<string>()
 const deferredRefreshTriggers = new Set<string>()
 let servicesClosed = false
@@ -210,6 +214,13 @@ function getQuestionBankService(): QuestionBankService {
   if (workspaceHandle === null) throw new Error('Workspace was not initialized')
   questionBankService ??= new QuestionBankService(workspaceHandle.paths, getManagedFiles())
   return questionBankService
+}
+
+function getMaterialLibraryService(): MaterialLibraryService {
+  if (workspaceHandle === null) getWorkspaceInfo()
+  if (workspaceHandle === null) throw new Error('Workspace was not initialized')
+  materialLibraryService ??= new MaterialLibraryService(workspaceHandle.database.raw, getManagedFiles())
+  return materialLibraryService
 }
 
 function enqueueIndex(fileId: string): void {
@@ -465,6 +476,11 @@ void app.whenReady().then(() => {
     },
     logger,
   )
+  unregisterMaterialLibraryIpc = registerMaterialLibraryIpc(
+    ipcMain,
+    { getService: getMaterialLibraryService, getExternalService: getExternalLibraryService, activityGate },
+    logger,
+  )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
   void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
@@ -502,6 +518,7 @@ app.on('before-quit', (event) => {
   unregisterSkillIpc?.()
   unregisterAttendanceIpc?.()
   unregisterQuestionBankIpc?.()
+  unregisterMaterialLibraryIpc?.()
   coreDataService = null
   managedFileService = null
   aiGateway = null
@@ -511,6 +528,7 @@ app.on('before-quit', (event) => {
   skillService = null
   questionBankService?.close()
   questionBankService = null
+  materialLibraryService = null
   void (async () => {
     await documentIndexWorker?.close()
     documentIndexWorker = null

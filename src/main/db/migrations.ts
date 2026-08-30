@@ -382,6 +382,39 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 15,
+    name: 'create_material_library_tree',
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS material_folders (
+          id TEXT PRIMARY KEY NOT NULL,
+          parent_id TEXT REFERENCES material_folders(id) ON DELETE RESTRICT,
+          name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+          sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_material_folders_parent_sort
+          ON material_folders (parent_id, sort_order, created_at, id);
+        CREATE TABLE IF NOT EXISTS material_folder_items (
+          folder_id TEXT REFERENCES material_folders(id) ON DELETE RESTRICT,
+          file_id TEXT PRIMARY KEY NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_material_folder_items_folder
+          ON material_folder_items (folder_id, created_at, file_id);
+
+        INSERT OR IGNORE INTO material_folder_items (folder_id, file_id, created_at)
+        SELECT NULL, f.id, f.created_at
+          FROM files AS f
+         WHERE f.deleted_at IS NULL
+           AND NOT EXISTS (SELECT 1 FROM lesson_files lf WHERE lf.file_id = f.id)
+           AND NOT EXISTS (SELECT 1 FROM student_files sf WHERE sf.file_id = f.id);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

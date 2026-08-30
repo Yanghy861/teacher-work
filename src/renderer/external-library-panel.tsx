@@ -297,14 +297,14 @@ export default function ExternalLibraryPanel({
                 }),
                 '已在资源管理器中定位。',
               )}
-              copyLabel={prepContext === null ? '复制到素材库' : '用于本次备课'}
+              copyLabel={prepContext === null ? '保存到素材库' : '用于本次备课'}
               onCopy={() => prepContext === null
                 ? runFileAction(
                   () => window.teacherWorkbench.externalLibrary.copyToLibrary({
                     rootId: selectedEntry.rootId,
                     relativePath: selectedEntry.relativePath,
                   }),
-                  '已复制到素材库，外部原文件保持不变。',
+                  '已保存到素材库，外部原文件保持不变。',
                 )
                 : runFileAction(
                   () => window.teacherWorkbench.externalLibrary.copyToLesson({

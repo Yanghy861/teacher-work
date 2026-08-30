@@ -616,6 +616,71 @@ button:disabled {
   min-width: 0;
 }
 
+.material-library-custom-heading {
+  margin: 14px 8px 5px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.material-folder-branch {
+  margin-left: 8px;
+}
+
+.material-folder-select {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.material-folder-select span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-more {
+  border: 0;
+  padding: 0 4px;
+  color: #94a3b8;
+  background: transparent;
+  cursor: pointer;
+}
+
+.material-type-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.material-type-filter button {
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #64748b;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.material-type-filter button.is-active {
+  border-color: #6366f1;
+  color: #3730a3;
+  background: #eef2ff;
+  font-weight: 700;
+}
+
 .file-list {
   display: grid;
   gap: 8px;

@@ -13,6 +13,7 @@ import {
   EXTERNAL_LIBRARY_IPC_CHANNELS,
   SKILL_IPC_CHANNELS,
   QUESTION_BANK_IPC_CHANNELS,
+  MATERIAL_LIBRARY_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContent,
   isManagedFileContentChanged,
@@ -48,6 +49,9 @@ import {
   isQuestionBankDetail,
   isQuestionBankSearchResult,
   isQuestionBankSummary,
+  isMaterialLibraryOverview,
+  isMaterialFolder,
+  isMaterialFolderItem,
   parseIpcResponse,
   TeacherWorkbenchError,
   type CreateCourseRequest,
@@ -96,6 +100,15 @@ import {
   type QuestionBankQuestionRequest,
   type QuestionBankSearchRequest,
 } from '../shared/preload-api'
+import type {
+  CreateMaterialFolderRequest,
+  RenameMaterialFolderRequest,
+  MaterialFolderIdRequest,
+  ReorderMaterialFolderRequest,
+  MoveMaterialRequest,
+  CopyExternalToMaterialRequest,
+  SaveFileAsMaterialRequest,
+} from '../shared/material-library-contracts'
 
 async function invoke<T>(
   channel: IpcChannel,
@@ -168,6 +181,16 @@ const api = Object.freeze({
       ipcRenderer.on(FILE_IPC_EVENTS.contentChanged, handler)
       return () => ipcRenderer.removeListener(FILE_IPC_EVENTS.contentChanged, handler)
     },
+  }),
+  materialLibrary: Object.freeze({
+    getOverview: () => invoke(MATERIAL_LIBRARY_IPC_CHANNELS.getOverview, {}, isMaterialLibraryOverview),
+    createFolder: (request: CreateMaterialFolderRequest) => invoke(MATERIAL_LIBRARY_IPC_CHANNELS.createFolder, request, isMaterialFolder),
+    renameFolder: (request: RenameMaterialFolderRequest) => invoke(MATERIAL_LIBRARY_IPC_CHANNELS.renameFolder, request, isMaterialFolder),
+    deleteFolder: async (request: MaterialFolderIdRequest): Promise<null> => invoke(MATERIAL_LIBRARY_IPC_CHANNELS.deleteFolder, request, (value): value is null => value === null),
+    reorderFolder: (request: ReorderMaterialFolderRequest) => invoke(MATERIAL_LIBRARY_IPC_CHANNELS.reorderFolder, request, isMaterialFolder),
+    moveFile: (request: MoveMaterialRequest) => invoke(MATERIAL_LIBRARY_IPC_CHANNELS.moveFile, request, isMaterialFolderItem),
+    saveExternal: (request: CopyExternalToMaterialRequest) => invoke(MATERIAL_LIBRARY_IPC_CHANNELS.saveExternal, request, isManagedFileRecord),
+    saveFileAsMaterial: (request: SaveFileAsMaterialRequest) => invoke(MATERIAL_LIBRARY_IPC_CHANNELS.saveFileAsMaterial, request, isManagedFileRecord),
   }),
   search: Object.freeze({
     query: (request: SearchQuery) => invoke(SEARCH_IPC_CHANNELS.query, request, (value): value is readonly SearchHit[] =>
