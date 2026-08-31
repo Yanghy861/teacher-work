@@ -561,6 +561,11 @@ button:disabled {
 
 .material-library-tree-heading strong,
 .material-library-results-heading strong {
+  min-width: 0;
+}
+
+.material-library-tree-heading strong,
+.material-library-results-heading strong {
   color: #334155;
   font-size: 13px;
 }
@@ -617,6 +622,10 @@ button:disabled {
 }
 
 .material-library-custom-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 14px 8px 5px;
   color: #94a3b8;
   font-size: 11px;
@@ -624,17 +633,56 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.material-folder-branch {
-  margin-left: 8px;
+.material-library-custom-heading.is-drop-target {
+  color: #3730a3;
 }
 
-.material-folder-branch > .material-library-tree-row {
-  grid-template-columns: minmax(0, 1fr) auto;
+.material-tree-add {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  color: #4338ca;
+  background: #eef2ff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.material-folder-branch {
+  margin-left: 0;
+}
+
+.material-folder-children {
+  margin-left: 15px;
+  border-left: 1px solid #e2e8f0;
+  padding-left: 6px;
+}
+
+.is-folder-row {
+  grid-template-columns: 22px minmax(0, 1fr) 24px;
+}
+
+.material-folder-toggle {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  color: #64748b;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.material-folder-toggle:disabled {
+  cursor: default;
 }
 
 .material-folder-select {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -647,39 +695,58 @@ button:disabled {
   text-align: left;
 }
 
-.material-folder-select span:nth-child(2) {
+.material-folder-select span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .folder-more {
+  width: 24px;
+  height: 24px;
   border: 0;
-  padding: 0 4px;
+  padding: 0;
   color: #94a3b8;
   background: transparent;
   cursor: pointer;
 }
 
-.folder-action-control {
-  position: relative;
+.is-folder-row.is-dragging,
+.file-row.is-dragging {
+  opacity: 0.55;
 }
 
-.folder-action-menu {
-  position: absolute;
-  z-index: 2;
-  top: calc(100% + 4px);
-  right: 0;
+.is-folder-row.is-drop-before {
+  box-shadow: inset 0 2px 0 #6366f1;
+}
+
+.is-folder-row.is-drop-after {
+  box-shadow: inset 0 -2px 0 #6366f1;
+}
+
+.is-folder-row.is-drop-inside,
+.material-library-tree-row.is-drop-inside {
+  color: #3730a3;
+  background: #eef2ff;
+  outline: 1px solid #a5b4fc;
+}
+
+.material-context-menu {
+  position: fixed;
+  z-index: 20;
   display: grid;
-  min-width: 96px;
-  overflow: hidden;
+  min-width: 220px;
+  max-width: min(280px, calc(100vw - 16px));
+  max-height: min(420px, calc(100vh - 16px));
+  overflow: auto;
   border: 1px solid #dbe3ef;
-  border-radius: 6px;
+  border-radius: 7px;
+  padding: 4px;
   background: #fff;
-  box-shadow: 0 8px 18px rgb(15 23 42 / 14%);
+  box-shadow: 0 12px 28px rgb(15 23 42 / 18%);
 }
 
-.folder-action-menu button {
+.material-context-menu button {
   border: 0;
   padding: 8px 10px;
   color: #334155;
@@ -689,12 +756,36 @@ button:disabled {
   text-align: left;
 }
 
-.folder-action-menu button:hover {
+.material-context-menu button:hover:not(:disabled) {
   background: #f8fafc;
 }
 
-.folder-action-menu .is-danger {
+.material-context-menu button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.material-context-menu .is-danger {
   color: #b91c1c;
+}
+
+.material-context-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: #e2e8f0;
+}
+
+.material-context-label {
+  padding: 6px 10px 3px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.material-context-folder-list {
+  display: grid;
+  max-height: 150px;
+  overflow: auto;
 }
 
 .material-type-filter {
@@ -738,6 +829,14 @@ button:disabled {
   border-radius: 10px;
   padding: 11px 12px;
   background: #f8fafc;
+}
+
+.file-row.is-draggable {
+  cursor: grab;
+}
+
+.file-row.is-draggable:active {
+  cursor: grabbing;
 }
 
 .file-row.is-deleted {

@@ -81,7 +81,7 @@ export async function dispatchMaterialLibraryIpc(channel: string, payload: unkno
         return success(null)
       case MATERIAL_LIBRARY_IPC_CHANNELS.reorderFolder:
         assert(payload, isReorderMaterialFolderRequest)
-        return ensure(service.reorderFolder((payload as ReorderMaterialFolderRequest).folderId, (payload as ReorderMaterialFolderRequest).sortOrder), isMaterialFolder)
+        return ensure(service.reorderFolder((payload as ReorderMaterialFolderRequest).folderId, (payload as ReorderMaterialFolderRequest).parentId, (payload as ReorderMaterialFolderRequest).sortOrder), isMaterialFolder)
       case MATERIAL_LIBRARY_IPC_CHANNELS.moveFile:
         assert(payload, isMoveMaterialRequest)
         return ensure(service.moveFile((payload as MoveMaterialRequest).fileId, (payload as MoveMaterialRequest).folderId), isMaterialFolderItem)

@@ -121,5 +121,5 @@
 
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
-| V154-A 树交互与安全移动 | IN_PROGRESS | 当前唯一实现范围：文件夹展开/收起、就地创建、文件/文件夹右键菜单、文件拖拽归档、文件夹跨级移动与排序；复用既有 schema、Service 和 IPC 通道 |
-| V154-B 最终回归与体验验收 | TODO | 待 V154-A 完成后运行全量自动门、production build、diff check 与代表性隔离 Windows 交互流程 |
+| V154-A 树交互与安全移动 | DONE | 文件夹展开/收起、就地创建、文件/文件夹右键菜单、文件拖拽归档、文件夹跨级移动与排序完成；复用既有 schema、Service 和 IPC 通道；专项测试、typecheck、lint、production build 通过 |
+| V154-B 最终回归与体验验收 | IN_PROGRESS | 全量自动门与隔离 Electron 启动 smoke 通过；待产品负责人确认真实窗口中的展开/收起、拖拽和右键菜单体验 |

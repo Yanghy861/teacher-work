@@ -1024,3 +1024,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 
 - 当前唯一实现范围：扩展现有目录排序请求的 `parentId`，实现循环校验与原子跨父级排序；Renderer 增加独立展开状态、就地新建、右键菜单、文件归档拖拽和文件夹跨级/同级拖拽。
 - 复用：继续使用 schema v15、MaterialLibraryService、AppDialogProvider、ManagedFileService 与现有白名单 IPC；不新增 schema/migration、Service 或 IPC 通道。
+
+## 2026-08-31 · V154-A · DONE / V154-B · IN_PROGRESS
+
+- 数据与安全：`ReorderMaterialFolderRequest` 增加目标 `parentId`；MaterialLibraryService 在单事务内完成同级排序、跨级换父级、旧/新父级排序归一和循环校验；managed 文件物理路径与课程/学生副本关系不变。
+- Renderer：素材库树新增独立展开/收起状态、稳定树缩进、顶层与子目录就地新建、文件夹/文件应用内右键菜单；文件可拖入目录或拖回待整理，文件夹可拖入目录、同级前后排序或移回顶层；目标高亮和失败提示加入现有 AppDialog/状态消息。
+- 自动门：素材库专项 7 tests ✅；`npm test` 57 files / 215 tests passed、1 skipped ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。
+- 隔离启动：production Electron 使用 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA=D:\\teacher_work\\tmp\\v154-smoke\\app-data` 和独立 `--user-data-dir` 启动成功，远程调试页加载 `file:///D:/teacher_work/out/renderer/index.html`，隔离 `workspace.db/search.db` 已创建；当前受限工具环境无可用 Playwright/WebSocket 驱动，未将鼠标级拖拽体验冒充为已验收。
+- Git：方案提交 `0a2fc6b` 已创建；V154-A 实现提交待产品负责人完成窗口体验确认后创建，未 push、未创建或移动 checkpoint。

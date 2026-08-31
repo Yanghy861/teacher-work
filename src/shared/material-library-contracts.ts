@@ -25,7 +25,7 @@ export interface MaterialLibraryOverview {
 export interface MaterialFolderIdRequest { readonly folderId: string }
 export interface CreateMaterialFolderRequest { readonly parentId: string | null; readonly name: string }
 export interface RenameMaterialFolderRequest { readonly folderId: string; readonly name: string }
-export interface ReorderMaterialFolderRequest { readonly folderId: string; readonly sortOrder: number }
+export interface ReorderMaterialFolderRequest { readonly folderId: string; readonly parentId: string | null; readonly sortOrder: number }
 export interface MoveMaterialRequest { readonly fileId: string; readonly folderId: string | null }
 export interface CopyExternalToMaterialRequest { readonly rootId: string; readonly relativePath: string; readonly folderId: string | null }
 export interface SaveFileAsMaterialRequest { readonly fileId: string; readonly folderId: string | null }
@@ -60,7 +60,7 @@ export function isRenameMaterialFolderRequest(value: unknown): value is RenameMa
   return hasKeys(value, ['folderId', 'name']) && nonEmpty(value.folderId) && nonEmpty(value.name)
 }
 export function isReorderMaterialFolderRequest(value: unknown): value is ReorderMaterialFolderRequest {
-  return hasKeys(value, ['folderId', 'sortOrder']) && nonEmpty(value.folderId) && typeof value.sortOrder === 'number' && Number.isSafeInteger(value.sortOrder) && value.sortOrder >= 0
+  return hasKeys(value, ['folderId', 'parentId', 'sortOrder']) && nonEmpty(value.folderId) && nullableString(value.parentId) && typeof value.sortOrder === 'number' && Number.isSafeInteger(value.sortOrder) && value.sortOrder >= 0
 }
 export function isMoveMaterialRequest(value: unknown): value is MoveMaterialRequest {
   return hasKeys(value, ['fileId', 'folderId']) && nonEmpty(value.fileId) && nullableString(value.folderId)

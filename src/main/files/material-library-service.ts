@@ -121,15 +121,22 @@ export class MaterialLibraryService {
     this.database.prepare('UPDATE material_folders SET deleted_at = ?, updated_at = ? WHERE id = ?').run(this.now(), this.now(), folder.id)
   }
 
-  reorderFolder(folderId: string, sortOrder: number): MaterialFolder {
+  reorderFolder(folderId: string, parentId: string | null, sortOrder: number): MaterialFolder {
     const folder = this.requireFolder(folderId)
-    const siblings = this.database.prepare('SELECT id FROM material_folders WHERE parent_id IS ? AND deleted_at IS NULL ORDER BY sort_order, created_at, id').all(folder.parentId) as Array<{ id: string }>
-    const clamped = Math.max(0, Math.min(sortOrder, siblings.length - 1))
-    const reordered = siblings.filter((item) => item.id !== folder.id)
-    reordered.splice(clamped, 0, { id: folder.id })
+    if (parentId !== null) this.requireFolder(parentId)
+    this.assertCanMoveFolder(folder.id, parentId)
+    const sourceSiblings = this.listSiblingIds(folder.parentId, folder.id)
+    const targetSiblings = folder.parentId === parentId ? sourceSiblings : this.listSiblingIds(parentId, folder.id)
+    const clamped = Math.max(0, Math.min(sortOrder, targetSiblings.length))
+    targetSiblings.splice(clamped, 0, folder.id)
+    const now = this.now()
     this.database.transaction(() => {
-      const update = this.database.prepare('UPDATE material_folders SET sort_order = ?, updated_at = ? WHERE id = ?')
-      reordered.forEach((item, index) => update.run(index, this.now(), item.id))
+      const updateOrder = this.database.prepare('UPDATE material_folders SET sort_order = ?, updated_at = ? WHERE id = ?')
+      if (folder.parentId !== parentId) {
+        this.database.prepare('UPDATE material_folders SET parent_id = ?, updated_at = ? WHERE id = ?').run(parentId, now, folder.id)
+        sourceSiblings.forEach((id, index) => updateOrder.run(index, now, id))
+      }
+      targetSiblings.forEach((id, index) => updateOrder.run(index, now, id))
     }).immediate()
     return this.requireFolder(folder.id)
   }
@@ -182,6 +189,26 @@ export class MaterialLibraryService {
     const row = this.database.prepare('SELECT id, parent_id, name, sort_order, created_at, updated_at FROM material_folders WHERE id = ? AND deleted_at IS NULL').get(folderId) as FolderRow | undefined
     if (row === undefined) throw new MaterialLibraryError('MATERIAL_FOLDER_NOT_FOUND', '素材文件夹不存在。')
     return mapFolder(row)
+  }
+
+  private listSiblingIds(parentId: string | null, excludedId: string): string[] {
+    return (this.database.prepare('SELECT id FROM material_folders WHERE parent_id IS ? AND id <> ? AND deleted_at IS NULL ORDER BY sort_order, created_at, id').all(parentId, excludedId) as Array<{ id: string }>).map((item) => item.id)
+  }
+
+  private assertCanMoveFolder(folderId: string, parentId: string | null): void {
+    if (parentId === null) return
+    if (parentId === folderId) throw new MaterialLibraryError('MATERIAL_FOLDER_CYCLE', '文件夹不能移动到自身或自己的子文件夹中。')
+    const visited = new Set<string>()
+    let currentId: string | null = parentId
+    const readParent = this.database.prepare('SELECT parent_id FROM material_folders WHERE id = ? AND deleted_at IS NULL')
+    while (currentId !== null) {
+      if (currentId === folderId) throw new MaterialLibraryError('MATERIAL_FOLDER_CYCLE', '文件夹不能移动到自身或自己的子文件夹中。')
+      if (visited.has(currentId)) throw new MaterialLibraryError('MATERIAL_FOLDER_CYCLE', '素材库目录存在循环关系，无法完成移动。')
+      visited.add(currentId)
+      const row = readParent.get(currentId) as { parent_id: string | null } | undefined
+      if (row === undefined) throw new MaterialLibraryError('MATERIAL_FOLDER_NOT_FOUND', '目标素材文件夹不存在。')
+      currentId = row.parent_id
+    }
   }
 }
 

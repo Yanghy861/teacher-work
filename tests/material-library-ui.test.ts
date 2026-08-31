@@ -9,6 +9,8 @@ import {
   listRemovedMaterialFiles,
   listReusableMaterialFiles,
 } from '../src/renderer/material-library'
+import { buildFolderMoveRequest, buildFolderRootMoveRequest, materialFolderPath } from '../src/renderer/material-tree'
+import type { MaterialFolder } from '../src/shared/material-library-contracts'
 
 function source(relativePath: string): string {
   return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), 'utf8')
@@ -30,6 +32,19 @@ function file(id: string, originalName: string, mimeType: string, deletedAt: str
 }
 
 describe('material library curation and lesson removal UI', () => {
+  const folders: MaterialFolder[] = [
+    { id: 'a', parentId: null, name: '七年级', sortOrder: 0, createdAt: '2026-08-30T00:00:00Z', updatedAt: '2026-08-30T00:00:00Z' },
+    { id: 'b', parentId: null, name: '八年级', sortOrder: 1, createdAt: '2026-08-30T00:00:01Z', updatedAt: '2026-08-30T00:00:01Z' },
+    { id: 'c', parentId: 'a', name: '几何', sortOrder: 0, createdAt: '2026-08-30T00:00:02Z', updatedAt: '2026-08-30T00:00:02Z' },
+  ]
+
+  it('builds safe folder drag requests and readable logical paths', () => {
+    expect(materialFolderPath(folders, 'c')).toBe('七年级 / 几何')
+    expect(buildFolderMoveRequest(folders, 'c', 'b', 'inside')).toEqual({ folderId: 'c', parentId: 'b', sortOrder: 0 })
+    expect(buildFolderMoveRequest(folders, 'a', 'c', 'inside')).toBeNull()
+    expect(buildFolderRootMoveRequest(folders, 'c')).toEqual({ folderId: 'c', parentId: null, sortOrder: 2 })
+  })
+
   it('keeps only standalone reusable files in the material library', () => {
     const overview: ManagedFileOverview = {
       files: [
@@ -74,7 +89,9 @@ describe('material library curation and lesson removal UI', () => {
     expect(dialogs).toContain('export function AppDialogProvider')
     expect(reader).toContain('onRemoveFile?: (fileId: string) => void')
     expect(reader).toContain('onRemoveFile(selectedFile.id)')
-    expect(managed).toContain('listReusableMaterialFiles')
     expect(managed).toContain('已经加入课程或学生的独立副本不会自动出现在这里')
+    expect(managed).toContain('onDragStart')
+    expect(managed).toContain('material-context-menu')
+    expect(managed).toContain('展开')
   })
 })

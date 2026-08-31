@@ -42,4 +42,27 @@ describe('material library logical folders', () => {
     item.library.deleteFolder(child.id)
     item.library.deleteFolder(root.id)
   })
+
+  it('moves folders across levels, preserves sibling order and rejects cycles', () => {
+    const item = fixture()
+    const grade7 = item.library.createFolder({ parentId: null, name: '七年级' })
+    const grade8 = item.library.createFolder({ parentId: null, name: '八年级' })
+    const geometry = item.library.createFolder({ parentId: grade7.id, name: '几何' })
+    const algebra = item.library.createFolder({ parentId: grade7.id, name: '代数' })
+
+    item.library.reorderFolder(algebra.id, grade7.id, 0)
+    let overview = item.library.getOverview()
+    expect(overview.folders.filter((folder) => folder.parentId === grade7.id).map((folder) => folder.name)).toEqual(['代数', '几何'])
+
+    item.library.reorderFolder(geometry.id, grade8.id, 0)
+    overview = item.library.getOverview()
+    expect(overview.folders.find((folder) => folder.id === geometry.id)?.parentId).toBe(grade8.id)
+    expect(overview.folders.filter((folder) => folder.parentId === grade7.id).map((folder) => folder.name)).toEqual(['代数'])
+
+    expect(() => item.library.reorderFolder(grade8.id, geometry.id, 0)).toThrowError(MaterialLibraryError)
+    expect(item.library.getOverview().folders.find((folder) => folder.id === grade8.id)?.parentId).toBeNull()
+
+    item.library.reorderFolder(geometry.id, null, 1)
+    expect(item.library.getOverview().folders.filter((folder) => folder.parentId === null).map((folder) => folder.name)).toEqual(['七年级', '几何', '八年级'])
+  })
 })
