@@ -1011,3 +1011,16 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动质量门：npm test（57 files / 213 tests passed，1 skipped）、npm run typecheck、npm run lint、npm run build、git diff --check 全部通过；Renderer 中无 window.confirm / window.prompt / window.alert。
 - 验收报告：docs/v1.5.3-acceptance.md 与 docs/v1.5.3.2-acceptance.md。
 - 版本动作：创建通过标签 checkpoint-V1.5.3-pass；随后按用户要求推送 main 与该标签到 GitHub origin。
+
+## 2026-08-31 · V1.5.4 · PLAN_FROZEN
+
+- 产品反馈：现有素材库自建目录只能从页面右上角创建，目录没有真正的展开/收起状态，文件不能拖动，只有“⋯”按钮的窄操作菜单，不符合桌面知识库的目录管理习惯。
+- 产品裁决：素材库内部采用接近思源笔记的树交互；文件和文件夹均可拖动，文件夹可跨级/同级调整，文件与文件夹提供应用内右键菜单，并在树内提供就地新建入口。
+- 安全边界：拖拽只修改逻辑目录关系；managed 文件物理路径不变；Main 阻止目录循环；不做跨页面拖拽、系统资源管理器拖放、批量选择、云同步或物理目录同步。
+- 实施链：V154-A（树交互与安全移动）→ V154-B（全量回归与隔离 Windows 验收）；同一时刻最多一个任务 `IN_PROGRESS`。
+- Git：方案使用 `plan(V1.5.4)`，里程碑使用 `v1.5.4(V154-XX)`；不自动 push，不运行 portable/installer，不移动既有 checkpoint。
+
+## 2026-08-31 · V154-A · IN_PROGRESS
+
+- 当前唯一实现范围：扩展现有目录排序请求的 `parentId`，实现循环校验与原子跨父级排序；Renderer 增加独立展开状态、就地新建、右键菜单、文件归档拖拽和文件夹跨级/同级拖拽。
+- 复用：继续使用 schema v15、MaterialLibraryService、AppDialogProvider、ManagedFileService 与现有白名单 IPC；不新增 schema/migration、Service 或 IPC 通道。

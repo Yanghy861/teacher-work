@@ -67,4 +67,6 @@ V1 只证明三条核心流程：
 
 V1.5 已在 `checkpoint-V1.5-pass` 冻结（增量 V1.5.1）。增量 V1.5.2（AI 修改工作区）遵循既有安全边界与复用裁决（D10–D14）：默认不新增 schema、migration、Service 或 IPC，现有白名单能力不足时停止并请产品负责人重新确认范围；验收按 D15 分层执行。V152-A–V152-D 运行相关测试、typecheck、lint 并按风险补 build；V152-E 运行全量测试、production build、`git diff --check` 和代表性本地 Windows 流程；不运行 portable/installer packaging。
 
+V1.5.3 已在 `checkpoint-V1.5.3-pass` 冻结。V1.5.4 仅补齐素材库内部桌面树交互：允许在现有逻辑目录模型上展开、收起、右键维护和受控拖拽；不改变 managed 文件物理路径，不新增 schema/migration 或 IPC 通道，不扩展到跨页面拖拽、Windows 资源管理器拖放或批量文件管理。
+
 完成里程碑后更新 `STATUS.md` 与 `GOAL_PROGRESS.md`，按 `VERSION_CONTROL.md` 创建范围清晰的本地提交；不得自动 push。
