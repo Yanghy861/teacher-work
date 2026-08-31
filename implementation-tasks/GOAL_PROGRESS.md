@@ -997,10 +997,17 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 修复已落在公共富文本规范化、课件目录资源提取和正文图片匹配三处：兼容跨行 `!`、跨行资源路径、空格/URL 编码与可选标题；保护图片/链接/代码 token，避免文件名下划线被数学规范化误判；缺图降级只显示短替代文字。
 - 新增图片专项 14 tests 全过；typecheck、lint 通过。该修复仍归入 V1.5.3.1/V1531-B，最终标签仍等待产品负责人体验确认。
 
-## 2026-08-30 · V1532-D 应用内弹窗反馈修复 · IN_PROGRESS
+## 2026-08-31 · V1532-D 应用内弹窗反馈修复 · DONE
 
 - 关键改动：新增 Renderer 级 AppDialogProvider，把原生 window.confirm / window.prompt 统一替换为工作台内的确认或文本输入弹窗；课次资料的“从本课移除”明确展示副本隔离影响，AI 修改、快速建课的放弃/排课确认，以及素材库新建、重命名、删除目录均接入同一套界面。
 - 体验收口：素材库目录的“⋯”现在提供应用内“重命名 / 删除”菜单；确认弹窗支持取消、关闭、Escape、破坏性操作样式和顺序队列，避免连续触发时覆盖前一个请求。
 - 修改文件：src/renderer/app-confirm-dialog.tsx、App.tsx、lesson-files-section.tsx、draft-panel.tsx、teaching-content-page.tsx、quick-course-wizard*.tsx、managed-files-panel.tsx、styles.css 与 UI 契约测试。
 - 验证命令与结果：npm test（57 files / 213 tests passed，1 skipped）✅；npm run typecheck ✅；npm run lint ✅；npm run build ✅；Renderer 中 window.confirm / window.prompt / window.alert 搜索无结果；git diff --check ✅。未运行 portable/installer，未 push。
-- 任务状态：V1532-D 仍为 IN_PROGRESS，等待产品负责人完成真实目录维护与资料流转走查；不创建 checkpoint-V1.5.3-pass。
+- 产品负责人已完成真实目录维护、资料流转和应用内弹窗体验确认；V1532-D 验收通过。V1.5.3 最终通过标签在后续确认提交上创建。
+
+## 2026-08-31 · V1.5.3 最终体验确认 · PASS
+
+- 产品负责人确认 V1.5.3 当前实现通过验收，包含课件动作化、AI 修改范围分流、课次资料移除、素材库逻辑目录及软件级弹窗。
+- 自动质量门：npm test（57 files / 213 tests passed，1 skipped）、npm run typecheck、npm run lint、npm run build、git diff --check 全部通过；Renderer 中无 window.confirm / window.prompt / window.alert。
+- 验收报告：docs/v1.5.3-acceptance.md 与 docs/v1.5.3.2-acceptance.md。
+- 版本动作：创建通过标签 checkpoint-V1.5.3-pass；随后按用户要求推送 main 与该标签到 GitHub origin。

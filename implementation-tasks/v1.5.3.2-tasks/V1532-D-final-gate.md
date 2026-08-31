@@ -1,6 +1,6 @@
 # V1532-D · 素材库逻辑目录最终回归与体验确认
 
-**状态：** 待产品负责人确认，不进入当前活动链
+**状态：** `DONE`（产品负责人于 2026-08-31 确认验收通过）
 
 **前置：** V1532-A–V1532-C 全部 `DONE`。
 
@@ -12,6 +12,8 @@
 - `npm run build`；
 - `git diff --check`；
 - 不运行 `package:portable`，不生成 portable、installer 或对外交付包。
+
+最终结果：`npm test` 57 files / 213 tests passed（1 skipped）；typecheck、lint、production build 与 `git diff --check` 全部通过。
 
 ## 代表性 Windows 流程
 
@@ -47,12 +49,11 @@
 - 记录迁移前后文件数量、目录归属、孤儿关系和 SQLite `integrity_check`；
 - 记录代表性 Windows 截图或可复现实验步骤；
 - 记录未运行 portable/installer；
-- 产品负责人完成逻辑目录与资料流转体验确认后，才允许创建新的通过标签。
+- 产品负责人已完成逻辑目录、资料流转及软件级弹窗体验确认；验收报告见 `docs/v1.5.3.2-acceptance.md`。
 
 ## 标签与版本规则
 
 - 本分支是否仍归属 V1.5.3，必须由产品负责人在方案确认时裁决；
 - 若维持当前命名，使用 `v1.5.3.2(V1532-XX): <摘要>` 里程碑提交；
-- 不覆盖、不移动既有 `checkpoint-V1.5.3-pass`；
-- 未完成最终体验确认前，不创建新的 checkpoint；
-- 不自动 push。
+- 创建 `checkpoint-V1.5.3-pass`，不创建独立的 V1.5.3.2 checkpoint；
+- 仅因产品负责人本次明确要求，推送 `main` 与通过标签到 GitHub `origin`。
