@@ -50,6 +50,11 @@ export default function CourseDetail({
   const [createLessonPeriodId, setCreateLessonPeriodId] = useState<string | null>(null)
   const [scheduleLessonId, setScheduleLessonId] = useState<string | null>(null)
   const [progressOpen, setProgressOpen] = useState(false)
+  const [expandedPeriodIds, setExpandedPeriodIds] = useState<ReadonlySet<string>>(new Set())
+
+  useEffect(() => {
+    setExpandedPeriodIds(new Set())
+  }, [summary?.course.id])
 
   useEffect(() => {
     if (summary === null) return
@@ -143,6 +148,13 @@ export default function CourseDetail({
           onStartPrep={onStartPrep}
           onOpenDraft={onOpenDraft}
           viewedDraft={viewedDraft}
+          expandedPeriodIds={expandedPeriodIds}
+          onTogglePeriod={(periodId) => setExpandedPeriodIds((current) => {
+            const next = new Set(current)
+            if (next.has(periodId)) next.delete(periodId)
+            else next.add(periodId)
+            return next
+          })}
           onAction={onAction}
         />
       ) : tab === 'students' ? (
@@ -211,6 +223,8 @@ function LessonsSection({
   onStartPrep,
   onOpenDraft,
   viewedDraft,
+  expandedPeriodIds,
+  onTogglePeriod,
   onAction,
 }: {
   readonly overview: CoreOverview
@@ -227,6 +241,8 @@ function LessonsSection({
   readonly onStartPrep: (context: LessonPrepContext) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
   readonly viewedDraft: NoteRecord | null
+  readonly expandedPeriodIds: ReadonlySet<string>
+  readonly onTogglePeriod: (periodId: string) => void
   readonly onAction: (action: () => Promise<void>, successMessage: string) => Promise<boolean>
 }): React.JSX.Element {
   const sessionByLesson = new Map(overview.lessonSessions.map((session) => [session.lessonId, session]))
@@ -241,40 +257,50 @@ function LessonsSection({
       <div className="period-list">
         {summary.periods.map((period) => {
           const lessons = summary.lessons.filter((lesson) => lesson.parentId === period.id)
+          const expanded = expandedPeriodIds.has(period.id)
           return (
             <section className="period-block" key={period.id}>
               <header>
-                <strong>{period.title}</strong>
+                <button
+                  className="period-toggle"
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={`period-lessons-${period.id}`}
+                  onClick={() => onTogglePeriod(period.id)}
+                >
+                  <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+                  <strong>{period.title}</strong>
+                </button>
                 <button className="link-button" type="button" disabled={busy || summary.ended} onClick={() => onCreateLesson(period.id)}>+ 新建课次</button>
               </header>
-              <div className="lesson-row-list">
-                {lessons.map((lesson, index) => {
-                  const session = sessionByLesson.get(lesson.id)
-                  return (
-                    <button
-                      className={`lesson-row${viewedLesson?.id === lesson.id ? ' is-viewed' : ''}`}
-                      type="button"
-                      key={lesson.id}
-                      onClick={() => onViewLesson(lesson.id)}
-                      onDoubleClick={() => onOpenTeachingContent(createLessonPrepContext(summary.course, lesson, summary.activeStudents, period.title))}
-                    >
-                      <span className="lesson-number">{lesson.lessonLabel ?? `第 ${index + 1} 课`}</span>
-                      <strong>{lesson.title}</strong>
-                      <span className="lesson-row-status">
-                        {session?.taughtConfirmedAt !== null && session?.taughtConfirmedAt !== undefined && <em>已上</em>}
-                        {session?.scheduledOn !== undefined && session.taughtConfirmedAt === null && <em>历史</em>}
-                        {summary.currentLesson?.id === lesson.id && <em className="is-current">Current</em>}
-                        {session?.attendanceRecordedAt !== null && session?.attendanceRecordedAt !== undefined && <em>已点名</em>}
-                        {session?.scheduledOn !== null && session?.scheduledOn !== undefined
-                          ? <small>{formatLocalDateOnly(session.scheduledOn)} · {session.scheduledAt === null ? '时间未记录' : formatLocalDateTime(session.scheduledAt)}</small>
-                          : session?.scheduledAt !== null && session?.scheduledAt !== undefined && <small>{formatLocalDateTime(session.scheduledAt)}</small>}
-                        {session?.durationMinutes !== null && session?.durationMinutes !== undefined && <small>{session.durationMinutes} 分钟</small>}
-                      </span>
-                    </button>
-                  )
-                })}
-                {lessons.length === 0 && <p className="empty-state">该阶段还没有课次。</p>}
-              </div>
+              {expanded && <div className="lesson-row-list" id={`period-lessons-${period.id}`}>
+                  {lessons.map((lesson, index) => {
+                    const session = sessionByLesson.get(lesson.id)
+                    return (
+                      <button
+                        className={`lesson-row${viewedLesson?.id === lesson.id ? ' is-viewed' : ''}`}
+                        type="button"
+                        key={lesson.id}
+                        onClick={() => onViewLesson(lesson.id)}
+                        onDoubleClick={() => onOpenTeachingContent(createLessonPrepContext(summary.course, lesson, summary.activeStudents, period.title))}
+                      >
+                        <span className="lesson-number">{lesson.lessonLabel ?? `第 ${index + 1} 课`}</span>
+                        <strong>{lesson.title}</strong>
+                        <span className="lesson-row-status">
+                          {session?.taughtConfirmedAt !== null && session?.taughtConfirmedAt !== undefined && <em>已上</em>}
+                          {session?.scheduledOn !== undefined && session.taughtConfirmedAt === null && <em>历史</em>}
+                          {summary.currentLesson?.id === lesson.id && <em className="is-current">Current</em>}
+                          {session?.attendanceRecordedAt !== null && session?.attendanceRecordedAt !== undefined && <em>已点名</em>}
+                          {session?.scheduledOn !== null && session?.scheduledOn !== undefined
+                            ? <small>{formatLocalDateOnly(session.scheduledOn)} · {session.scheduledAt === null ? '时间未记录' : formatLocalDateTime(session.scheduledAt)}</small>
+                            : session?.scheduledAt !== null && session?.scheduledAt !== undefined && <small>{formatLocalDateTime(session.scheduledAt)}</small>}
+                          {session?.durationMinutes !== null && session?.durationMinutes !== undefined && <small>{session.durationMinutes} 分钟</small>}
+                        </span>
+                      </button>
+                    )
+                  })}
+                  {lessons.length === 0 && <p className="empty-state">该阶段还没有课次。</p>}
+                </div>}
             </section>
           )
         })}

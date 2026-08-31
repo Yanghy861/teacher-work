@@ -1032,3 +1032,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动门：素材库专项 7 tests ✅；`npm test` 57 files / 215 tests passed、1 skipped ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。
 - 隔离启动：production Electron 使用 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA=D:\\teacher_work\\tmp\\v154-smoke\\app-data` 和独立 `--user-data-dir` 启动成功，远程调试页加载 `file:///D:/teacher_work/out/renderer/index.html`，隔离 `workspace.db/search.db` 已创建；当前受限工具环境无可用 Playwright/WebSocket 驱动，未将鼠标级拖拽体验冒充为已验收。
 - Git：方案提交 `0a2fc6b` 已创建；V154-A 实现提交待产品负责人完成窗口体验确认后创建，未 push、未创建或移动 checkpoint。
+
+## 2026-08-31 · V154-B · 课程详情折叠小修复
+
+- 用户反馈：课程详情中的“阶段与课次”只能一直展开，缺少收起入口；期望课程界面默认收起阶段。
+- 修复：`CourseDetail` 为每个阶段增加独立 `period-toggle`，默认全部收起；切换课程时重置展开状态；折叠只影响 Renderer 展示，不改变 Viewed Lesson、Current Lesson、排课或点名事实。
+- 验证：课程相关 8 tests、typecheck、lint 已通过；全量测试、production build 与 diff check 随 V154-B 最终门复跑。
