@@ -122,4 +122,4 @@
 | 里程碑 | 状态 | 完成/阻塞记录 |
 |---|---|---|
 | V154-A 树交互与安全移动 | DONE | 文件夹展开/收起、就地创建、文件/文件夹右键菜单、文件拖拽归档、文件夹跨级移动与排序完成；复用既有 schema、Service 和 IPC 通道；专项测试、typecheck、lint、production build 通过 |
-| V154-B 最终回归与体验验收 | IN_PROGRESS | 全量自动门与隔离 Electron 启动 smoke 通过；课程详情阶段已补默认收起与独立展开/收起；待产品负责人确认真实窗口中的素材树和课程阶段体验 |
+| V154-B 最终回归与体验验收 | DONE | 最终门复跑通过：全量 57 files / 215 tests passed（1 skipped）、typecheck、lint、production build、`git diff --check`；产品负责人已完成真实窗口体验确认（素材树拖拽/右键/重启保持与课程阶段默认收起共 6 点全部通过）；`checkpoint-V1.5.4-pass` 创建于最终确认提交 |

@@ -1038,3 +1038,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 用户反馈：课程详情中的“阶段与课次”只能一直展开，缺少收起入口；期望课程界面默认收起阶段。
 - 修复：`CourseDetail` 为每个阶段增加独立 `period-toggle`，默认全部收起；切换课程时重置展开状态；折叠只影响 Renderer 展示，不改变 Viewed Lesson、Current Lesson、排课或点名事实。
 - 验证：课程相关 8 tests、typecheck、lint 已通过；全量测试、production build 与 diff check 随 V154-B 最终门复跑。
+
+## 2026-08-31 · V154-B · DONE / V1.5.4 最终验收
+
+- 产品负责人已在真实窗口完成最终体验确认：文件夹展开/收起独立于选中、就地新建、文件拖入目录与待整理并重启保持、文件夹同级排序/跨级移动/移回顶层与环拒绝、文件/文件夹右键菜单（空白或 Escape 关闭）、课程详情阶段默认收起与独立展开——6 点全部通过。
+- 最终门复跑：`npm test` 57 files / 215 tests passed、1 skipped ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅（仅 CRLF 换行提示，无空白错误）；未运行 portable/installer。
+- Git：最终确认提交 `v1.5.4(V154-B): record final acceptance` 与通过标签 `checkpoint-V1.5.4-pass` 一并创建；未 push、未移动任何既有 checkpoint。
