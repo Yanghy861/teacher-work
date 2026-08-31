@@ -129,3 +129,12 @@
 - 文件和文件夹均提供应用内右键菜单。文件菜单覆盖打开、定位、复制到课次、移动到目录/待整理和移除；文件夹菜单覆盖新建子文件夹、重命名和删除；
 - 本增量不做外部资料树与素材库之间的跨页面拖拽、不接管 Windows 资源管理器拖放、不新增批量选择、云同步或物理文件整理；
 - 不新增 schema/migration 或 IPC 通道。复用现有 `material-library:move-file` 与 `material-library:reorder-folder`，后者扩展 `parentId` 并由 Main 完成循环校验和原子排序。
+
+## D19 · V1.5.5 正确性与健壮性加固（产品负责人确认，2026-08-31）
+
+- V1.5.5 承接 2026-08-31 全面分析报告的 P1-1/P1-2/P1-3、P2-4、P2-6 与 P3-8，全部为正确性与健壮性小修，不改用户可见行为与既有验收记录；设计基准 `docs/v1.5.5-hardening-plan.md`；
+- AI 修改范围元数据结构化：`requirement` 标记串继续作为 AI 提示词原样发送，提示词与 `DRAFT_PROMPT_VERSION` 不变；UI 还原改读 `aiMetadata.modification` 结构化键（新可选键，逐字段守卫，旧笔记回退标记解析）；仅扩展现有 `drafts:generate` 载荷（同 D18 先例），不做数据迁移；
+- 补齐 `tests/material-library-ipc.test.ts`，与其余 IPC 模块同等强度；`MaterialLibraryService.getOverview` 恒真 WHERE 简化为零行为变化，“已移除文件仍在 overview、由渲染层分视图”为有意行为并须由测试钉死，不得改为删除过滤；
+- 解析 worker 增加可注入的单作业超时（默认 120 秒），超时按既有 `parse_failed` 语义处理，不引入新状态机；主窗口增加 `setWindowOpenHandler` 拒绝与 `will-navigate` 白名单守卫；
+- 课件版本发布改为“含软删除文件的锚定 MAX+1”，避免历史版本号复用；`isConstraintError` 改为错误码优先、消息匹配兜底；树操作 O(全表) 维持接受并记录 revisit 条件（节点数 > ~5k）；
+- 不新增 schema/migration 或 IPC 通道；基线 `checkpoint-V1.5.4-pass` 已创建；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer。

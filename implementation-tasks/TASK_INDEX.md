@@ -50,3 +50,15 @@ V15 任务必须按编号顺序执行；同一时刻最多一个里程碑为 `IN
 | [V1532-B](v1.5.3.2-tasks/V1532-B-material-library-ipc.md) | DONE | 目录查询、新建、重命名、移动、删除、排序与复制流转 IPC | typecheck、lint、build 通过 |
 | [V1532-C](v1.5.3.2-tasks/V1532-C-material-library-ui.md) | DONE | 逻辑目录树、文件区、明确资料流转文案 | UI 契约测试、typecheck、lint、build 通过 |
 | [V1532-D](v1.5.3.2-tasks/V1532-D-final-gate.md) | IN_PROGRESS | 全量回归与最终体验确认 | 产品负责人走查后决定是否创建标签 |
+
+## V1.5.5 已立项后续增量（正确性与健壮性加固）
+
+方案：[`docs/v1.5.5-hardening-plan.md`](../docs/v1.5.5-hardening-plan.md)；决策 D19。基线 `checkpoint-V1.5.4-pass` 已创建；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer。
+
+| 里程碑 | 前置 | 核心产物 | 验收 |
+|---|---|---|---|
+| [V155-A](v1.5.5-tasks/V155-A-draft-modification-scope-metadata.md) | `checkpoint-V1.5.4-pass` | AI 修改范围结构化元数据、draft-scope 纯模块、旧笔记回退 | 相关测试 + typecheck + lint |
+| [V155-B](v1.5.5-tasks/V155-B-material-library-ipc-test-and-overview-fix.md) | V155-A | 素材库 IPC 测试补齐、getOverview 零行为简化与行为钉死 | 新测试 + typecheck + lint |
+| [V155-C](v1.5.5-tasks/V155-C-parser-timeout-and-window-guard.md) | V155-B | 解析单作业超时、窗口导航守卫 | 相关测试 + typecheck + lint |
+| [V155-D](v1.5.5-tasks/V155-D-version-counting-and-constraint-error-code.md) | V155-C | 版本计数 MAX+1、约束错误码修正 | 相关测试 + typecheck + lint |
+| [V155-E](v1.5.5-tasks/V155-E-final-gate.md) | V155-A–D | 全量回归 + 隔离 Windows 冒烟 + 验收文档 | 最终验收；确认后创建 `checkpoint-V1.5.5-pass` |

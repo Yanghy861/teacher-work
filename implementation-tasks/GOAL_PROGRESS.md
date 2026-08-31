@@ -1044,3 +1044,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 产品负责人已在真实窗口完成最终体验确认：文件夹展开/收起独立于选中、就地新建、文件拖入目录与待整理并重启保持、文件夹同级排序/跨级移动/移回顶层与环拒绝、文件/文件夹右键菜单（空白或 Escape 关闭）、课程详情阶段默认收起与独立展开——6 点全部通过。
 - 最终门复跑：`npm test` 57 files / 215 tests passed、1 skipped ✅；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅（仅 CRLF 换行提示，无空白错误）；未运行 portable/installer。
 - Git：最终确认提交 `v1.5.4(V154-B): record final acceptance` 与通过标签 `checkpoint-V1.5.4-pass` 一并创建；未 push、未移动任何既有 checkpoint。
+
+## 2026-08-31 · V1.5.5 立项（plan 提交）
+
+- 背景：基于 2026-08-31 对 V1.5.4 收尾基线的全面分析报告（P1/P2/P3 技术债清单），产品负责人确认拆分为两个后续增量并落盘立项；V1.5.4 已于本日闭环（`checkpoint-V1.5.4-pass`）。
+- V1.5.5 正确性与健壮性加固（V155-A–E）：AI 修改范围元数据结构化（提示词不变、UI 还原改读 `aiMetadata.modification` 结构化键、旧笔记回退标记解析）、素材库 IPC 补测试、getOverview 恒真 WHERE 简化与行为钉死、解析 worker 单作业超时、窗口导航守卫、版本计数含软删除的锚定 MAX+1 与约束错误码修正；决策 D19，设计基准 `docs/v1.5.5-hardening-plan.md`。
+- 安全边界：不新增 schema/migration/IPC 通道；唯一载荷扩展为 `drafts:generate` 可选键 `modification`（同 D18 先例）；AI 提示词与 `DRAFT_PROMPT_VERSION` 不变；不改写既有 checkpoint 与验收记录。
+- Git：本条目随 `plan(V1.5.5)` 提交；里程碑使用 `v1.5.5(V155-XX)`；不自动 push、不运行 portable/installer。
