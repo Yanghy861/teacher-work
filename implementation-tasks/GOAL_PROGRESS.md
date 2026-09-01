@@ -1130,3 +1130,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 门禁：全量 62 files / 255 passed / 1 skipped（+11）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净；零 IPC/schema 变化。
 - 过程注记：happy-dom DOM 型测试与项目 node 环境基建不合（act 告警 + vitest 可选 peer 自动补装污染 lockfile），已彻底移除并恢复 lockfile，改用"纯逻辑单测 + 字符串合同测试"既有模式。
 - Git：本地提交 `v1.5.6(V156-C): introduce shared core overview provider and migrate pages`。
+
+## 2026-09-01 · V156-D 完成：向导去重与静态渲染测试
+
+- 新增 `quick-course-wizard-orchestration.ts`（`useQuickCourseWizardOrchestration`）：两向导重复的步骤 1–2 编排收敛为单点（state、花名册解析、重名处理、空课次/教学计划输入、放弃确认、去到课次步）；逐向导差异（回退文案两套原值、full 的时长注入与宿主 confirm）经参数保持原值，应用级放弃确认对话框文案收敛到 hook。两向导组件只保留渲染层与 full 特有的步骤 3–4。
+- 字符串合同 pin 重定向（V156-C 先例，意图不变不降级）：`resolveRosterDuplicate`/`confirmDiscard`/`lessonMode: hadLessons ? ...` 三条断言指向编排模块并新增委托断言；其余 pin 原位保留；v1.3-* 全组 17 tests 通过。
+- 静态渲染测试升级（加法）：`static-render-v156-d.test.ts`（10 tests）覆盖 managed-files-panel 树结构/拖拽 affordance 类/aria/右键菜单 role=menu 三分区骨架与禁用守卫、LessonsSection 阶段默认收起（V154 合同）与展开徽章、draft-panel 收件箱/备课两初始态、App 外壳 8 项导航。为可测做最小导出/抽取（`FolderBranch`/`LibraryButton`/`FileList`/`FileSummary`/`MaterialContextMenu`/`LessonsSection`），JSX 与行为逐字节不变。拖拽运行时验证仍归产品负责人手工确认单。
+- 门禁：全量 63 files / 265 passed / 1 skipped（+10）、typecheck 0 错误、lint 通过、`git diff --check` 干净。
+- Git：本地提交 `v1.5.6(V156-D): dedupe quick course wizard orchestration and add static render tests`。

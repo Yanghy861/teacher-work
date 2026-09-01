@@ -1,22 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import type { CoreOverview, CourseMode, StudentRecord } from '../shared/core-contracts'
+import { useQuickCourseWizardOrchestration } from './quick-course-wizard-orchestration'
 import {
-  buildEmptyLessons,
-  createInitialQuickCourseWizardState,
   formatLessonPreviewTitle,
-  parseStudentRoster,
-  parseTeachingPlan,
   QUICK_COURSE_LESSON_LIMIT_MESSAGE,
-  resolveRosterDuplicate,
   validateQuickCourseStep,
   type QuickCourseWizardState,
   type QuickLessonMode,
   type QuickRosterEntry,
   type RosterResolution,
 } from './quick-course-wizard-model'
-import { useAppDialog } from './app-confirm-dialog'
-import { toErrorMessage } from './ui-utils'
 
 const wizardSteps = ['课程与学生', '阶段与课次', '上课安排', '检查并创建'] as const
 
@@ -39,130 +33,32 @@ export default function QuickCourseWizardBasics({
   readonly onDraftChange?: (state: QuickCourseWizardState) => void
   readonly onContinueToSchedule: (state: QuickCourseWizardState) => void
 }): React.JSX.Element {
-  const { confirm } = useAppDialog()
-  const [state, setState] = useState<QuickCourseWizardState>(
-    initialState ?? createInitialQuickCourseWizardState(),
-  )
-  const [rosterText, setRosterText] = useState(
-    initialRosterText ?? state.roster.entries.map((entry) => entry.name).join('\n'),
-  )
-  const [emptyCountText, setEmptyCountText] = useState(
-    state.lessonMode === 'empty' && state.lessons.length > 0
-      ? state.lessons.length.toString()
-      : '16',
-  )
-  const [planText, setPlanText] = useState(
-    state.lessonMode === 'plan' ? state.lessons.map((lesson) => lesson.title).join('\n') : '',
-  )
-  const [lessonInputError, setLessonInputError] = useState('')
-  const [duplicateEntry, setDuplicateEntry] = useState<QuickRosterEntry | null>(null)
-  const step = state.currentStep === 1 ? 1 : 2
+  const orchestration = useQuickCourseWizardOrchestration({
+    overview,
+    initialState,
+    initialRosterText,
+    lessonInputFallbackMessage: '输入无效。',
+    confirmDiscard,
+    onClose,
+    onDraftChange,
+  })
+  const { state, rosterText, emptyCountText, planText, lessonInputError, duplicateEntry, step } = orchestration
   const validation = useMemo(
     () => validateQuickCourseStep(state, step),
     [state, step],
   )
 
-  function commitState(next: QuickCourseWizardState): void {
-    setState(next)
-    onDraftChange?.(next)
-  }
-
-  function updateState(patch: Partial<QuickCourseWizardState>): void {
-    commitState({ ...state, ...patch })
-  }
-
-  async function requestClose(): Promise<void> {
-    const hasContent =
-      state.courseTitle.trim() !== '' ||
-      rosterText.trim() !== '' ||
-      state.lessons.length > 0
-    if (!hasContent) {
-      onClose()
-      return
-    }
-    const confirmed = confirmDiscard !== undefined
-      ? await confirmDiscard()
-      : await confirm({
-        title: '放弃快速建课？',
-        description: '当前已填写的课程、学生或课次内容尚未创建，放弃后不会保留。',
-        confirmLabel: '放弃并关闭',
-        destructive: true,
-      })
-    if (confirmed) onClose()
-  }
-
-  function updateRoster(value: string): void {
-    setRosterText(value)
-    updateState({ roster: parseStudentRoster(value, overview.students) })
-  }
-
-  function updateMode(mode: CourseMode): void {
-    updateState({ mode })
-  }
-
-  function resolveDuplicate(entry: QuickRosterEntry, resolution: RosterResolution): void {
-    const roster = resolveRosterDuplicate(state.roster, entry.name, resolution)
-    updateState({ roster })
-    setDuplicateEntry(null)
-  }
-
-  function goToLessons(): void {
-    const stepValidation = validateQuickCourseStep(state, 1)
-    if (!stepValidation.valid) return
-    const hadLessons = state.lessons.length > 0
-    let lessons = state.lessons
-    if (!hadLessons) {
-      lessons = buildEmptyLessons(16)
-      setEmptyCountText('16')
-    }
-    commitState({ ...state, currentStep: 2, lessonMode: hadLessons ? state.lessonMode : 'empty', lessons })
-  }
-
-  function selectLessonMode(mode: QuickLessonMode): void {
-    setLessonInputError('')
-    if (mode === 'empty') {
-      updateEmptyLessons(emptyCountText)
-      return
-    }
-    updateTeachingPlan(planText)
-  }
-
-  function updateEmptyLessons(value: string): void {
-    setEmptyCountText(value)
-    const count = Number(value)
-    try {
-      const lessons = buildEmptyLessons(count)
-      setLessonInputError('')
-      updateState({ lessonMode: 'empty', lessons })
-    } catch (error) {
-      setLessonInputError(toErrorMessage(error, '输入无效。'))
-      updateState({ lessonMode: 'empty', lessons: [] })
-    }
-  }
-
-  function updateTeachingPlan(value: string): void {
-    setPlanText(value)
-    try {
-      const lessons = parseTeachingPlan(value)
-      setLessonInputError('')
-      updateState({ lessonMode: 'plan', lessons })
-    } catch (error) {
-      setLessonInputError(toErrorMessage(error, '输入无效。'))
-      updateState({ lessonMode: 'plan', lessons: [] })
-    }
-  }
-
   function continueToSchedule(): void {
     const stepValidation = validateQuickCourseStep(state, 2)
     if (!stepValidation.valid || lessonInputError !== '') return
     const next = { ...state, currentStep: 3 as const }
-    commitState(next)
+    orchestration.commitState(next)
     onContinueToSchedule(next)
   }
 
   return (
     <div className="modal-backdrop quick-course-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) void requestClose()
+      if (event.target === event.currentTarget) void orchestration.requestClose()
     }}>
       <section
         className="quick-course-wizard"
@@ -172,7 +68,7 @@ export default function QuickCourseWizardBasics({
       >
         <header className="quick-course-heading">
           <h2 id="quick-course-title">快速建课</h2>
-          <button className="modal-close" type="button" aria-label="关闭" onClick={() => void requestClose()}>×</button>
+          <button className="modal-close" type="button" aria-label="关闭" onClick={() => void orchestration.requestClose()}>×</button>
         </header>
 
         <ol className="quick-course-steps" aria-label="快速建课步骤">
@@ -200,10 +96,10 @@ export default function QuickCourseWizardBasics({
               state={state}
               rosterText={rosterText}
               busy={busy}
-              onCourseTitleChange={(courseTitle) => updateState({ courseTitle })}
-              onModeChange={updateMode}
-              onRosterTextChange={updateRoster}
-              onOpenDuplicate={setDuplicateEntry}
+              onCourseTitleChange={(courseTitle) => orchestration.updateState({ courseTitle })}
+              onModeChange={orchestration.updateMode}
+              onRosterTextChange={orchestration.updateRoster}
+              onOpenDuplicate={orchestration.setDuplicateEntry}
             />
           ) : (
             <PeriodLessonsStep
@@ -212,10 +108,10 @@ export default function QuickCourseWizardBasics({
               planText={planText}
               inputError={lessonInputError}
               busy={busy}
-              onPeriodTitleChange={(periodTitle) => updateState({ periodTitle })}
-              onLessonModeChange={selectLessonMode}
-              onEmptyCountChange={updateEmptyLessons}
-              onPlanTextChange={updateTeachingPlan}
+              onPeriodTitleChange={(periodTitle) => orchestration.updateState({ periodTitle })}
+              onLessonModeChange={orchestration.selectLessonMode}
+              onEmptyCountChange={orchestration.updateEmptyLessons}
+              onPlanTextChange={orchestration.updateTeachingPlan}
             />
           )}
         </div>
@@ -225,7 +121,7 @@ export default function QuickCourseWizardBasics({
             className="secondary-button"
             type="button"
             disabled={busy}
-            onClick={step === 1 ? () => void requestClose() : () => updateState({ currentStep: 1 })}
+            onClick={step === 1 ? () => void orchestration.requestClose() : () => orchestration.updateState({ currentStep: 1 })}
           >
             {step === 1 ? '取消' : '上一步'}
           </button>
@@ -239,7 +135,7 @@ export default function QuickCourseWizardBasics({
               className="primary-button"
               type="button"
               disabled={busy || !validation.valid || lessonInputError !== ''}
-              onClick={step === 1 ? goToLessons : continueToSchedule}
+              onClick={step === 1 ? orchestration.goToLessons : continueToSchedule}
             >
               下一步
             </button>
@@ -251,8 +147,8 @@ export default function QuickCourseWizardBasics({
             overview={overview}
             entry={duplicateEntry}
             busy={busy}
-            onCancel={() => setDuplicateEntry(null)}
-            onResolve={(resolution) => resolveDuplicate(duplicateEntry, resolution)}
+            onCancel={() => orchestration.setDuplicateEntry(null)}
+            onResolve={(resolution) => orchestration.resolveDuplicate(duplicateEntry, resolution)}
           />
         )}
       </section>

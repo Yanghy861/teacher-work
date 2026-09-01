@@ -6,28 +6,21 @@ import {
   applyLessonDuration,
   applyUnscheduledLessons,
   buildCreateCourseSetupRequest,
-  buildEmptyLessons,
   buildScheduleReview,
   clearLessonSchedule,
-  createInitialQuickCourseWizardState,
   formatLessonPreviewTitle,
   generateRegularSchedule,
   getFreeDateMismatch,
-  parseStudentRoster,
-  parseTeachingPlan,
-  resolveRosterDuplicate,
   setLessonLocalSchedule,
   syncEmptyLessonsToDateCount,
   toggleSelectedDate,
   validateQuickCourseStep,
   type QuickCourseWizardState,
   type QuickLessonDraft,
-  type QuickLessonMode,
-  type QuickRosterEntry,
   type QuickScheduleMode,
   type RegularRepeat,
-  type RosterResolution,
 } from './quick-course-wizard-model'
+import { useQuickCourseWizardOrchestration } from './quick-course-wizard-orchestration'
 import {
   CourseStudentsStep,
   DuplicateStudentDialog,
@@ -50,19 +43,6 @@ export default function QuickCourseWizard({
   readonly confirm?: (message: string) => boolean | Promise<boolean>
 }): React.JSX.Element {
   const { confirm: appConfirm } = useAppDialog()
-  const initial = useMemo(() => createInitialQuickCourseWizardState(), [])
-  const today = useMemo(() => toLocalDateKey(new Date()), [])
-  const [state, setState] = useState<QuickCourseWizardState>(initial)
-  const [rosterText, setRosterText] = useState('')
-  const [emptyCountText, setEmptyCountText] = useState('16')
-  const [planText, setPlanText] = useState('')
-  const [lessonInputError, setLessonInputError] = useState('')
-  const [duplicateEntry, setDuplicateEntry] = useState<QuickRosterEntry | null>(null)
-  const [regularFirstDate, setRegularFirstDate] = useState(today)
-  const [regularTime, setRegularTime] = useState('14:00')
-  const [regularRepeat, setRegularRepeat] = useState<RegularRepeat>('weekly')
-  const [excludedDates, setExcludedDates] = useState<string[]>([])
-  const [exceptionDate, setExceptionDate] = useState('')
   const [durationText, setDurationText] = useState('90')
   const [freeDateTime, setFreeDateTime] = useState('14:00')
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -70,81 +50,44 @@ export default function QuickCourseWizard({
   const [editingLesson, setEditingLesson] = useState<QuickLessonDraft | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<{ message: string; step: 1 | 2 | 3 | 4 } | null>(null)
+  const today = useMemo(() => toLocalDateKey(new Date()), [])
+  const [regularFirstDate, setRegularFirstDate] = useState(today)
+  const [regularTime, setRegularTime] = useState('14:00')
+  const [regularRepeat, setRegularRepeat] = useState<RegularRepeat>('weekly')
+  const [excludedDates, setExcludedDates] = useState<string[]>([])
+  const [exceptionDate, setExceptionDate] = useState('')
+  const orchestration = useQuickCourseWizardOrchestration({
+    overview,
+    lessonDurationMinutes: () => parseDuration(durationText),
+    lessonInputFallbackMessage: '创建失败，请稍后重试。',
+    confirmDiscard: confirm !== undefined ? () => confirm('放弃当前快速建课内容吗？') : undefined,
+    onClose,
+    onStateCommitted: () => setSubmissionError(null),
+  })
+  const {
+    state,
+    rosterText,
+    emptyCountText,
+    planText,
+    lessonInputError,
+    duplicateEntry,
+    requestClose,
+    updateState,
+    commitState,
+    updateRoster,
+    resolveDuplicate,
+    goToLessons,
+    selectLessonMode,
+    updateEmptyLessons,
+    updateTeachingPlan,
+    setDuplicateEntry,
+    setEmptyCountText,
+  } = orchestration
   const validation = useMemo(
     () => validateQuickCourseStep(state, state.currentStep),
     [state],
   )
   const busy = submitting
-
-  function commitState(next: QuickCourseWizardState): void {
-    setState(next)
-    setSubmissionError(null)
-  }
-
-  function updateState(patch: Partial<QuickCourseWizardState>): void {
-    commitState({ ...state, ...patch })
-  }
-
-  async function requestClose(): Promise<void> {
-    const hasContent = state.courseTitle.trim() !== '' || rosterText.trim() !== '' || state.lessons.length > 0
-    if (!hasContent) { onClose(); return }
-    const confirmed = confirm !== undefined
-      ? await confirm('放弃当前快速建课内容吗？')
-      : await appConfirm({
-        title: '放弃快速建课？',
-        description: '当前已填写的课程、学生或课次内容尚未创建，放弃后不会保留。',
-        confirmLabel: '放弃并关闭',
-        destructive: true,
-      })
-    if (confirmed) onClose()
-  }
-
-  function updateRoster(value: string): void {
-    setRosterText(value)
-    updateState({ roster: parseStudentRoster(value, overview.students) })
-  }
-
-  function resolveDuplicate(entry: QuickRosterEntry, resolution: RosterResolution): void {
-    updateState({ roster: resolveRosterDuplicate(state.roster, entry.name, resolution) })
-    setDuplicateEntry(null)
-  }
-
-  function goToLessons(): void {
-    if (!validateQuickCourseStep(state, 1).valid) return
-    const hadLessons = state.lessons.length > 0
-    const lessons = hadLessons ? state.lessons : buildEmptyLessons(16)
-    commitState({ ...state, currentStep: 2, lessonMode: hadLessons ? state.lessonMode : 'empty', lessons })
-  }
-
-  function selectLessonMode(mode: QuickLessonMode): void {
-    setLessonInputError('')
-    if (mode === 'empty') updateEmptyLessons(emptyCountText)
-    else updateTeachingPlan(planText)
-  }
-
-  function updateEmptyLessons(value: string): void {
-    setEmptyCountText(value)
-    try {
-      const lessons = buildEmptyLessons(Number(value), parseDuration(durationText))
-      setLessonInputError('')
-      updateState({ lessonMode: 'empty', lessons })
-    } catch (error) {
-      setLessonInputError(toErrorMessage(error, '创建失败，请稍后重试。'))
-      updateState({ lessonMode: 'empty', lessons: [] })
-    }
-  }
-
-  function updateTeachingPlan(value: string): void {
-    setPlanText(value)
-    try {
-      const lessons = parseTeachingPlan(value, parseDuration(durationText))
-      setLessonInputError('')
-      updateState({ lessonMode: 'plan', lessons })
-    } catch (error) {
-      setLessonInputError(toErrorMessage(error, '创建失败，请稍后重试。'))
-      updateState({ lessonMode: 'plan', lessons: [] })
-    }
-  }
 
   function goToSchedule(): void {
     if (!validateQuickCourseStep(state, 2).valid || lessonInputError !== '') return

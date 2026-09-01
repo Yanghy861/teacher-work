@@ -153,12 +153,15 @@ describe('V13-03 quick course wizard basics UI', () => {
 
   it('keeps V13-03 isolated from persistence and fixes the 100-lesson boundary in UI', () => {
     const componentSource = readSource('../src/renderer/quick-course-wizard.tsx')
+    const orchestrationSource = readSource('../src/renderer/quick-course-wizard-orchestration.ts')
     const stylesheet = readSource('../src/renderer/styles.css')
 
     expect(componentSource).toContain('QUICK_COURSE_LESSON_LIMIT_MESSAGE')
     expect(componentSource).toContain('max="100"')
-    expect(componentSource).toContain('resolveRosterDuplicate')
-    expect(componentSource).toContain('confirmDiscard')
+    // V156-D：步骤 1–2 编排收敛到共享 hook 后，重名与放弃确认逻辑随之迁移（意图不变）
+    expect(orchestrationSource).toContain('resolveRosterDuplicate')
+    expect(orchestrationSource).toContain('confirmDiscard')
+    expect(componentSource).toContain('useQuickCourseWizardOrchestration')
     expect(componentSource).not.toContain('createCourseSetup(')
     expect(stylesheet).toContain('.quick-course-two-column')
     expect(stylesheet).toContain('.quick-duplicate-dialog')

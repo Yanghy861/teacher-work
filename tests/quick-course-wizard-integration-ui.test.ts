@@ -141,13 +141,15 @@ describe('V13-04 quick course scheduling and integration UI', () => {
 
   it('uses the single atomic setup API and preserves the maintenance entry points', () => {
     const wizardSource = readSource('../src/renderer/quick-course-wizard-full.tsx')
+    const orchestrationSource = readSource('../src/renderer/quick-course-wizard-orchestration.ts')
     const dashboardSource = readSource('../src/renderer/course-dashboard.tsx')
     const detailSource = readSource('../src/renderer/course-detail.tsx')
 
     expect(wizardSource.match(/\.createCourseSetup\(/gu)).toHaveLength(1)
     expect(wizardSource).not.toContain('.createStudent(')
     expect(wizardSource).not.toContain('.createLesson(')
-    expect(wizardSource).toContain("lessonMode: hadLessons ? state.lessonMode : 'empty'")
+    // V156-D：步骤 1–2 编排（含 goToLessons 的 lessonMode 保留逻辑）收敛到共享 hook（意图不变）
+    expect(orchestrationSource).toContain("lessonMode: hadLessons ? state.lessonMode : 'empty'")
     expect(wizardSource).toContain("state.scheduleMode !== 'free_dates' || state.selectedFreeDates.length === 0")
     expect(wizardSource).toContain('onFreeDateTimeChange={updateFreeDateTime}')
     expect(dashboardSource).toContain('+ 快速建课')

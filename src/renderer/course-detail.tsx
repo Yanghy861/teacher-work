@@ -208,7 +208,7 @@ export default function CourseDetail({
   )
 }
 
-function LessonsSection({
+export function LessonsSection({
   overview,
   summary,
   viewedLesson,
