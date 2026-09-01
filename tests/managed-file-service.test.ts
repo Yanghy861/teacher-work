@@ -150,6 +150,69 @@ describe('L02 managed file service', () => {
     ]))
   })
 
+  it('never reuses a soft-deleted version number when publishing (V155-D)', () => {
+    const fixture = createFixture()
+    const course = fixture.core.nodes.createCourse('软删课程', 'class')
+    const period = fixture.core.nodes.createPeriod(course.id, '阶段')
+    const lesson = fixture.core.nodes.createLesson(period.id, '软删课次')
+    const metadata = {
+      noteKind: 'lecture' as const,
+      aiMetadata: {
+        kind: 'lecture' as const,
+        promptVersion: 'v155d-test',
+        provider: 'openai-compatible',
+        model: 'fake-model',
+        sources: [{ fileId: 'any-file', charsSent: 1 }],
+        inputChars: 1,
+        maxChars: 100,
+        maxTokens: 100,
+      },
+    }
+
+    const firstDraft = fixture.core.createLessonDraft(lesson.id, '# 第 1 版', metadata)
+    const first = fixture.files.publishLessonDraftVersion(firstDraft.id)
+    expect(first.version).toBe(1)
+
+    const secondDraft = fixture.core.createLessonDraft(lesson.id, '# 第 2 版', metadata)
+    const second = fixture.files.publishLessonDraftVersion(secondDraft.id)
+    expect(second.version).toBe(2)
+
+    fixture.files.softDeleteFile(second.file.id)
+
+    const thirdDraft = fixture.core.createLessonDraft(lesson.id, '# 第 3 版', metadata)
+    const third = fixture.files.publishLessonDraftVersion(thirdDraft.id)
+    expect(third.version).toBe(3)
+    expect(third.file.originalName).toBe('软删课次 · 第 3 版.md')
+  })
+
+  it('takes the manual highest version number into account instead of counting matches (V155-D)', () => {
+    const fixture = createFixture()
+    const course = fixture.core.nodes.createCourse('手工课程', 'class')
+    const period = fixture.core.nodes.createPeriod(course.id, '阶段')
+    const lesson = fixture.core.nodes.createLesson(period.id, '手工课次')
+    const manualPath = join(fixture.baseDirectory, '手工课次 · 第 9 版.md')
+    writeFileSync(manualPath, '# 手工导入的第 9 版', 'utf8')
+    fixture.files.importToLesson(manualPath, lesson.id)
+    const metadata = {
+      noteKind: 'lecture' as const,
+      aiMetadata: {
+        kind: 'lecture' as const,
+        promptVersion: 'v155d-test',
+        provider: 'openai-compatible',
+        model: 'fake-model',
+        sources: [{ fileId: 'any-file', charsSent: 1 }],
+        inputChars: 1,
+        maxChars: 100,
+        maxTokens: 100,
+      },
+    }
+
+    const draft = fixture.core.createLessonDraft(lesson.id, '# 第 10 版', metadata)
+    const published = fixture.files.publishLessonDraftVersion(draft.id)
+    expect(published.version).toBe(10)
+    expect(published.file.originalName).toBe('手工课次 · 第 10 版.md')
+  })
+
   it('soft deletes and restores a file without removing its managed object', () => {
     const fixture = createFixture()
     const record = fixture.files.importFile(createSource(fixture))

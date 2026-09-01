@@ -316,16 +316,19 @@ export class ManagedFileService {
     const lessonTitle = this.database
       .prepare('SELECT title FROM nodes WHERE id = ?')
       .get(lessonId) as { readonly title: string }
-    const publishedCount = this.database
+    const versionRows = this.database
       .prepare(
-        `SELECT COUNT(*) AS count
+        `SELECT f.original_name AS original_name
           FROM lesson_files lf
           JOIN files f ON f.id = lf.file_id
-         WHERE lf.lesson_id = ? AND f.deleted_at IS NULL
+         WHERE lf.lesson_id = ?
             AND f.original_name LIKE '% · 第 % 版.md'`,
       )
-      .get(lessonId) as { readonly count: number }
-    const version = publishedCount.count + 1
+      .all(lessonId) as Array<{ readonly original_name: string }>
+    const version = versionRows.reduce((max, row) => {
+      const match = / · 第 (\d+) 版\.md$/u.exec(row.original_name)
+      return match === null ? max : Math.max(max, Number(match[1]))
+    }, 0) + 1
     const originalName = `${lessonTitle.title} · 第 ${version} 版.md`
     const file = this.createTextObjectAndRegister(body, originalName, { targetType: 'lesson', targetId: lessonId })
     this.transaction(() => {

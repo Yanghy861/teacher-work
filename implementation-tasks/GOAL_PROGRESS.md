@@ -1076,6 +1076,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动门：相关 9 tests ✅、typecheck ✅、lint ✅。
 - Git：里程碑提交 `v1.5.5(V155-C)`；未 push。
 
+## 2026-08-31 · V155-D · DONE
+
+- 版本计数：`publishLessonDraftVersion` 由 COUNT+1 改为含软删除文件的锚定 MAX+1（正则 `/ · 第 (\d+) 版\.md$/u`）；软删 v2 后再发布得 v3（不重号）；手工导入 `… · 第 9 版.md` 后发布得 v10（取最大值而非计数）；删除后版本号留空洞为诚实的历史记录。
+- 约束错误码：`isConstraintError` 先查 better-sqlite3 `SQLITE_CONSTRAINT` 前缀错误码（FK 约束不再误判），消息匹配降级为兜底；导出供测试，真实重复关联路径验证 STUDENT_ALREADY_LINKED 不回归。
+- 顺带：修复 V155-C 定时器声明的 lint `prefer-const`（`const timeout` 于处理器定义前创建，语义不变，parser 6 tests 复跑通过）。
+- 自动门：相关 32 tests ✅、typecheck ✅、lint ✅。
+- Git：里程碑提交 `v1.5.5(V155-D)`；未 push。
+
 ## 2026-08-31 · V1.5.6 立项（plan 提交）
 
 - V1.5.6 可维护性技术债清理（V156-A–E）：共享工具收敛、CSS 设计令牌、overview 共享缓存与分页迁移、快速建课向导去重、覆盖率基线与静态渲染测试升级；决策 D20，设计基准 `docs/v1.5.6-maintainability-plan.md`。

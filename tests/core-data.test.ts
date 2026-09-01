@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import { describe, expect, it } from 'vitest'
 
-import { CoreDataService } from '../src/main/data/core-data-service'
+import { CoreDataService, isConstraintError } from '../src/main/data/core-data-service'
 import { runMigrations } from '../src/main/db/migrations'
 import { isCoreOverview, isCourseStudentLink } from '../src/shared/core-contracts'
 
@@ -182,6 +182,30 @@ describe('L01 core data tree', () => {
         studentId: null,
         createdAt: '2026-08-20T00:00:00.000Z',
       })).toBe(false)
+    } finally {
+      database.close()
+    }
+  })
+
+  it('recognizes SQLite error codes and legacy message shapes as constraint errors (V155-D)', () => {
+    const { database, service } = createService()
+    try {
+      const course = service.nodes.createCourse('约束课程', 'class')
+      const student = service.createStudentForCourse(course.id, '约束学生')
+      expect(() => service.linkStudentToCourse(course.id, student.id)).toThrowError(
+        expect.objectContaining({ code: 'STUDENT_ALREADY_LINKED' }),
+      )
+
+      const codeShaped = Object.assign(
+        new Error('SQLITE_CONSTRAINT_FOREIGNKEY: foreign key constraint failed'),
+        { code: 'SQLITE_CONSTRAINT_FOREIGNKEY' },
+      )
+      expect(isConstraintError(codeShaped)).toBe(true)
+      const legacyMessage = new Error('UNIQUE constraint failed: course_students.course_id, course_students.student_id')
+      expect(isConstraintError(legacyMessage)).toBe(true)
+      const unrelated = new Error('no such table: missing_table')
+      expect(isConstraintError(unrelated)).toBe(false)
+      expect(isConstraintError(null)).toBe(false)
     } finally {
       database.close()
     }

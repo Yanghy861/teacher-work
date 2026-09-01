@@ -301,7 +301,19 @@ export class DocumentIndexWorker {
     const requestId = ++this.requestSequence
     return new Promise<ParsedDocument>((resolve, reject) => {
       this.activeRequest = { requestId, resolve, reject }
-      let timeout: NodeJS.Timeout | undefined
+      const timeout = setTimeout(() => {
+        if (this.activeRequest?.requestId !== requestId) {
+          return
+        }
+        worker.off('message', onMessage)
+        worker.off('error', onError)
+        worker.off('exit', onExit)
+        this.activeRequest = null
+        this.worker = null
+        void worker.terminate().catch(() => undefined)
+        reject(new ParseTimeoutError(this.parseTimeoutMs))
+      }, this.parseTimeoutMs)
+      timeout.unref()
       const onMessage = (message: WorkerMessage): void => {
         if (message.requestId !== requestId || this.activeRequest?.requestId !== requestId) {
           return
@@ -337,19 +349,6 @@ export class DocumentIndexWorker {
       worker.on('message', onMessage)
       worker.on('error', onError)
       worker.on('exit', onExit)
-      timeout = setTimeout(() => {
-        if (this.activeRequest?.requestId !== requestId) {
-          return
-        }
-        worker.off('message', onMessage)
-        worker.off('error', onError)
-        worker.off('exit', onExit)
-        this.activeRequest = null
-        this.worker = null
-        void worker.terminate().catch(() => undefined)
-        reject(new ParseTimeoutError(this.parseTimeoutMs))
-      }, this.parseTimeoutMs)
-      timeout.unref()
       const request: WorkerRequest = { type: 'parse', requestId, filePath, originalName }
       worker.postMessage(request)
     })

@@ -852,6 +852,10 @@ function mapNote(row: NoteRow): NoteRecord {
   }
 }
 
-function isConstraintError(error: unknown): boolean {
+export function isConstraintError(error: unknown): boolean {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const code = (error as { code?: unknown }).code
+    if (typeof code === 'string' && code.startsWith('SQLITE_CONSTRAINT')) return true
+  }
   return error instanceof Error && error.message.includes('UNIQUE constraint failed')
 }
