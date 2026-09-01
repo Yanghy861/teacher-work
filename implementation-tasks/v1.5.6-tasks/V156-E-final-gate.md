@@ -1,6 +1,6 @@
 # V156-E · V1.5.6 最终回归与版本验收
 
-**状态：** `IN_PROGRESS`（2026-09-01；自动门与隔离冒烟已通过并记录于 `docs/v1.5.6-acceptance.md`，按 2026-08-31 裁决与 V1.5.5 合并验收，待产品负责人最终确认）
+**状态：** `DONE`（2026-09-01 产品负责人最终确认通过）
 
 ## 前置
 
@@ -20,3 +20,8 @@
 - 隔离冒烟：独立 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA` + `--user-data-dir` 启动 production Electron，主窗口进程存活（两次采样），`workspace.db` / `search.db`（含 WAL/SHM）创建成功，stderr 无错误；进程与临时目录已清理。
 - 行为不变性：等值替换/文案原值/合并语义均有单测或逐字节对比证明；两处已知更优差异（draft-panel 随 onContentChanged 感知、runAction 通知不再被刷新失败吞掉）已在验收文档记录在案。
 - 待办：产品负责人与 V1.5.5 一次走查（清单见验收文档"待最终确认"节）；通过后依版本顺序创建两个 checkpoint。
+
+## 最终验收记录（2026-09-01）
+
+- 产品负责人已在真实窗口完成最终体验确认（按 2026-08-31 裁决与 V1.5.5 合并走查）：建课双入口、课程/学生页刷新与切页观感、教学内容两模式、素材库/题库/搜索不回归、整体视觉零变化——6 点全部通过（详见 `docs/v1.5.6-acceptance.md` 体验确认记录）。
+- Git：最终确认提交 `v1.5.6(V156-E): record final acceptance` 与通过标签 `checkpoint-V1.5.6-pass` 一并创建（依版本顺序晚于 `checkpoint-V1.5.5-pass`）；未运行 portable/installer。

@@ -144,7 +144,7 @@
 | V156-B CSS 设计令牌 | DONE | `:root` 14 令牌（indigo/slate/边线/底色/danger/圆角）落地；styles.css 291 行 + question-bank.css 31 处机械等值替换，目标 hex 零残留、引用全部可解析；全量 244 tests、build、lint、typecheck、diff check 通过 |
 | V156-C overview 共享缓存 | DONE | `CoreOverviewProvider`（快照 + reload/invalidate/clearError）+ `overview-reload-coalescer.ts` 纯模块（in-flight 合并 + 单次跟单）；4 页迁移完成（draft-panel 的 core 拉取并入共享，files/skills 独立拉取保留）；新增 11 tests（coalescer 5 + provider 6）；全量 62 files / 255 tests、build、lint、typecheck 通过；零 IPC/schema 变化 |
 | V156-D 向导去重与静态渲染测试 | DONE | 共享编排 hook `useQuickCourseWizardOrchestration`（步骤 1–2 收敛，逐向导差异参数化保持原值，两组件只剩渲染层/full 特有步骤 3–4）；2 处字符串 pin 按先例重定向到编排模块（意图不变）；新增 `static-render-v156-d.test.ts`（10 tests：树/拖拽 affordance/aria/右键菜单骨架/LessonsSection/draft-panel 两模式/App 外壳），菜单与展示子组件最小导出抽取零行为变化。全量 63 files / 265 tests、typecheck、lint、diff check 通过 |
-| V156-E V1.5.6 最终回归与版本验收 | IN_PROGRESS | 全量 63 files / 265 tests、typecheck、lint、production build、diff check 通过；coverage 终值 54.32%（范围变化说明见验收文档）；隔离 Windows 冒烟通过（workspace.db/search.db 含 WAL 创建、进程清理）；`docs/v1.5.6-acceptance.md` 已写入。待产品负责人与 V1.5.5 合并走查确认后创建 `checkpoint-V1.5.6-pass` |
+| V156-E V1.5.6 最终回归与版本验收 | DONE | 全量 63 files / 265 tests、typecheck、lint、production build、diff check 通过；coverage 终值 54.32%（范围变化说明见验收文档）；隔离 Windows 冒烟通过；产品负责人已于 2026-09-01 完成真实窗口最终确认（建课双入口、课程/学生页、教学内容两模式、素材库/题库/搜索、整体视觉共 6 点全部通过）；`checkpoint-V1.5.6-pass` 创建于最终确认提交 |
 
 基线 `checkpoint-V1.5.5-pass`（待 V155-E 验收后创建）；设计基准 `docs/v1.5.6-maintainability-plan.md`，决策 D20；基线创建前任何任务不得置为 `IN_PROGRESS`。
 
