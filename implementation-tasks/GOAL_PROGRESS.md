@@ -1146,3 +1146,8 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 隔离冒烟：独立 app-data + `--user-data-dir` 启动 production Electron，主窗口进程两次采样存活，`workspace.db` / `search.db`（含 WAL/SHM）创建成功，stderr 无错误；未接触正式工作区与真实资料；进程与临时目录已清理。
 - 验收文档 `docs/v1.5.6-acceptance.md`：实施内容表、自动门数字、覆盖率范围说明、行为不变性说明（两处已知更优差异在案）、冒烟记录、与 V1.5.5 合并走查的 6 点清单。
 - Git：本地提交 `v1.5.6(V156-E): record automated gates and isolated smoke results`；checkpoint 标签待产品负责人确认后依版本顺序创建（先 V1.5.5 后 V1.5.6）。
+
+## 2026-09-01 · V1.5.5 最终验收（产品负责人确认）
+
+- 按 2026-08-31 合并验收裁决，产品负责人一次真实窗口走查覆盖 V1.5.5 与 V1.5.6 两份验收清单；V1.5.5 的 4 点（旧修改节点还原、AI 修改两步流发布编号连续、素材库三视图齐全、全局搜索正常）全部通过。
+- Git：最终确认提交 `v1.5.5(V155-E): record final acceptance` 与通过标签 `checkpoint-V1.5.5-pass` 一并创建（依版本顺序先于 V1.5.6）；未移动任何既有 checkpoint。

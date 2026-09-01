@@ -132,7 +132,7 @@
 | V155-B 素材库 IPC 测试与 overview 查询修正 | DONE | `material-library-ipc.test.ts` 补齐（6 tests）、恒真 WHERE 简化与类型化行接口（零行为变化）、软删除/挂课副本行为钉死完成；相关 11 tests、typecheck、lint 通过 |
 | V155-C 解析超时与窗口导航守卫 | DONE | DocumentParser `parseTimeoutMs`（默认 120s，超时按既有 parse_failed 语义）与 `applyWindowNavigationGuard`（deny window.open + 导航白名单）完成；相关 9 tests、typecheck、lint 通过 |
 | V155-D 版本计数与约束错误码修正 | DONE | 发布版本号改含软删除的锚定 MAX+1（软删不重号、手工高版本号计入）；`isConstraintError` 错误码优先+消息兜底；相关 32 tests、typecheck、lint 通过 |
-| V155-E V1.5.5 最终回归与版本验收 | IN_PROGRESS | 全量 59 files / 238 tests passed（1 skipped）、typecheck、lint、production build、diff check 与隔离启动 smoke 通过；验收记录 `docs/v1.5.5-acceptance.md` 已写入；待产品负责人真实窗口最终确认后创建 `checkpoint-V1.5.5-pass` |
+| V155-E V1.5.5 最终回归与版本验收 | DONE | 全量 59 files / 238 tests passed（1 skipped）、typecheck、lint、production build、diff check 与隔离启动 smoke 通过；产品负责人已于 2026-09-01 完成真实窗口最终确认（旧修改节点还原、AI 修改两步流编号连续、素材库三视图、全局搜索共 4 点全部通过）；`checkpoint-V1.5.5-pass` 创建于最终确认提交 |
 
 基线 `checkpoint-V1.5.4-pass`（已创建）；设计基准 `docs/v1.5.5-hardening-plan.md`，决策 D19；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`。
 
