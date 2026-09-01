@@ -8,6 +8,7 @@ import {
   DRAFT_REQUIREMENT_MAX_CHARS,
   type DraftKind,
   type DraftLessonSnapshot,
+  type DraftModificationScope,
   type DraftNoteMetadata,
   type DraftSkillSnapshot,
   type DraftSourceRef,
@@ -54,6 +55,7 @@ interface ResolvedGenerationInput {
   readonly maxTokens: number
   readonly skill?: DraftSkillSnapshot
   readonly requirement?: string
+  readonly modification?: DraftModificationScope
 }
 
 export class DraftService {
@@ -82,6 +84,7 @@ export class DraftService {
       ...(request.requirement === undefined
         ? {}
         : { requirement: normalizeRequirement(request.requirement) }),
+      ...(request.modification === undefined ? {} : { modification: request.modification }),
     })
   }
 
@@ -110,6 +113,9 @@ export class DraftService {
       ...(original.aiMetadata.requirement === undefined
         ? {}
         : { requirement: original.aiMetadata.requirement }),
+      ...(original.aiMetadata.modification === undefined
+        ? {}
+        : { modification: original.aiMetadata.modification }),
     })
   }
 
@@ -163,6 +169,7 @@ export class DraftService {
       lesson: input.lesson,
       ...(input.skill === undefined ? {} : { skill: input.skill }),
       ...(input.requirement === undefined ? {} : { requirement: input.requirement }),
+      ...(input.modification === undefined ? {} : { modification: input.modification }),
     }
 
     try {

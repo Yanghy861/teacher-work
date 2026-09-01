@@ -299,6 +299,43 @@ describe('L09 context builder and draft generation', () => {
       .toContain('selected source text')
   })
 
+  it('persists structured modification metadata and reuses it on regeneration', async () => {
+    const { core, draft, gateway, fileId, studentId, lessonId } = fixture()
+    let promptCount = 0
+    gateway.requestText = async () => { promptCount += 1; return { text: '# 修改稿', model: 'fake-model' } }
+
+    const modification = {
+      scopeVersion: 1 as const,
+      mode: 'lesson' as const,
+      baselineCount: 2,
+      teacherRequirement: '整课降低难度',
+      confirmedPlan: '先讲概念再练习。',
+    }
+    const first = await draft.generate({
+      requestId: 'modification-persist',
+      kind: 'lecture',
+      studentId,
+      lessonId,
+      requirement: '【AI修改方式：整课重做】\n【自动基线数量：2】\n【生成约束】\n输出一份完整课件。\n【老师修改要求】\n整课降低难度\n【老师已确认的修改方案（请严格按方案修改）】\n先讲概念再练习。',
+      modification,
+      sources: [{ fileId }],
+      maxChars: 100,
+      maxTokens: 100,
+    })
+
+    expect(first.metadata.modification).toEqual(modification)
+    const stored = core.getOverview().notes.find((note) => note.id === first.noteId)
+    expect(stored?.aiMetadata?.modification).toEqual(modification)
+
+    const regenerated = await draft.regenerate({
+      requestId: 'modification-regenerate',
+      noteId: first.noteId,
+    })
+    expect(regenerated.noteId).not.toBe(first.noteId)
+    expect(regenerated.metadata.modification).toEqual(modification)
+    expect(promptCount).toBe(2)
+  })
+
   it('can be retried after an empty/invalid provider response without duplicating a prior note', async () => {
     const { core, search, fileId, studentId, lessonId, skills } = fixture()
     const existing = core.createNote(studentId, '保留的 note', lessonId)

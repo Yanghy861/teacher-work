@@ -128,7 +128,7 @@
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
-| V155-A AI 修改范围元数据结构化 | TODO | `DraftModificationScope` 可选键双轨制、`draft-scope.ts` 纯模块抽取、旧笔记回退解析 |
+| V155-A AI 修改范围元数据结构化 | DONE | `DraftModificationScope` 可选键双轨制、`draft-scope.ts` 纯模块抽取、旧笔记回退解析完成；相关 30 tests、typecheck、lint 通过 |
 | V155-B 素材库 IPC 测试与 overview 查询修正 | TODO | `material-library-ipc.test.ts` 补齐、恒真 WHERE 简化（零行为变化）与行为钉死 |
 | V155-C 解析超时与窗口导航守卫 | TODO | DocumentParser `parseTimeoutMs`（默认 120s）、`applyWindowNavigationGuard` |
 | V155-D 版本计数与约束错误码修正 | TODO | 发布版本号改含软删除的锚定 MAX+1；`isConstraintError` 错误码优先 |

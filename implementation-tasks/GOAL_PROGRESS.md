@@ -1052,6 +1052,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 安全边界：不新增 schema/migration/IPC 通道；唯一载荷扩展为 `drafts:generate` 可选键 `modification`（同 D18 先例）；AI 提示词与 `DRAFT_PROMPT_VERSION` 不变；不改写既有 checkpoint 与验收记录。
 - Git：本条目随 `plan(V1.5.5)` 提交；里程碑使用 `v1.5.5(V155-XX)`；不自动 push、不运行 portable/installer。
 
+## 2026-08-31 · V155-A · DONE
+
+- 合同与数据：`drafts:generate` 载荷新增可选键 `modification`（`DraftModificationScope`：scopeVersion=1、mode、baselineCount 1..100、可选 targetFileId/targetName/confirmedPlan≤800、teacherRequirement≤4000）；`DraftNoteMetadata` 同步增加可选键；严格键集守卫。仅扩展现有通道（D18 先例），无 schema/migration。
+- 双轨制：AI 提示词 `requirement` 标记串与 `DRAFT_PROMPT_VERSION` 完全不变；UI 还原优先读 `aiMetadata.modification` 结构化键，旧笔记回退标记解析；`regenerate` 透传结构化键。
+- Renderer：`buildModeRequirement`/`buildModificationScope`/`parseModificationScope`/`extractMarkedSection`/`modificationNodeLabel`/`buildPublishConfirmation`/`kindLabels` 抽取为纯模块 `src/renderer/draft-scope.ts`（D14 复用惯例），`draft-panel.tsx` 引用。
+- 测试：新增 `tests/draft-scope.test.ts`（9 tests）；`draft-service.test.ts` 增持久化/重新生成用例；`v1.5.3.1-scope-flow`、`v1.5.2-improve-flow` 断言目标随迁移更新（意图不变）。相关 30 tests ✅、typecheck ✅、lint ✅。
+- Git：里程碑提交 `v1.5.5(V155-A)`；未 push。
+
 ## 2026-08-31 · V1.5.6 立项（plan 提交）
 
 - V1.5.6 可维护性技术债清理（V156-A–E）：共享工具收敛、CSS 设计令牌、overview 共享缓存与分页迁移、快速建课向导去重、覆盖率基线与静态渲染测试升级；决策 D20，设计基准 `docs/v1.5.6-maintainability-plan.md`。

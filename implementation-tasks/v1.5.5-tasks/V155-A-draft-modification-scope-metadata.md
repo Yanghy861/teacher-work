@@ -1,11 +1,19 @@
 # V155-A · AI 修改范围元数据结构化
 
-**状态：** `TODO`
+**状态：** `DONE`
 
 ## 前置
 
 - 基线 `checkpoint-V1.5.4-pass` 已创建（V154-B 产品负责人体验确认完成）；
 - 设计基准：`docs/v1.5.5-hardening-plan.md` §2.1。
+
+## 完成记录（2026-08-31）
+
+- 合同：`DraftModificationScope`（`scopeVersion: 1`、`mode`、`baselineCount` 1..100、可选 `targetFileId`/`targetName`/`confirmedPlan` ≤800、`teacherRequirement` ≤4000 允许空串以匹配现行交互）+ `isDraftModificationScope` 严格键集守卫；`DraftNoteMetadata`/`GenerateDraftRequest` 增加可选键 `modification`，`isGenerateDraftRequest` 可选键白名单同步。
+- Main：`generate`/`regenerate`/metadata 组装全链透传 `modification`；AI 提示词与 `DRAFT_PROMPT_VERSION` 未变。
+- Renderer：新建纯模块 `src/renderer/draft-scope.ts`（buildModeRequirement/buildModificationScope/parseModificationScope/extractMarkedSection/modificationNodeLabel/buildPublishConfirmation/kindLabels），`draft-panel.tsx` 引用并在确认生成时随请求发出结构化对象；解析优先读 `aiMetadata.modification`，旧笔记回退标记解析。
+- 测试：新增 `tests/draft-scope.test.ts`（9 tests：结构化优先、标记回退、毒化要求防护、截断边界、双轨标签/发布文案）；`draft-service.test.ts` 增持久化+重新生成透传；`v1.5.3.1-scope-flow` 与 `v1.5.2-improve-flow` 断言目标随迁移更新（意图不变）。
+- 自动门：相关 30 tests ✅；typecheck ✅；lint ✅。
 
 ## 范围
 

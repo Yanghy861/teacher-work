@@ -49,6 +49,7 @@ describe('V1.5.3.1 scoped AI modification contract', () => {
 
   it('orders the modification baseline before optional references and persists readable mode markers', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
+    const scope = source('../src/renderer/draft-scope.ts')
     const generation = draft.slice(
       draft.indexOf('async function confirmPlanAndGenerate'),
       draft.indexOf('async function publishVersion'),
@@ -56,27 +57,32 @@ describe('V1.5.3.1 scoped AI modification contract', () => {
 
     expect(generation).toContain('uniqueFiles([...baselineFiles, ...selectedReferenceFiles])')
     expect(generation).toContain('sources: orderedSources.map')
-    expect(draft).toContain("const SINGLE_MODE_MARKER = '【AI修改方式：单文件】'")
-    expect(draft).toContain("const LESSON_MODE_MARKER = '【AI修改方式：整课重做】'")
-    expect(draft).toContain('【修改对象：${targetFile.originalName}】')
-    expect(draft).toContain('【自动基线数量：${baselineCount}】')
+    expect(generation).toContain('const modification = buildModificationScope(')
+    expect(generation).toContain('requirement: embeddedRequirement,')
+    expect(generation).toContain('modification,')
+    expect(scope).toContain("const SINGLE_MODE_MARKER = '【AI修改方式：单文件】'")
+    expect(scope).toContain("const LESSON_MODE_MARKER = '【AI修改方式：整课重做】'")
+    expect(scope).toContain('【修改对象：${targetFile.originalName}】')
+    expect(scope).toContain('【自动基线数量：${baselineCount}】')
   })
 
   it('gives each mode a distinct plan and final-output contract', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
+    const scope = source('../src/renderer/draft-scope.ts')
 
     expect(draft).toContain('唯一修改对象')
     expect(draft).toContain('补充参考只用于理解要求，不能变成额外修改对象')
     expect(draft).toContain('自动整课基线')
     expect(draft).toContain('整课结构与难度调整')
-    expect(draft).toContain('输出修改后的完整文件 Markdown')
-    expect(draft).toContain('输出一份可直接发布的完整课件 Markdown，不要拆成多个文件')
-    expect(draft).toContain('讲义、例题、课堂练习、课后作业四个清晰板块')
+    expect(scope).toContain('输出修改后的完整文件 Markdown')
+    expect(scope).toContain('输出一份可直接发布的完整课件 Markdown，不要拆成多个文件')
+    expect(scope).toContain('讲义、例题、课堂练习、课后作业四个清晰板块')
     expect(draft).toContain("const generatedKind = prepMode === 'lesson' ? DRAFT_KINDS.lecture : kind")
   })
 
-  it('restores scoped drafts from requirement markers and ordered metadata sources', () => {
+  it('restores scoped drafts from structured metadata first and falls back to requirement markers', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
+    const scope = source('../src/renderer/draft-scope.ts')
     const restore = draft.slice(
       draft.indexOf('const orderedSourceIds = uniqueStrings'),
       draft.indexOf('async function reload'),
@@ -88,19 +94,21 @@ describe('V1.5.3.1 scoped AI modification contract', () => {
     expect(restore).toContain("setLessonBaselineFileIds(scope.mode === 'lesson' ? baselineIds : [])")
     expect(restore).toContain('setRequirement(scope.teacherRequirement)')
     expect(restore).toContain('buildComparisonBase(scope.mode, scopedText.baselineParts)')
-    expect(draft).toContain("if (mode === null) return null")
+    expect(scope).toContain('metadata?.modification !== undefined')
+    expect(scope).toContain("if (mode === null) return null")
   })
 
   it('prioritizes baseline text within the budget and exposes truncation and mode-specific publishing', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
+    const scope = source('../src/renderer/draft-scope.ts')
 
     expect(draft.indexOf('const baselineParts = await readGroup(baselineFiles)')).toBeLessThan(
       draft.indexOf('const referenceParts = await readGroup(referenceFiles)'),
     )
     expect(draft).toContain('内容超过本次读取上限。AI 已优先读取修改对象或整课基线')
-    expect(draft).toContain("if (scope?.mode === 'single') return '单文件修订'")
-    expect(draft).toContain("if (scope?.mode === 'lesson') return '整课重做'")
-    expect(draft).toContain('的单文件修订发布为本课课件新版本')
-    expect(draft).toContain('将把整课重做内容发布为本课课件新版本')
+    expect(scope).toContain("if (scope?.mode === 'single') return '单文件修订'")
+    expect(scope).toContain("if (scope?.mode === 'lesson') return '整课重做'")
+    expect(scope).toContain('的单文件修订发布为本课课件新版本')
+    expect(scope).toContain('将把整课重做内容发布为本课课件新版本')
   })
 })

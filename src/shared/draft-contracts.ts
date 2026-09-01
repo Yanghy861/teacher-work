@@ -42,6 +42,7 @@ export interface DraftNoteMetadata {
   readonly lesson?: DraftLessonSnapshot
   readonly skill?: DraftSkillSnapshot
   readonly requirement?: string
+  readonly modification?: DraftModificationScope
 }
 
 export interface DraftLessonSnapshot {
@@ -61,6 +62,21 @@ export interface DraftSkillSnapshot {
   readonly prompt: string
 }
 
+export type DraftModificationMode = 'single' | 'lesson'
+
+export const DRAFT_MODIFICATION_SCOPE_VERSION = 1
+export const DRAFT_MODIFICATION_PLAN_MAX_CHARS = 800
+
+export interface DraftModificationScope {
+  readonly scopeVersion: typeof DRAFT_MODIFICATION_SCOPE_VERSION
+  readonly mode: DraftModificationMode
+  readonly baselineCount: number
+  readonly targetFileId?: string
+  readonly targetName?: string
+  readonly teacherRequirement: string
+  readonly confirmedPlan?: string
+}
+
 export interface GenerateDraftRequest {
   readonly requestId: string
   readonly kind: DraftKind
@@ -68,6 +84,7 @@ export interface GenerateDraftRequest {
   readonly studentId?: string
   readonly skillId?: string
   readonly requirement?: string
+  readonly modification?: DraftModificationScope
   readonly sources: readonly DraftSourceSelection[]
   readonly maxChars: number
   readonly maxTokens: number
@@ -112,7 +129,7 @@ export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRe
     hasOnlyKeys(
       value,
       ['requestId', 'kind', 'lessonId', 'sources', 'maxChars', 'maxTokens'],
-      ['studentId', 'skillId', 'requirement'],
+      ['studentId', 'skillId', 'requirement', 'modification'],
     ) &&
     isNonEmptyString(value.requestId, 128) &&
     isDraftKind(value.kind) &&
@@ -120,6 +137,7 @@ export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRe
     (value.studentId === undefined || isNonEmptyString(value.studentId, 128)) &&
     (value.skillId === undefined || isNonEmptyString(value.skillId, 128)) &&
     (value.requirement === undefined || isNonEmptyString(value.requirement, DRAFT_REQUIREMENT_MAX_CHARS)) &&
+    (value.modification === undefined || isDraftModificationScope(value.modification)) &&
     Array.isArray(value.sources) &&
     value.sources.length > 0 &&
     value.sources.length <= 100 &&
@@ -178,6 +196,34 @@ function isDraftSkillSnapshot(value: unknown): value is DraftSkillSnapshot {
   )
 }
 
+export function isDraftModificationScope(value: unknown): value is DraftModificationScope {
+  if (!isRecord(value)) return false
+  const record = value as Record<string, unknown>
+  if (
+    record.scopeVersion !== DRAFT_MODIFICATION_SCOPE_VERSION ||
+    (record.mode !== 'single' && record.mode !== 'lesson') ||
+    typeof record.baselineCount !== 'number' ||
+    !Number.isInteger(record.baselineCount) ||
+    record.baselineCount < 1 ||
+    record.baselineCount > 100 ||
+    typeof record.teacherRequirement !== 'string' ||
+    record.teacherRequirement.length > DRAFT_REQUIREMENT_MAX_CHARS
+  ) {
+    return false
+  }
+  const allowedKeys = new Set([
+    'scopeVersion', 'mode', 'baselineCount', 'teacherRequirement',
+    'targetFileId', 'targetName', 'confirmedPlan',
+  ])
+  const keys = Object.keys(record)
+  if (!keys.every((key) => allowedKeys.has(key))) return false
+  return (
+    (record.targetFileId === undefined || isNonEmptyString(record.targetFileId, 128)) &&
+    (record.targetName === undefined || isNonEmptyString(record.targetName, 500)) &&
+    (record.confirmedPlan === undefined || isNonEmptyString(record.confirmedPlan, DRAFT_MODIFICATION_PLAN_MAX_CHARS))
+  )
+}
+
 export function isDraftNoteMetadata(value: unknown): value is DraftNoteMetadata {
   return (
     isRecord(value) &&
@@ -192,7 +238,8 @@ export function isDraftNoteMetadata(value: unknown): value is DraftNoteMetadata 
     isSafeLimit(value.maxTokens, DRAFT_MAX_TOKENS) &&
     (value.lesson === undefined || isDraftLessonSnapshot(value.lesson)) &&
     (value.skill === undefined || isDraftSkillSnapshot(value.skill)) &&
-    (value.requirement === undefined || isNonEmptyString(value.requirement, DRAFT_REQUIREMENT_MAX_CHARS))
+    (value.requirement === undefined || isNonEmptyString(value.requirement, DRAFT_REQUIREMENT_MAX_CHARS)) &&
+    (value.modification === undefined || isDraftModificationScope(value.modification))
   )
 }
 
