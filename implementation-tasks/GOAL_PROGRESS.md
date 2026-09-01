@@ -1060,6 +1060,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 测试：新增 `tests/draft-scope.test.ts`（9 tests）；`draft-service.test.ts` 增持久化/重新生成用例；`v1.5.3.1-scope-flow`、`v1.5.2-improve-flow` 断言目标随迁移更新（意图不变）。相关 30 tests ✅、typecheck ✅、lint ✅。
 - Git：里程碑提交 `v1.5.5(V155-A)`；未 push。
 
+## 2026-08-31 · V155-B · DONE
+
+- 通道测试补齐：`tests/material-library-ipc.test.ts` 与其余 11 个 IPC 模块同等强度（FakeIpcMain + 真实临时工作区 + 真实服务栈）：白名单精确性、载荷拒绝先于服务、未知通道、四类真实错误映射、正向流、内部错误卫生（通用文案/无栈/无泄漏/日志 channel）。
+- 查询修正：`getOverview` 条目查询删除恒真 `WHERE deleted_at IS NULL OR deleted_at IS NOT NULL` 与冗余 JOIN（JS `fileIds.has` 已限定范围，行为零变化）；`FileRow` 类型化行接口替换 `Record<string, unknown>` 手工断言（含 `requireStandaloneOrLinkedFile`）。
+- 行为钉死：软删除独立文件仍出现在 overview（渲染层"已移除"视图依赖）且条目保留、`moveFile` 拒绝已删除文件；lesson/student 副本隔离由测试钉死。
+- 自动门：相关 11 tests ✅、typecheck ✅、lint ✅。
+- Git：里程碑提交 `v1.5.5(V155-B)`；未 push。
+
 ## 2026-08-31 · V1.5.6 立项（plan 提交）
 
 - V1.5.6 可维护性技术债清理（V156-A–E）：共享工具收敛、CSS 设计令牌、overview 共享缓存与分页迁移、快速建课向导去重、覆盖率基线与静态渲染测试升级；决策 D20，设计基准 `docs/v1.5.6-maintainability-plan.md`。

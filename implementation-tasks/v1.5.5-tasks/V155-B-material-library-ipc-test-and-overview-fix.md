@@ -1,11 +1,18 @@
 # V155-B · 素材库 IPC 测试与 overview 查询修正
 
-**状态：** `TODO`
+**状态：** `DONE`
 
 ## 前置
 
 - V155-A 为 `DONE`；
 - 设计基准：`docs/v1.5.5-hardening-plan.md` §2.2。
+
+## 完成记录（2026-08-31）
+
+- 新增 `tests/material-library-ipc.test.ts`（6 tests）：白名单精确注册/注销、未知通道、载荷形状拒绝（额外键/负数 sortOrder/缺键）、错误映射（环、非空删除、课程副本、未登记外部根）、创建/改名正向流、内部错误通用文案 + 无栈 + 无泄漏 + logger 记录。
+- `getOverview` 条目查询去掉恒真 `WHERE` 与冗余 `JOIN`；`files` 查询与 `requireStandaloneOrLinkedFile` 补类型化行接口 `FileRow`（行为零变化）。
+- `material-library-service.test.ts` 增 2 个钉死测试：软删除独立文件仍出现在 `overview.files`（deletedAt 非空）且条目保留、`moveFile` 拒绝已删除文件；已挂课/学生副本绝不出现在 `overview.files`/`overview.items`。
+- 自动门：相关 11 tests ✅（新 IPC 6 + service 5）；typecheck ✅；lint ✅。
 
 ## 范围
 

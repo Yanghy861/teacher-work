@@ -38,6 +38,19 @@ interface FolderRow {
 
 interface ItemRow { readonly file_id: string; readonly folder_id: string | null; readonly created_at: string }
 
+interface FileRow {
+  readonly id: string
+  readonly original_name: string
+  readonly size_bytes: number
+  readonly mime_type: string
+  readonly origin_file_id: string | null
+  readonly mtime_ms: number | null
+  readonly content_hash: string | null
+  readonly created_at: string
+  readonly updated_at: string
+  readonly deleted_at: string | null
+}
+
 export class MaterialLibraryService {
   private readonly idFactory: () => string
   private readonly now: () => string
@@ -52,33 +65,31 @@ export class MaterialLibraryService {
   }
 
   getOverview(): MaterialLibraryOverview {
-    const files = this.database.prepare(`
+    const fileRows = this.database.prepare(`
       SELECT f.id, f.original_name, f.size_bytes, f.mime_type, f.origin_file_id,
              f.mtime_ms, f.content_hash, f.created_at, f.updated_at, f.deleted_at
         FROM files f
        WHERE NOT EXISTS (SELECT 1 FROM lesson_files lf WHERE lf.file_id = f.id)
          AND NOT EXISTS (SELECT 1 FROM student_files sf WHERE sf.file_id = f.id)
        ORDER BY f.created_at, f.id
-    `).all() as Array<Record<string, unknown>>
-    const mappedFiles = files.map((row) => ({
-      id: row.id as string,
-      originalName: row.original_name as string,
-      sizeBytes: row.size_bytes as number,
-      mimeType: row.mime_type as string,
-      originFileId: row.origin_file_id as string | null,
-      mtimeMs: row.mtime_ms as number | null,
-      contentHash: row.content_hash as string | null,
-      createdAt: row.created_at as string,
-      updatedAt: row.updated_at as string,
-      deletedAt: row.deleted_at as string | null,
-    } satisfies ManagedFileRecord))
+    `).all() as FileRow[]
+    const mappedFiles = fileRows.map((row) => ({
+      id: row.id,
+      originalName: row.original_name,
+      sizeBytes: row.size_bytes,
+      mimeType: row.mime_type,
+      originFileId: row.origin_file_id,
+      mtimeMs: row.mtime_ms,
+      contentHash: row.content_hash,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      deletedAt: row.deleted_at,
+    }))
     const fileIds = new Set(mappedFiles.map((file) => file.id))
     const itemRows = this.database.prepare(`
-      SELECT mfi.file_id, mfi.folder_id, mfi.created_at
-        FROM material_folder_items mfi
-        JOIN files f ON f.id = mfi.file_id
-       WHERE f.id IN (SELECT id FROM files WHERE deleted_at IS NULL OR deleted_at IS NOT NULL)
-       ORDER BY mfi.created_at, mfi.file_id
+      SELECT file_id, folder_id, created_at
+        FROM material_folder_items
+       ORDER BY created_at, file_id
     `).all() as ItemRow[]
     const items = itemRows.filter((item) => fileIds.has(item.file_id)).map(mapItem)
     const known = new Set(items.map((item) => item.fileId))
@@ -167,13 +178,13 @@ export class MaterialLibraryService {
   }
 
   private requireStandaloneOrLinkedFile(fileId: string): ManagedFileRecord {
-    const file = this.database.prepare(`SELECT id, original_name, size_bytes, mime_type, origin_file_id, mtime_ms, content_hash, created_at, updated_at, deleted_at FROM files WHERE id = ?`).get(fileId) as Record<string, unknown> | undefined
+    const file = this.database.prepare(`SELECT id, original_name, size_bytes, mime_type, origin_file_id, mtime_ms, content_hash, created_at, updated_at, deleted_at FROM files WHERE id = ?`).get(fileId) as FileRow | undefined
     if (file === undefined) throw new MaterialLibraryError('MATERIAL_FILE_INVALID', '资料不存在。')
     return {
-      id: file.id as string, originalName: file.original_name as string, sizeBytes: file.size_bytes as number,
-      mimeType: file.mime_type as string, originFileId: file.origin_file_id as string | null,
-      mtimeMs: file.mtime_ms as number | null, contentHash: file.content_hash as string | null,
-      createdAt: file.created_at as string, updatedAt: file.updated_at as string, deletedAt: file.deleted_at as string | null,
+      id: file.id, originalName: file.original_name, sizeBytes: file.size_bytes,
+      mimeType: file.mime_type, originFileId: file.origin_file_id,
+      mtimeMs: file.mtime_ms, contentHash: file.content_hash,
+      createdAt: file.created_at, updatedAt: file.updated_at, deletedAt: file.deleted_at,
     }
   }
 

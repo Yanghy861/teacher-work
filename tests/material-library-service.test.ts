@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { MaterialLibraryError, MaterialLibraryService } from '../src/main/files/material-library-service'
 import { ManagedFileService } from '../src/main/files/managed-file-service'
+import { CoreDataService } from '../src/main/data/core-data-service'
 import { initializeWorkspace, type WorkspaceHandle } from '../src/main/workspace/workspace-service'
 
 const fixtures: Array<{ root: string; workspace: WorkspaceHandle }> = []
@@ -64,5 +65,41 @@ describe('material library logical folders', () => {
 
     item.library.reorderFolder(geometry.id, null, 1)
     expect(item.library.getOverview().folders.filter((folder) => folder.parentId === null).map((folder) => folder.name)).toEqual(['七年级', '几何', '八年级'])
+  })
+
+  it('keeps soft-deleted standalone files in the overview with their folder items (V155-B pin)', () => {
+    const item = fixture()
+    const folder = item.library.createFolder({ parentId: null, name: '存档' })
+    const sourcePath = join(item.root, 'removed.txt'); writeFileSync(sourcePath, 'removed content')
+    const file = item.files.importFile(sourcePath)
+    item.library.moveFile(file.id, folder.id)
+
+    item.files.softDeleteFile(file.id)
+    const overview = item.library.getOverview()
+    const removed = overview.files.find((entry) => entry.id === file.id)
+    expect(removed?.deletedAt).not.toBeNull()
+    expect(overview.items.find((entry) => entry.fileId === file.id)?.folderId).toBe(folder.id)
+
+    expect(() => item.library.moveFile(file.id, null)).toThrowError(MaterialLibraryError)
+  })
+
+  it('never exposes lesson-linked or student-linked files in overview files or items (V155-B pin)', () => {
+    const item = fixture()
+    const core = new CoreDataService(item.workspace.database.raw)
+    const course = core.nodes.createCourse('素材课程', 'class')
+    const period = core.nodes.createPeriod(course.id, '阶段')
+    const lesson = core.nodes.createLesson(period.id, '课次')
+    const student = core.createStudentForCourse(course.id, '素材学生')
+
+    const sourcePath = join(item.root, 'linked.txt'); writeFileSync(sourcePath, 'linked content')
+    const standalone = item.files.importFile(sourcePath)
+    const lessonCopy = item.files.copyToLesson(standalone.id, lesson.id)
+    const studentCopy = item.files.copyToStudent(standalone.id, student.id)
+
+    const overview = item.library.getOverview()
+    expect(overview.files.map((file) => file.id)).toEqual([standalone.id])
+    expect(overview.files.map((file) => file.id)).not.toContain(lessonCopy.id)
+    expect(overview.files.map((file) => file.id)).not.toContain(studentCopy.id)
+    expect(overview.items.map((entry) => entry.fileId)).toEqual([standalone.id])
   })
 })
