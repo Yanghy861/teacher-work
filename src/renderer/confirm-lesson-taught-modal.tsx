@@ -8,6 +8,7 @@ import {
   type CourseSummary,
 } from './course-view-model'
 import Modal from './modal'
+import { toErrorMessage } from './ui-utils'
 
 export default function ConfirmLessonTaughtModal({
   overview,
@@ -49,7 +50,7 @@ export default function ConfirmLessonTaughtModal({
       )
       onClose()
     } catch (saveError) {
-      setError(toErrorMessage(saveError))
+      setError(toErrorMessage(saveError, '操作失败，请稍后重试。'))
     } finally {
       setSaving(false)
     }
@@ -100,8 +101,4 @@ function formatLesson(summary: CourseSummary, lesson: NodeRecord): string {
   const period = summary.periods.find((candidate) => candidate.id === lesson.parentId)
   const number = lesson.parentId === null ? 0 : getLessonNumber(summary.lessons, lesson.parentId, lesson.id)
   return `${period?.title ?? '未命名阶段'} · 第 ${number} 课 ${lesson.title}`
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '操作失败，请稍后重试。'
 }

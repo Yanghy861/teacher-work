@@ -16,6 +16,7 @@ import {
   type RosterResolution,
 } from './quick-course-wizard-model'
 import { useAppDialog } from './app-confirm-dialog'
+import { toErrorMessage } from './ui-utils'
 
 const wizardSteps = ['课程与学生', '阶段与课次', '上课安排', '检查并创建'] as const
 
@@ -134,7 +135,7 @@ export default function QuickCourseWizardBasics({
       setLessonInputError('')
       updateState({ lessonMode: 'empty', lessons })
     } catch (error) {
-      setLessonInputError(toErrorMessage(error))
+      setLessonInputError(toErrorMessage(error, '输入无效。'))
       updateState({ lessonMode: 'empty', lessons: [] })
     }
   }
@@ -146,7 +147,7 @@ export default function QuickCourseWizardBasics({
       setLessonInputError('')
       updateState({ lessonMode: 'plan', lessons })
     } catch (error) {
-      setLessonInputError(toErrorMessage(error))
+      setLessonInputError(toErrorMessage(error, '输入无效。'))
       updateState({ lessonMode: 'plan', lessons: [] })
     }
   }
@@ -603,8 +604,4 @@ function StudentCandidateCard({
       <em>{selected ? '已选择' : '选择'}</em>
     </button>
   )
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '输入无效。'
 }

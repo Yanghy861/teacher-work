@@ -1,3 +1,4 @@
+import { toErrorMessage } from './ui-utils'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { CoreOverview, NoteRecord } from '../shared/core-contracts'
@@ -255,7 +256,7 @@ export default function DraftPanel({
     })().catch((restoreError: unknown) => {
       if (cancelled) return
       setImproveBase(null)
-      setImproveError(`原始对比内容暂时无法恢复：${toErrorMessage(restoreError)}`)
+      setImproveError(`原始对比内容暂时无法恢复：${toErrorMessage(restoreError, '操作失败，请稍后重试。')}`)
     })
 
     return () => { cancelled = true }
@@ -274,7 +275,7 @@ export default function DraftPanel({
       setError('')
       return nextCore
     } catch (loadError) {
-      setError(toErrorMessage(loadError))
+      setError(toErrorMessage(loadError, '操作失败，请稍后重试。'))
       return null
     }
   }
@@ -350,7 +351,7 @@ export default function DraftPanel({
       setMessage(`已生成，可在修改记录中查看。`)
     } catch (generationError) {
       setMessage('')
-      setError(toErrorMessage(generationError))
+      setError(toErrorMessage(generationError, '操作失败，请稍后重试。'))
     } finally {
       setBusyAction('')
     }
@@ -400,7 +401,7 @@ export default function DraftPanel({
         : '整课重做方案已生成，请审阅确认后再生成完整新版本。')
     } catch (planError) {
       setMessage('')
-      setImproveError(toErrorMessage(planError))
+      setImproveError(toErrorMessage(planError, '操作失败，请稍后重试。'))
     } finally {
       setImproveBusy(false)
     }
@@ -465,7 +466,7 @@ export default function DraftPanel({
         : '整课完整新版本已生成，包含讲义、例题、课堂练习与课后作业，可用“新旧对比”审阅。')
     } catch (generationError) {
       setMessage('')
-      setImproveError(toErrorMessage(generationError))
+      setImproveError(toErrorMessage(generationError, '操作失败，请稍后重试。'))
     } finally {
       setImproveBusy(false)
     }
@@ -489,7 +490,7 @@ export default function DraftPanel({
       await reload()
       setMessage(`已发布为课件《${result.file.originalName}》（第 ${result.version} 版），旧版本保留，可在课件区查看。`)
     } catch (publishError) {
-      setError(toErrorMessage(publishError))
+      setError(toErrorMessage(publishError, '操作失败，请稍后重试。'))
     } finally {
       setBusyAction('')
     }
@@ -552,7 +553,7 @@ export default function DraftPanel({
       setMessage('修改已保存。')
       await reload()
     } catch (saveError) {
-      setError(toErrorMessage(saveError))
+      setError(toErrorMessage(saveError, '操作失败，请稍后重试。'))
     } finally {
       setBusyAction('')
     }
@@ -576,7 +577,7 @@ export default function DraftPanel({
       setMessage('当前版本已保存到本次课次。')
       await reload()
     } catch (saveError) {
-      setError(toErrorMessage(saveError))
+      setError(toErrorMessage(saveError, '操作失败，请稍后重试。'))
     } finally {
       setBusyAction('')
     }
@@ -605,7 +606,7 @@ export default function DraftPanel({
       setMessage('已生成新草稿，旧结果仍然保留。')
     } catch (regenerationError) {
       setMessage('')
-      setError(toErrorMessage(regenerationError))
+      setError(toErrorMessage(regenerationError, '操作失败，请稍后重试。'))
     } finally {
       setBusyAction('')
     }
@@ -631,7 +632,7 @@ export default function DraftPanel({
       setMessage('草稿已删除。')
       await reload()
     } catch (deleteError) {
-      setError(toErrorMessage(deleteError))
+      setError(toErrorMessage(deleteError, '操作失败，请稍后重试。'))
     } finally {
       setBusyAction('')
     }
@@ -984,8 +985,4 @@ function uniqueFiles(files: readonly ManagedFileRecord[]): ManagedFileRecord[] {
 function formatDateTime(value: string): string {
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString('zh-CN', { hour12: false })
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '操作失败，请稍后重试。'
 }

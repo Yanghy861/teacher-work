@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { ManagedFileOverview, ManagedFileRecord } from '../shared/file-contracts'
 import type { LessonPrepContext } from './lesson-prep-context'
+import { formatBytes, toErrorMessage } from './ui-utils'
 
 export default function MaterialPickerPanel({
   context,
@@ -19,7 +20,7 @@ export default function MaterialPickerPanel({
   useEffect(() => {
     void window.teacherWorkbench.files.getOverview()
       .then(setOverview)
-      .catch((loadError: unknown) => setError(toErrorMessage(loadError)))
+      .catch((loadError: unknown) => setError(toErrorMessage(loadError, '素材复制失败，请稍后重试。')))
   }, [])
 
   const materialFiles = useMemo(() => {
@@ -38,7 +39,7 @@ export default function MaterialPickerPanel({
       })
       onAdded(copied)
     } catch (copyError) {
-      setError(toErrorMessage(copyError))
+      setError(toErrorMessage(copyError, '素材复制失败，请稍后重试。'))
     } finally {
       setBusyId('')
     }
@@ -83,16 +84,4 @@ export default function MaterialPickerPanel({
       </section>
     </section>
   )
-}
-
-function formatBytes(size: number): string {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== ''
-    ? error.message
-    : '素材复制失败，请稍后重试。'
 }

@@ -15,6 +15,7 @@ import { parseQuestionNumberExpression } from '../shared/question-bank-contracts
 import Modal from './modal'
 import { formatPlainMarkdownText, splitMathText } from './rich-text'
 import './question-bank.css'
+import { toErrorMessage } from './ui-utils'
 
 interface FilterState {
   readonly text: string
@@ -743,8 +744,4 @@ function clampDifficulty(value: string): number {
 function formatDate(value: string): string {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('zh-CN').format(date)
-}
-
-function toErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : fallback
 }

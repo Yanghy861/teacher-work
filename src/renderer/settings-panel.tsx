@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import type { AiKeyStorageMode, AiSettings, ExternalRootSummary } from '../shared/preload-api'
 import SkillSettingsPanel from './skill-settings-panel'
+import { toErrorMessage } from './ui-utils'
 
 const initialSettings: AiSettings = {
   provider: 'openai-compatible',
@@ -28,13 +29,13 @@ export default function SettingsPanel(): React.JSX.Element {
       setSettings(value)
       setModel(value.model)
       setEndpoint(value.endpoint)
-    }).catch((loadError: unknown) => setError(toErrorMessage(loadError)))
+    }).catch((loadError: unknown) => setError(toErrorMessage(loadError, '操作失败，请稍后重试。')))
   }, [])
 
   useEffect(() => {
     void window.teacherWorkbench.externalLibrary.getRoot()
       .then(setExternalRoot)
-      .catch((loadError: unknown) => setError(toErrorMessage(loadError)))
+      .catch((loadError: unknown) => setError(toErrorMessage(loadError, '操作失败，请稍后重试。')))
   }, [])
 
   async function save(): Promise<void> {
@@ -52,7 +53,7 @@ export default function SettingsPanel(): React.JSX.Element {
       setApiKey('')
       setMessage(next.keyStorage === 'session' ? '已保存设置；Key 仅在本次会话可用。' : '已保存设置。')
     } catch (saveError) {
-      setError(toErrorMessage(saveError))
+      setError(toErrorMessage(saveError, '操作失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -72,7 +73,7 @@ export default function SettingsPanel(): React.JSX.Element {
       setSettings(next)
       setMessage('已删除已保存的 Key。')
     } catch (clearError) {
-      setError(toErrorMessage(clearError))
+      setError(toErrorMessage(clearError, '操作失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -87,7 +88,7 @@ export default function SettingsPanel(): React.JSX.Element {
       const result = await window.teacherWorkbench.ai.testConnection({ requestId })
       setMessage(`连接成功 · ${result.model} · ${result.latencyMs} ms`)
     } catch (testError) {
-      setError(toErrorMessage(testError))
+      setError(toErrorMessage(testError, '操作失败，请稍后重试。'))
       setMessage('')
     } finally {
       setBusy(false)
@@ -103,7 +104,7 @@ export default function SettingsPanel(): React.JSX.Element {
       if (result !== null) setMessage(`备份完成 · ${result.fileCount} 个文件`)
       else setMessage('已取消备份。')
     } catch (backupError) {
-      setError(toErrorMessage(backupError))
+      setError(toErrorMessage(backupError, '操作失败，请稍后重试。'))
       setMessage('')
     } finally {
       setBackupBusy(false)
@@ -119,7 +120,7 @@ export default function SettingsPanel(): React.JSX.Element {
       if (result !== null) setMessage(`恢复完成 · ${result.indexedFiles} 个文件已重新索引；请重新配置 Key。`)
       else setMessage('已取消恢复。')
     } catch (restoreError) {
-      setError(toErrorMessage(restoreError))
+      setError(toErrorMessage(restoreError, '操作失败，请稍后重试。'))
       setMessage('')
     } finally {
       setBackupBusy(false)
@@ -139,7 +140,7 @@ export default function SettingsPanel(): React.JSX.Element {
         setMessage(`外部资料目录已连接：${selectedRoot.name}`)
       }
     } catch (rootError) {
-      setError(toErrorMessage(rootError))
+      setError(toErrorMessage(rootError, '操作失败，请稍后重试。'))
     } finally {
       setExternalBusy(false)
     }
@@ -240,8 +241,4 @@ export default function SettingsPanel(): React.JSX.Element {
 
 function storageLabel(mode: AiKeyStorageMode): string {
   return mode === 'secure' ? '安全存储' : mode === 'session' ? '本次会话' : mode === 'none' ? '未配置' : '不可用'
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '操作失败，请稍后重试。'
 }

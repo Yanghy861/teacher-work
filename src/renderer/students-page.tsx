@@ -1,3 +1,4 @@
+import { toErrorMessage } from './ui-utils'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import type { CoreOverview, NoteRecord } from '../shared/core-contracts'
@@ -56,7 +57,7 @@ export default function StudentsPage({
       setOverview(await window.teacherWorkbench.core.getOverview())
       setError('')
     } catch (loadError) {
-      setError(toErrorMessage(loadError))
+      setError(toErrorMessage(loadError, '操作失败，请稍后重试。'))
     } finally {
       setLoading(false)
     }
@@ -75,7 +76,7 @@ export default function StudentsPage({
       setNotice(successMessage)
       return true
     } catch (actionError) {
-      setError(toErrorMessage(actionError))
+      setError(toErrorMessage(actionError, '操作失败，请稍后重试。'))
       return false
     } finally {
       setBusy(false)
@@ -285,8 +286,4 @@ function formatDate(value: string): string {
 function formatRecordDate(note: NoteRecord): string {
   if (note.occurredOn !== undefined) return note.occurredOn
   return formatDate(note.updatedAt)
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '操作失败，请稍后重试。'
 }

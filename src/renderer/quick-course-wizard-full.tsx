@@ -34,6 +34,7 @@ import {
   PeriodLessonsStep,
 } from './quick-course-wizard'
 import { useAppDialog } from './app-confirm-dialog'
+import { toErrorMessage } from './ui-utils'
 
 const wizardSteps = ['课程与学生', '阶段与课次', '上课安排', '检查并创建'] as const
 
@@ -128,7 +129,7 @@ export default function QuickCourseWizard({
       setLessonInputError('')
       updateState({ lessonMode: 'empty', lessons })
     } catch (error) {
-      setLessonInputError(toErrorMessage(error))
+      setLessonInputError(toErrorMessage(error, '创建失败，请稍后重试。'))
       updateState({ lessonMode: 'empty', lessons: [] })
     }
   }
@@ -140,7 +141,7 @@ export default function QuickCourseWizard({
       setLessonInputError('')
       updateState({ lessonMode: 'plan', lessons })
     } catch (error) {
-      setLessonInputError(toErrorMessage(error))
+      setLessonInputError(toErrorMessage(error, '创建失败，请稍后重试。'))
       updateState({ lessonMode: 'plan', lessons: [] })
     }
   }
@@ -165,7 +166,7 @@ export default function QuickCourseWizard({
         freeDateRemainderAccepted: false,
       })
     } catch (error) {
-      setScheduleError(toErrorMessage(error))
+      setScheduleError(toErrorMessage(error, '创建失败，请稍后重试。'))
       updateState({ currentStep: 3 })
     }
   }
@@ -197,7 +198,7 @@ export default function QuickCourseWizard({
         freeDateRemainderAccepted: false,
       })
     } catch (error) {
-      setScheduleError(toErrorMessage(error))
+      setScheduleError(toErrorMessage(error, '创建失败，请稍后重试。'))
     }
   }
 
@@ -212,7 +213,7 @@ export default function QuickCourseWizard({
     try {
       lessons = applyUnscheduledLessons(state.lessons, parseDuration(durationText))
     } catch (error) {
-      setScheduleError(toErrorMessage(error))
+      setScheduleError(toErrorMessage(error, '创建失败，请稍后重试。'))
       return
     }
     commitState({
@@ -232,7 +233,7 @@ export default function QuickCourseWizard({
       setScheduleError('')
       updateState({ lessons })
     } catch (error) {
-      setScheduleError(toErrorMessage(error))
+      setScheduleError(toErrorMessage(error, '创建失败，请稍后重试。'))
     }
   }
 
@@ -248,7 +249,7 @@ export default function QuickCourseWizard({
       setScheduleError('')
       updateState({ lessons })
     } catch (error) {
-      setScheduleError(toErrorMessage(error))
+      setScheduleError(toErrorMessage(error, '创建失败，请稍后重试。'))
     }
   }
 
@@ -315,7 +316,7 @@ export default function QuickCourseWizard({
       setCalendarOpen(false)
       return true
     } catch (error) {
-      setScheduleError(toErrorMessage(error))
+      setScheduleError(toErrorMessage(error, '创建失败，请稍后重试。'))
       return false
     }
   }
@@ -327,7 +328,7 @@ export default function QuickCourseWizard({
       updateState({ lessons })
       setEditingLesson(null)
     } catch (error) {
-      setScheduleError(toErrorMessage(error))
+      setScheduleError(toErrorMessage(error, '创建失败，请稍后重试。'))
     }
   }
 
@@ -351,7 +352,7 @@ export default function QuickCourseWizard({
       const result = await window.teacherWorkbench.core.createCourseSetup(request)
       await onCreated(result)
     } catch (error) {
-      const message = toErrorMessage(error)
+      const message = toErrorMessage(error, '创建失败，请稍后重试。')
       setSubmissionError({ message, step: locateErrorStep(message) })
     } finally {
       setSubmitting(false)
@@ -748,8 +749,4 @@ function locateErrorStep(message: string): 1 | 2 | 3 | 4 {
   if (/阶段|课次|100 节|标题/u.test(message)) return 2
   if (/时间|日期|时长|session/iu.test(message)) return 3
   return 4
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '创建失败，请稍后重试。'
 }

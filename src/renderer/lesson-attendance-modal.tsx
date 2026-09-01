@@ -6,6 +6,7 @@ import type {
 } from '../shared/core-contracts'
 import { formatLocalDateTime } from './course-view-model'
 import Modal from './modal'
+import { toErrorMessage } from './ui-utils'
 
 const attendanceOptions: readonly { readonly value: AttendanceStatus; readonly label: string }[] = [
   { value: 'present', label: '到课' },
@@ -45,7 +46,7 @@ export default function LessonAttendanceModal({
         ])))
         setError('')
       })
-      .catch((loadError: unknown) => active && setError(toErrorMessage(loadError)))
+      .catch((loadError: unknown) => active && setError(toErrorMessage(loadError, '操作失败，请稍后重试。')))
       .finally(() => active && setLoading(false))
     return () => { active = false }
   }, [lessonId])
@@ -72,7 +73,7 @@ export default function LessonAttendanceModal({
       await onSaved(record.attendanceRecordedAt === null ? '点名已保存。' : '点名已更新。')
       onClose()
     } catch (saveError) {
-      setError(toErrorMessage(saveError))
+      setError(toErrorMessage(saveError, '操作失败，请稍后重试。'))
     } finally {
       setSaving(false)
     }
@@ -141,8 +142,4 @@ export default function LessonAttendanceModal({
       )}
     </Modal>
   )
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '操作失败，请稍后重试。'
 }

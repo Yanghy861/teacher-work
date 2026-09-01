@@ -14,6 +14,7 @@ import LessonAttendanceModal from './lesson-attendance-modal'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
 import Modal from './modal'
 import QuickCourseWizard from './quick-course-wizard-full'
+import { toErrorMessage } from './ui-utils'
 
 type CourseFilter = 'active' | 'ended'
 
@@ -96,7 +97,7 @@ export default function CourseDashboard({
       setOverview(await window.teacherWorkbench.core.getOverview())
       setError('')
     } catch (loadError) {
-      setError(toErrorMessage(loadError))
+      setError(toErrorMessage(loadError, '操作失败，请稍后重试。'))
     } finally {
       setLoading(false)
     }
@@ -115,7 +116,7 @@ export default function CourseDashboard({
       setNotice(successMessage)
       return true
     } catch (actionError) {
-      setError(toErrorMessage(actionError))
+      setError(toErrorMessage(actionError, '操作失败，请稍后重试。'))
       return false
     } finally {
       setBusy(false)
@@ -394,8 +395,4 @@ function attendanceSummary(
     return activeStudentCount === 0 ? '未关联学生' : `${activeStudentCount} 位学生 · 待点名`
   }
   return `已到 ${session.presentCount} / ${session.totalCount} · 请假 ${session.leaveCount} · 缺席 ${session.absentCount}`
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '操作失败，请稍后重试。'
 }

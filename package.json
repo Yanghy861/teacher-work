@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "question-bank:export": "node scripts/export-question-bank.mjs"
   },
@@ -50,6 +51,7 @@
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "chokidar": "4.0.3",
     "electron": "^43.4.1",
     "electron-builder": "^26.15.3",

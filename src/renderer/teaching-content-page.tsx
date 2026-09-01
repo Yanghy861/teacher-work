@@ -1,3 +1,4 @@
+import { toErrorMessage } from './ui-utils'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { CoreOverview, NodeRecord } from '../shared/core-contracts'
@@ -60,7 +61,7 @@ export default function TeachingContentPage({
         }
       })
       .catch((loadError: unknown) => {
-        if (!cancelled) setError(toErrorMessage(loadError))
+        if (!cancelled) setError(toErrorMessage(loadError, '教学内容读取失败，请稍后重试。'))
       })
     return () => { cancelled = true }
   }, [])
@@ -294,8 +295,4 @@ function latestDraftForLesson(overview: CoreOverview, lessonId: string) {
   return overview.notes
     .filter((note) => note.lessonId === lessonId && note.deletedAt === null && note.draftStatus === 'draft')
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '教学内容读取失败，请稍后重试。'
 }

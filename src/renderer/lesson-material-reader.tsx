@@ -9,6 +9,7 @@ import {
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
 import { normalizeMarkdownImageReferences, normalizeRichText } from './rich-text'
+import { formatBytes, toErrorMessage } from './ui-utils'
 
 export default function LessonMaterialReader({
   files,
@@ -57,7 +58,7 @@ export default function LessonMaterialReader({
       .catch((loadError: unknown) => {
         if (!cancelled) {
           setContent(null)
-          setError(toErrorMessage(loadError))
+          setError(toErrorMessage(loadError, '资料正文读取失败，请稍后重试。'))
         }
       })
       .finally(() => {
@@ -557,14 +558,4 @@ function choosePreferredFile(files: readonly ManagedFileRecord[]): ManagedFileRe
 
 function displayFileName(name: string): string {
   return name.replace(/\.(?:md|markdown|txt)$/iu, '')
-}
-
-function formatBytes(size: number): string {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '资料正文读取失败，请稍后重试。'
 }

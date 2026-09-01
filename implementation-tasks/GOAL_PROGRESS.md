@@ -1092,8 +1092,24 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 行为不变性：AI 提示词逐字不变；素材库 overview 返回内容不变；版本发布命名格式不变；解析超时仅在原本会无限卡死的场景生效。
 - Git：里程碑提交 `v1.5.5(V155-E)`；`checkpoint-V1.5.5-pass` 待产品负责人最终确认后创建；未 push。
 
+## 2026-08-31 · 产品负责人裁决：V1.5.5 与 V1.5.6 合并验收
+
+- 产品负责人表示 V1.5.5 暂时无法验收，指示继续实施 V1.5.6，两个版本稍后一并走最终体验确认。
+- 裁决效果：V155-E 保持 `IN_PROGRESS`；V1.5.6 链提前激活（本链原基线 `checkpoint-V1.5.5-pass` 未创建，由产品负责人明确豁免，最终门将以 V1.5.5 全部代码已提交且自动门通过为前提）；两版本各自保持独立任务链、独立里程碑提交，互不合并。
+- 合并验收时序：产品负责人一次真实窗口走查同时覆盖 V1.5.5 验收文档 4 点与 V1.5.6 验收文档清单；全部通过后先创建 `v1.5.5 record final acceptance` 提交与 `checkpoint-V1.5.5-pass`，再创建 `v1.5.6 record final acceptance` 与 `checkpoint-V1.5.6-pass`（顺序依版本）。
+- 安全边界不变：不运行 portable/installer，不自动 push。
+
 ## 2026-08-31 · V1.5.6 立项（plan 提交）
 
 - V1.5.6 可维护性技术债清理（V156-A–E）：共享工具收敛、CSS 设计令牌、overview 共享缓存与分页迁移、快速建课向导去重、覆盖率基线与静态渲染测试升级；决策 D20，设计基准 `docs/v1.5.6-maintainability-plan.md`。
 - 安全边界：全部为不改用户可见行为的 Renderer 与测试基建改动；不引入路由库、全局 store、CSS 框架或设计系统依赖；不触碰 Main/Preload/IPC/schema。
 - Git：基线 `checkpoint-V1.5.5-pass`（待 V155-E 验收后创建）；本条目随 `plan(V1.5.6)` 提交；里程碑使用 `v1.5.6(V156-XX)`；不自动 push、不运行 portable/installer。
+
+## 2026-09-01 · V156-A 完成：共享工具收敛与覆盖率基线
+
+- `src/renderer/ui-utils.ts` 新建并收敛 20 处本地定义：16 处 `toErrorMessage`（question-bank-page 原本参数化，仅移除定义）、4 处 `formatBytes`；提取脚本造成的 4 处误插 import 与 15 处 EOF 空行已全部修复。
+- 等值审计：逐文件核对原本地函数回退文案与现调用实参一一相同（含 quick-course-wizard“输入无效。”与 quick-course-wizard-full“创建失败，请稍后重试。”两套原值）；4 处 `formatBytes` 原副本与共享版本逐段一致；零行为、零文案变化。
+- 覆盖率工具：devDependency 增 `@vitest/coverage-v8@^4.1.11`，script 增 `test:coverage`；基线 73.28% 语句 / 65.78% 分支 / 76.55% 函数 / 75.25% 行，无阈值；`coverage/` 已在 gitignore。
+- 新增 `tests/ui-utils.test.ts`（6 tests：B/KB/MB 档位与边界、无 GB 档、Error/非 Error/空白 message 回退），ui-utils.ts 覆盖率 100%。
+- 门禁：全量 60 files / 244 passed / 1 skipped、typecheck 0 错误、lint 通过、`git diff --check` 干净。
+- Git：本地提交 `v1.5.6(V156-A): converge renderer shared utils and record coverage baseline`。

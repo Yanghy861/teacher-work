@@ -1,3 +1,4 @@
+import { toErrorMessage } from './ui-utils'
 import { useEffect, useState } from 'react'
 
 import {
@@ -24,7 +25,7 @@ export default function SkillSettingsPanel(): React.JSX.Element {
       setSkills(await window.teacherWorkbench.skills.list())
       setError('')
     } catch (loadError) {
-      setError(toErrorMessage(loadError))
+      setError(toErrorMessage(loadError, 'Skill 操作失败，请稍后重试。'))
     }
   }
 
@@ -57,7 +58,7 @@ export default function SkillSettingsPanel(): React.JSX.Element {
       resetForm()
       await reload()
     } catch (saveError) {
-      setError(toErrorMessage(saveError))
+      setError(toErrorMessage(saveError, 'Skill 操作失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -73,7 +74,7 @@ export default function SkillSettingsPanel(): React.JSX.Element {
       setMessage(`已删除「${skill.name}」。`)
       await reload()
     } catch (deleteError) {
-      setError(toErrorMessage(deleteError))
+      setError(toErrorMessage(deleteError, 'Skill 操作失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -155,10 +156,4 @@ export default function SkillSettingsPanel(): React.JSX.Element {
 function formatDate(value: string): string {
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('zh-CN')
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== ''
-    ? error.message
-    : 'Skill 操作失败，请稍后重试。'
 }

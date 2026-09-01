@@ -12,6 +12,7 @@ import {
 import LessonMaterialReader from './lesson-material-reader'
 import { useAppDialog } from './app-confirm-dialog'
 import type { PrepLaunchIntent } from './teaching-content-context'
+import { toErrorMessage } from './ui-utils'
 
 // Legacy V1.2 boundary retained: 不包含整门课程资料或学生文件。
 
@@ -75,7 +76,7 @@ export default function LessonFilesSection({
       setOverview(await window.teacherWorkbench.files.getOverview())
       setError('')
     } catch (loadError) {
-      setError(toErrorMessage(loadError))
+      setError(toErrorMessage(loadError, '课次资料读取失败，请稍后重试。'))
     }
   }
 
@@ -86,7 +87,7 @@ export default function LessonFilesSection({
       if (reveal) await window.teacherWorkbench.files.showFileInFolder({ fileId })
       else await window.teacherWorkbench.files.openFile({ fileId })
     } catch (openError) {
-      setError(toErrorMessage(openError))
+      setError(toErrorMessage(openError, '课次资料读取失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -112,7 +113,7 @@ export default function LessonFilesSection({
       await reload()
       setNotice(`已从本课移除“${file.originalName}”。`)
     } catch (removeError) {
-      setError(toErrorMessage(removeError))
+      setError(toErrorMessage(removeError, '课次资料读取失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -191,8 +192,4 @@ export default function LessonFilesSection({
       )}
     </div>
   )
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== '' ? error.message : '课次资料读取失败，请稍后重试。'
 }

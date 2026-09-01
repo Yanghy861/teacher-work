@@ -6,6 +6,7 @@ import type {
 } from '../shared/external-library-contracts'
 import type { ManagedFileRecord } from '../shared/file-contracts'
 import type { LessonPrepContext } from './lesson-prep-context'
+import { formatBytes, toErrorMessage } from './ui-utils'
 
 type EntryMap = Record<string, readonly ExternalEntry[]>
 
@@ -47,7 +48,7 @@ export default function ExternalLibraryPanel({
         setEntriesByFolder({ '': listing.entries })
       }
     } catch (loadError) {
-      setError(toErrorMessage(loadError))
+      setError(toErrorMessage(loadError, '外部资料操作失败，请稍后重试。'))
     } finally {
       setLoading(false)
     }
@@ -73,7 +74,7 @@ export default function ExternalLibraryPanel({
       setSelectedEntry(null)
       setNotice(`已连接「${selectedRoot.name}」。`)
     } catch (chooseError) {
-      setError(toErrorMessage(chooseError))
+      setError(toErrorMessage(chooseError, '外部资料操作失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -107,7 +108,7 @@ export default function ExternalLibraryPanel({
       }
       setExpandedFolders((current) => new Set(current).add(entry.relativePath))
     } catch (folderError) {
-      setError(toErrorMessage(folderError))
+      setError(toErrorMessage(folderError, '外部资料操作失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -157,7 +158,7 @@ export default function ExternalLibraryPanel({
       }
       setNotice('资料树已刷新。')
     } catch (refreshError) {
-      setError(toErrorMessage(refreshError))
+      setError(toErrorMessage(refreshError, '外部资料操作失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -176,7 +177,7 @@ export default function ExternalLibraryPanel({
       setNotice(successMessage)
       afterSuccess?.(result)
     } catch (actionError) {
-      setError(toErrorMessage(actionError))
+      setError(toErrorMessage(actionError, '外部资料操作失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -475,19 +476,8 @@ function formatFileType(entry: ExternalEntry): string {
   return entry.extension === null ? '普通文件' : `${entry.extension.slice(1).toUpperCase()} 文件`
 }
 
-function formatBytes(size: number): string {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
-}
 
 function formatModifiedAt(value: string): string {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false })
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim() !== ''
-    ? error.message
-    : '外部资料操作失败，请稍后重试。'
 }

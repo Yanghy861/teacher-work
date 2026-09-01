@@ -6,6 +6,7 @@ import type { MaterialFolder, MaterialLibraryOverview, ReorderMaterialFolderRequ
 import { useAppDialog } from './app-confirm-dialog'
 import { materialKind } from './material-library'
 import { buildFolderMoveRequest, buildFolderRootMoveRequest, listMaterialFolderChildren, materialFolderPath, type FolderDropPosition } from './material-tree'
+import { formatBytes, toErrorMessage } from './ui-utils'
 
 interface ManagedFilesPanelProps { readonly compact?: boolean; readonly heading?: string; readonly lessonId?: string; readonly lessonLabel?: string }
 type LibraryView = 'all' | 'recent' | 'unfiled' | `folder:${string}`
@@ -87,7 +88,7 @@ export default function ManagedFilesPanel({ compact = false, heading = '素材�
       if (nextOverview.folders.length === 0) setExpandedFolderIds(new Set())
       if (nextCore !== null) setCoreOverview(nextCore)
       setError('')
-    } catch (loadError) { setError(toErrorMessage(loadError)) } finally { setLoading(false) }
+    } catch (loadError) { setError(toErrorMessage(loadError, '素材库操作失败，请稍后重试。')) } finally { setLoading(false) }
   }
 
   async function runAction<T>(action: () => Promise<T>, message?: string): Promise<T | undefined> {
@@ -97,7 +98,7 @@ export default function ManagedFilesPanel({ compact = false, heading = '素材�
       if (message !== undefined) setNotice(message)
       await reload()
       return result
-    } catch (actionError) { setError(toErrorMessage(actionError)); return undefined } finally { setBusy(false) }
+    } catch (actionError) { setError(toErrorMessage(actionError, '素材库操作失败，请稍后重试。')); return undefined } finally { setBusy(false) }
   }
 
   function importFile(): void { void runAction(async () => { const imported = await window.teacherWorkbench.files.importFromPicker(); if (imported !== null) await window.teacherWorkbench.materialLibrary.moveFile({ fileId: imported.id, folderId: activeFolderId }) }, activeFolder === null ? '资料已保存到待整理。' : `资料已保存到「${activeFolder.name}」。`) }
@@ -231,5 +232,3 @@ function FileList({ files, busy, lessonId, onAction, onContextMenu, onDragStart,
 function FileSummary({ file }: { readonly file: ManagedFileRecord }): React.JSX.Element { const kind = materialKind(file); return <div className="file-summary"><strong title={file.originalName}>{file.originalName}</strong><small>{formatBytes(file.sizeBytes)} · {kind === 'documents' ? '文档' : kind === 'images' ? '图片' : '其他'} · {file.originFileId === null ? '素材原件' : '保存自副本'}</small></div> }
 function getFolderDropPosition(event: DragEvent<HTMLElement>): FolderDropPosition { const rect = event.currentTarget.getBoundingClientRect(); const ratio = rect.height === 0 ? 0.5 : (event.clientY - rect.top) / rect.height; return ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside' }
 function menuPosition(x: number, y: number): { readonly x: number; readonly y: number } { return { x: Math.max(8, Math.min(x, window.innerWidth - 252)), y: Math.max(8, Math.min(y, window.innerHeight - 360)) } }
-function formatBytes(size: number): string { if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`; return `${(size / (1024 * 1024)).toFixed(1)} MB` }
-function toErrorMessage(error: unknown): string { return error instanceof Error && error.message.trim() !== '' ? error.message : '素材库操作失败，请稍后重试。' }
