@@ -70,6 +70,16 @@ interface QueueTask {
 
 export interface DocumentIndexWorkerOptions {
   readonly workerFactory?: () => Worker
+  readonly parseTimeoutMs?: number
+}
+
+export const DEFAULT_PARSE_TIMEOUT_MS = 120_000
+
+export class ParseTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`文档解析超过 ${timeoutMs} 毫秒未返回，已中止本次解析。`)
+    this.name = 'PARSE_TIMEOUT'
+  }
 }
 
 /**
@@ -80,6 +90,7 @@ export class DocumentIndexWorker {
   private readonly queue: QueueTask[] = []
   private readonly pendingByFile = new Map<string, Promise<IndexedFileResult>>()
   private readonly workerFactory: () => Worker
+  private readonly parseTimeoutMs: number
   private worker: Worker | null = null
   private activeRequest: {
     readonly requestId: number
@@ -98,6 +109,7 @@ export class DocumentIndexWorker {
     options: DocumentIndexWorkerOptions = {},
   ) {
     this.workerFactory = options.workerFactory ?? (() => new Worker(DOCUMENT_PARSER_WORKER_SOURCE, { eval: true }))
+    this.parseTimeoutMs = options.parseTimeoutMs ?? DEFAULT_PARSE_TIMEOUT_MS
   }
 
   enqueue(fileId: string): Promise<IndexedFileResult> {
@@ -289,10 +301,12 @@ export class DocumentIndexWorker {
     const requestId = ++this.requestSequence
     return new Promise<ParsedDocument>((resolve, reject) => {
       this.activeRequest = { requestId, resolve, reject }
+      let timeout: NodeJS.Timeout | undefined
       const onMessage = (message: WorkerMessage): void => {
         if (message.requestId !== requestId || this.activeRequest?.requestId !== requestId) {
           return
         }
+        clearTimeout(timeout)
         worker.off('message', onMessage)
         worker.off('error', onError)
         worker.off('exit', onExit)
@@ -307,6 +321,7 @@ export class DocumentIndexWorker {
         if (this.activeRequest?.requestId !== requestId) {
           return
         }
+        clearTimeout(timeout)
         worker.off('message', onMessage)
         worker.off('error', onError)
         worker.off('exit', onExit)
@@ -322,6 +337,19 @@ export class DocumentIndexWorker {
       worker.on('message', onMessage)
       worker.on('error', onError)
       worker.on('exit', onExit)
+      timeout = setTimeout(() => {
+        if (this.activeRequest?.requestId !== requestId) {
+          return
+        }
+        worker.off('message', onMessage)
+        worker.off('error', onError)
+        worker.off('exit', onExit)
+        this.activeRequest = null
+        this.worker = null
+        void worker.terminate().catch(() => undefined)
+        reject(new ParseTimeoutError(this.parseTimeoutMs))
+      }, this.parseTimeoutMs)
+      timeout.unref()
       const request: WorkerRequest = { type: 'parse', requestId, filePath, originalName }
       worker.postMessage(request)
     })

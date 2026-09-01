@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { Worker } from 'node:worker_threads'
 
 import { strToU8, zipSync } from 'fflate'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -272,6 +273,87 @@ describe('L06 unified parser and sequential worker', () => {
       expect(results.every((result) => result.chunkCount > 0)).toBe(true)
       const hits = await fixture.search.search({ text: '有理数' })
       expect(new Set(hits.map((hit) => hit.fileId))).toEqual(new Set([imported[0].id, imported[1].id, imported[3].id]))
+    } finally {
+      await fixture.worker.close()
+      fixture.closeSearch()
+    }
+  })
+
+  it('aborts a hung parse job after the configured timeout and recovers the queue (V155-C)', async () => {
+    const fixture = createFixture()
+    try {
+      const hungPath = join(fixture.root, 'hung.txt'); writeFileSync(hungPath, 'hung content')
+      const hungFile = fixture.files.importFile(hungPath)
+      const goodPath = join(fixture.root, 'good.txt'); writeFileSync(goodPath, 'good content')
+      const goodFile = fixture.files.importFile(goodPath)
+
+      type Handler = (payload: unknown) => void
+      class FakeWorker {
+        readonly handlers = new Map<string, Handler[]>()
+        terminated = false
+        constructor(private readonly respondTo: (worker: FakeWorker, requestId: number) => void) {}
+        on(event: string, handler: Handler): void {
+          const list = this.handlers.get(event) ?? []
+          list.push(handler)
+          this.handlers.set(event, list)
+        }
+        off(event: string, handler: Handler): void {
+          const list = this.handlers.get(event) ?? []
+          this.handlers.set(event, list.filter((entry) => entry !== handler))
+        }
+        postMessage(message: unknown): void {
+          const request = message as { requestId: number }
+          this.respondTo(this, request.requestId)
+        }
+        terminate(): Promise<number> {
+          this.terminated = true
+          return Promise.resolve(1)
+        }
+        removeAllListeners(): void {
+          this.handlers.clear()
+        }
+        emitMessage(payload: unknown): void {
+          for (const handler of [...(this.handlers.get('message') ?? [])]) handler(payload)
+        }
+      }
+
+      const hungWorker = new FakeWorker(() => undefined)
+      const respondIndexed = (worker: FakeWorker, requestId: number) => {
+        setImmediate(() => worker.emitMessage({
+          type: 'result',
+          requestId,
+          text: '超时恢复后的正文',
+          chunks: [{ text: '超时恢复后的正文', ordinal: 0 }],
+          parseStatus: 'indexed',
+          contentHash: 'recovery-hash',
+          sizeBytes: 9,
+          mtimeMs: 1,
+        }))
+      }
+
+      let factoryCalls = 0
+      const guardedWorker = new DocumentIndexWorker(
+        fixture.workspace.database.raw, fixture.search, fixture.workspace.paths,
+        {
+          workerFactory: () => {
+            factoryCalls += 1
+            return (factoryCalls === 1 ? hungWorker : new FakeWorker(respondIndexed)) as unknown as Worker
+          },
+          parseTimeoutMs: 40,
+        },
+      )
+      try {
+        const first = await guardedWorker.enqueue(hungFile.id)
+        expect(first).toMatchObject({ fileId: hungFile.id, status: 'parse_failed', parserErrorCode: 'PARSE_TIMEOUT' })
+        expect(hungWorker.terminated).toBe(true)
+        expect(fixture.search.getIndexState(hungFile.id).status).toBe('parse_failed')
+
+        const second = await guardedWorker.enqueue(goodFile.id)
+        expect(second).toMatchObject({ fileId: goodFile.id, status: 'indexed', contentHash: 'recovery-hash' })
+        expect(factoryCalls).toBe(2)
+      } finally {
+        await guardedWorker.close()
+      }
     } finally {
       await fixture.worker.close()
       fixture.closeSearch()

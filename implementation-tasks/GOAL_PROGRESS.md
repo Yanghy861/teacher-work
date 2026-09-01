@@ -1068,6 +1068,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动门：相关 11 tests ✅、typecheck ✅、lint ✅。
 - Git：里程碑提交 `v1.5.5(V155-B)`；未 push。
 
+## 2026-08-31 · V155-C · DONE
+
+- 解析超时：`runWorker` postMessage 后启动 `unref` 定时器（默认 120s，可注入）；触发时核对 requestId → 摘监听 → 清 activeRequest → 置空 worker → `terminate()` 放行 → 以 `PARSE_TIMEOUT` reject；正常路径 `clearTimeout`。超时按既有 `parse_failed` 语义处理（contentHash 为 null 不写 `files` 行，`rebuildPending` 重试），不引入新状态机；worker 由下次 `ensureWorker` 重建，泵在超时后继续处理后续文件。
+- 窗口导航守卫：`applyWindowNavigationGuard` 全局拒绝 `window.open`（`{action:'deny'}`），`will-navigate` 仅放行当前已加载地址（dev `ELECTRON_RENDERER_URL` / prod `pathToFileURL` index.html）；`createMainWindow` 加载前调用。
+- 测试：哑 worker 注入下超时转 `parse_failed` + `PARSE_TIMEOUT`、`files` 行未写坏、第二个文件经新 worker 恢复索引（contentHash 'recovery-hash'）；守卫单测 deny 一切 open、拦截非白名单导航。
+- 自动门：相关 9 tests ✅、typecheck ✅、lint ✅。
+- Git：里程碑提交 `v1.5.5(V155-C)`；未 push。
+
 ## 2026-08-31 · V1.5.6 立项（plan 提交）
 
 - V1.5.6 可维护性技术债清理（V156-A–E）：共享工具收敛、CSS 设计令牌、overview 共享缓存与分页迁移、快速建课向导去重、覆盖率基线与静态渲染测试升级；决策 D20，设计基准 `docs/v1.5.6-maintainability-plan.md`。

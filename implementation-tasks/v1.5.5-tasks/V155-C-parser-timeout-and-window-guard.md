@@ -1,11 +1,18 @@
 # V155-C · 解析超时与窗口导航守卫
 
-**状态：** `TODO`
+**状态：** `DONE`
 
 ## 前置
 
 - V155-B 为 `DONE`；
 - 设计基准：`docs/v1.5.5-hardening-plan.md` §2.3。
+
+## 完成记录（2026-08-31）
+
+- `DocumentParser` 增加构造选项 `parseTimeoutMs`（默认 `DEFAULT_PARSE_TIMEOUT_MS = 120_000`）与 `ParseTimeoutError`（`name = 'PARSE_TIMEOUT'`）；`runWorker` 在 `postMessage` 后启动 `unref` 定时器——触发时核对 `activeRequest.requestId`，先摘监听、清 `activeRequest`、置空 `this.worker`，再 `terminate()` 放行并 reject；正常 message/error 路径 `clearTimeout`。超时沿用既有 `parse_failed` 语义，不引入新状态机。
+- `window-security.ts` 新增 `WebContentsLike` 接口与 `applyWindowNavigationGuard`：全局拒绝 `window.open`，`will-navigate` 仅放行白名单；`createMainWindow` 以 dev URL / `pathToFileURL` 计算 index.html 地址为白名单，加载前调用。
+- 测试：`document-parser.test.ts` 增哑 worker 超时用例（超时转 `parse_failed` + `PARSE_TIMEOUT`、`files` 行未写坏、新 worker 队列恢复、terminate 确认）；`security-baseline.test.ts` 增守卫单测（open 恒 deny、非白名单导航 preventDefault、白名单放行）。
+- 自动门：相关 9 tests ✅；typecheck ✅；lint ✅。
 
 ## 范围
 

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell, type OpenDialogOptions } from 'electron'
 import { release } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { registerAppIpc } from './ipc/app-ipc'
 import { registerCoreIpc } from './ipc/core-ipc'
@@ -23,7 +24,7 @@ import { DocumentIndexWorker } from './parser/document-parser'
 import { installMainErrorHandlers } from './logging/main-error-handlers'
 import { StructuredLogger } from './logging/structured-logger'
 import { applyWindowsCompatibility } from './windows-compat'
-import { windowWebPreferences } from './window-security'
+import { applyWindowNavigationGuard, windowWebPreferences } from './window-security'
 import { AiGateway } from './ai/ai-gateway'
 import { AiSettingsService } from './ai/ai-settings-service'
 import { electronSecureStorage } from './ai/secure-storage'
@@ -308,6 +309,11 @@ function createMainWindow(): BrowserWindow {
   window.on('focus', () => {
     refreshManagedFilesInBackground('window_focus')
   })
+
+  const allowedUrls = process.env.ELECTRON_RENDERER_URL
+    ? [process.env.ELECTRON_RENDERER_URL]
+    : [pathToFileURL(join(__dirname, '../renderer/index.html')).href]
+  applyWindowNavigationGuard(window.webContents, allowedUrls)
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void window.loadURL(process.env.ELECTRON_RENDERER_URL)
