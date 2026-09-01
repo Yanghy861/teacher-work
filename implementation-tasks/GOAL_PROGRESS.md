@@ -1138,3 +1138,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 静态渲染测试升级（加法）：`static-render-v156-d.test.ts`（10 tests）覆盖 managed-files-panel 树结构/拖拽 affordance 类/aria/右键菜单 role=menu 三分区骨架与禁用守卫、LessonsSection 阶段默认收起（V154 合同）与展开徽章、draft-panel 收件箱/备课两初始态、App 外壳 8 项导航。为可测做最小导出/抽取（`FolderBranch`/`LibraryButton`/`FileList`/`FileSummary`/`MaterialContextMenu`/`LessonsSection`），JSX 与行为逐字节不变。拖拽运行时验证仍归产品负责人手工确认单。
 - 门禁：全量 63 files / 265 passed / 1 skipped（+10）、typecheck 0 错误、lint 通过、`git diff --check` 干净。
 - Git：本地提交 `v1.5.6(V156-D): dedupe quick course wizard orchestration and add static render tests`。
+
+## 2026-09-01 · V156-E 自动门与冒烟完成（IN_PROGRESS，合并验收待最终确认）
+
+- 自动门：全量 63 files / 265 passed / 1 skipped（V1.5.5 基线 59/238，净增 4 files / 27 tests）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净；未运行 portable/installer。
+- 覆盖率口径变化（非回归）：V156-A 基线 73.28% → V156-E 终值 54.32%，系 V156-D 静态渲染测试导入 App 后页面树进入报告（分母扩大）；逐文件对比一致或更高；完整说明记入 `docs/v1.5.6-acceptance.md`；后续版本按 V156-E 终值口径比较。
+- 隔离冒烟：独立 app-data + `--user-data-dir` 启动 production Electron，主窗口进程两次采样存活，`workspace.db` / `search.db`（含 WAL/SHM）创建成功，stderr 无错误；未接触正式工作区与真实资料；进程与临时目录已清理。
+- 验收文档 `docs/v1.5.6-acceptance.md`：实施内容表、自动门数字、覆盖率范围说明、行为不变性说明（两处已知更优差异在案）、冒烟记录、与 V1.5.5 合并走查的 6 点清单。
+- Git：本地提交 `v1.5.6(V156-E): record automated gates and isolated smoke results`；checkpoint 标签待产品负责人确认后依版本顺序创建（先 V1.5.5 后 V1.5.6）。
