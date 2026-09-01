@@ -2,6 +2,7 @@ import { toErrorMessage } from './ui-utils'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import type { CoreOverview, NoteRecord } from '../shared/core-contracts'
+import { useCoreOverview } from './core-overview-provider'
 import Modal from './modal'
 import {
   buildStudentSummaries,
@@ -19,13 +20,12 @@ export default function StudentsPage({
   readonly onSelectStudent: (studentId: string) => void
   readonly onOpenCourse: (courseId: string, originStudentId?: string) => void
 }): React.JSX.Element {
-  const [overview, setOverview] = useState<CoreOverview | null>(null)
+  const { overview, loading, error: loadError, reload: reloadOverview, clearError } = useCoreOverview()
+  const [actionError, setActionError] = useState('')
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [recordOpen, setRecordOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
   const summaries = useMemo(
@@ -42,7 +42,7 @@ export default function StudentsPage({
     (summary) => summary.student.id === selectedStudentId,
   ) ?? null
 
-  useEffect(() => { void reload() }, [])
+  useEffect(() => { clearError() }, [clearError])
 
   useEffect(() => {
     if (loading) return
@@ -52,15 +52,7 @@ export default function StudentsPage({
   }, [onSelectStudent, selectedStudentId, visibleSummaries, loading])
 
   async function reload(): Promise<void> {
-    setLoading(true)
-    try {
-      setOverview(await window.teacherWorkbench.core.getOverview())
-      setError('')
-    } catch (loadError) {
-      setError(toErrorMessage(loadError, '操作失败，请稍后重试。'))
-    } finally {
-      setLoading(false)
-    }
+    await reloadOverview()
   }
 
   async function runAction(
@@ -68,15 +60,15 @@ export default function StudentsPage({
     successMessage: string,
   ): Promise<boolean> {
     setBusy(true)
-    setError('')
+    setActionError('')
     setNotice('')
     try {
       await action()
       await reload()
       setNotice(successMessage)
       return true
-    } catch (actionError) {
-      setError(toErrorMessage(actionError, '操作失败，请稍后重试。'))
+    } catch (runError) {
+      setActionError(toErrorMessage(runError, '操作失败，请稍后重试。'))
       return false
     } finally {
       setBusy(false)
@@ -89,7 +81,7 @@ export default function StudentsPage({
 
   return (
     <div className="students-page" aria-live="polite">
-      {error !== '' && <div className="inline-error" role="alert">{error}</div>}
+      {(actionError !== '' || loadError !== '') && <div className="inline-error" role="alert">{actionError !== '' ? actionError : loadError}</div>}
       {notice !== '' && <div className="inline-notice" role="status">{notice}</div>}
       <header className="students-page-header">
         <div><strong>全部学生 {summaries.length}</strong><span>只展示课程关系与人工学习记录</span></div>

@@ -22,6 +22,7 @@ import {
 import { listDraftInbox, listLessonAiResults, type DraftInboxEntry } from './draft-view-model'
 import { MarkdownDocument } from './lesson-material-reader'
 import { useAppDialog } from './app-confirm-dialog'
+import { useCoreOverview } from './core-overview-provider'
 import type { PrepLaunchIntent, PrepLaunchMode } from './teaching-content-context'
 import {
   buildModificationScope,
@@ -69,8 +70,8 @@ export default function DraftPanel({
   readonly onDirtyChange?: (dirty: boolean) => void
 }): React.JSX.Element {
   const { confirm } = useAppDialog()
+  const { overview: core, error: coreLoadError, reload: reloadSharedOverview, clearError: clearCoreError } = useCoreOverview()
   const [files, setFiles] = useState<ManagedFileOverview | null>(null)
-  const [core, setCore] = useState<CoreOverview | null>(null)
   const [skills, setSkills] = useState<readonly SkillRecord[]>([])
   const [prepMode, setPrepMode] = useState<PrepLaunchMode>('new')
   const [targetFileId, setTargetFileId] = useState('')
@@ -141,6 +142,8 @@ export default function DraftPanel({
   useEffect(() => {
     onDirtyChange?.(dirty)
   }, [dirty, onDirtyChange])
+
+  useEffect(() => { clearCoreError() }, [clearCoreError])
 
   useEffect(() => {
     let cancelled = false
@@ -264,13 +267,12 @@ export default function DraftPanel({
 
   async function reload(): Promise<CoreOverview | null> {
     try {
-      const [nextFiles, nextCore, nextSkills] = await Promise.all([
+      const [nextFiles, nextSkills, nextCore] = await Promise.all([
         window.teacherWorkbench.files.getOverview(),
-        window.teacherWorkbench.core.getOverview(),
         window.teacherWorkbench.skills.list(),
+        reloadSharedOverview(),
       ])
       setFiles(nextFiles)
-      setCore(nextCore)
       setSkills(nextSkills)
       setError('')
       return nextCore
@@ -643,7 +645,7 @@ export default function DraftPanel({
       <DraftInbox
         core={core}
         busy={busyAction !== ''}
-        error={error}
+        error={error !== '' ? error : coreLoadError}
         message={message}
         onOpenDraft={onOpenDraft}
         onDeleteDraft={(note) => void deleteDraft(note)}

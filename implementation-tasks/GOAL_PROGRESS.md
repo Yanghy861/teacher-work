@@ -1121,3 +1121,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 可解析性证明：14 个 `var()` 引用全部在 `:root` 定义集合内；production bundle 中令牌定义保留且全部可解析（custom properties 文档级继承，与 bundle 段落顺序无关）。视觉零变化由等值替换 + 保留原值证明，真实窗口视觉走查并入 V1.5.5+V1.5.6 合并验收。
 - 门禁：全量 60 files / 244 passed / 1 skipped（含 5 个 CSS 合同测试）、production build、typecheck、lint、`git diff --check` 全部通过。
 - Git：本地提交 `v1.5.6(V156-B): introduce CSS design tokens with mechanical equivalence`。
+
+## 2026-09-01 · V156-C 完成：overview 共享缓存与分页迁移
+
+- 新增 `core-overview-provider.tsx`（App 层 Provider：快照 + `reload()/invalidate()/clearError()`，挂载即拉一次，`files.onContentChanged` 接同一失效口）与 `overview-reload-coalescer.ts`（纯合并器：in-flight 合并 + 恰一次跟单，保证调用方拿到调用之后的新数据，等价旧页面"变更后整页重拉"语义）。
+- 分页迁移：course-dashboard → students-page → course-detail（props 透传自动迁移）→ draft-panel（三拉中 core 拉取替换为共享 reload；files/skills 保持独立）；页面 `reload` 保留薄包装，动作错误与加载错误分离展示，挂载 `clearError()` 复原旧"进入即空"语义。
+- 新增 tests：`overview-reload-coalescer.test.ts`（5：并发合并恰一次跟单、多次等待者不放大、失败回调与恢复）+ `core-overview-provider.test.ts`（6：App 接线、上下文合同、仅用既有白名单 IPC 面等）。
+- 门禁：全量 62 files / 255 passed / 1 skipped（+11）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净；零 IPC/schema 变化。
+- 过程注记：happy-dom DOM 型测试与项目 node 环境基建不合（act 告警 + vitest 可选 peer 自动补装污染 lockfile），已彻底移除并恢复 lockfile，改用"纯逻辑单测 + 字符串合同测试"既有模式。
+- Git：本地提交 `v1.5.6(V156-C): introduce shared core overview provider and migrate pages`。

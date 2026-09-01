@@ -12,6 +12,7 @@ import StudentsPage from './students-page'
 import QuestionBankPage from './question-bank-page'
 import TeachingContentPage from './teaching-content-page'
 import { AppDialogProvider } from './app-confirm-dialog'
+import { CoreOverviewProvider } from './core-overview-provider'
 import {
   createDraftInboxTarget,
   createTeachingContentTarget,
@@ -36,7 +37,9 @@ type NavigationIconName = NavigationItem['icon']
 export default function App(): React.JSX.Element {
   return (
     <AppDialogProvider>
-      <AppContent />
+      <CoreOverviewProvider>
+        <AppContent />
+      </CoreOverviewProvider>
     </AppDialogProvider>
   )
 }

@@ -12,6 +12,7 @@ import {
 } from './course-view-model'
 import LessonAttendanceModal from './lesson-attendance-modal'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
+import { useCoreOverview } from './core-overview-provider'
 import Modal from './modal'
 import QuickCourseWizard from './quick-course-wizard-full'
 import { toErrorMessage } from './ui-utils'
@@ -37,7 +38,8 @@ export default function CourseDashboard({
   readonly onOpenStudent: (studentId: string) => void
   readonly onOpenTeachingContent: (context: LessonPrepContext) => void
 }): React.JSX.Element {
-  const [overview, setOverview] = useState<CoreOverview | null>(null)
+  const { overview, loading, error: loadError, reload: reloadOverview, clearError } = useCoreOverview()
+  const [actionError, setActionError] = useState('')
   const [viewedLessonId, setViewedLessonId] = useState(initialViewedLessonId)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<CourseFilter>('active')
@@ -46,8 +48,6 @@ export default function CourseDashboard({
   const [attendanceLessonId, setAttendanceLessonId] = useState<string | null>(null)
   const [confirmLessonId, setConfirmLessonId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [quickCourseSuccess, setQuickCourseSuccess] = useState<CreateCourseSetupResult | null>(null)
 
@@ -71,7 +71,7 @@ export default function CourseDashboard({
     (note) => note.deletedAt === null && note.draftStatus === 'draft',
   ).length ?? 0
 
-  useEffect(() => { void reload() }, [])
+  useEffect(() => { clearError() }, [clearError])
 
   useEffect(() => {
     if (initialViewedLessonId === '') return
@@ -92,15 +92,7 @@ export default function CourseDashboard({
   }, [filter, onSelectCourse, selectedCourseId, summaries, visibleSummaries, loading])
 
   async function reload(): Promise<void> {
-    setLoading(true)
-    try {
-      setOverview(await window.teacherWorkbench.core.getOverview())
-      setError('')
-    } catch (loadError) {
-      setError(toErrorMessage(loadError, '操作失败，请稍后重试。'))
-    } finally {
-      setLoading(false)
-    }
+    await reloadOverview()
   }
 
   async function runAction(
@@ -108,15 +100,15 @@ export default function CourseDashboard({
     successMessage: string,
   ): Promise<boolean> {
     setBusy(true)
-    setError('')
+    setActionError('')
     setNotice('')
     try {
       await action()
       await reload()
       setNotice(successMessage)
       return true
-    } catch (actionError) {
-      setError(toErrorMessage(actionError, '操作失败，请稍后重试。'))
+    } catch (runError) {
+      setActionError(toErrorMessage(runError, '操作失败，请稍后重试。'))
       return false
     } finally {
       setBusy(false)
@@ -170,7 +162,7 @@ export default function CourseDashboard({
 
   return (
     <div className="course-dashboard" aria-live="polite">
-      {error !== '' && <div className="inline-error" role="alert">{error}</div>}
+      {(actionError !== '' || loadError !== '') && <div className="inline-error" role="alert">{actionError !== '' ? actionError : loadError}</div>}
       {notice !== '' && <div className="inline-notice" role="status">{notice}</div>}
       {quickCourseSuccess !== null && (
         <div className="quick-course-success" role="status">
