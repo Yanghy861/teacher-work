@@ -1084,6 +1084,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 自动门：相关 32 tests ✅、typecheck ✅、lint ✅。
 - Git：里程碑提交 `v1.5.5(V155-D)`；未 push。
 
+## 2026-08-31 · V155-E · IN_PROGRESS（自动门通过，待最终确认）
+
+- 全量门：`npm test` 59 files / 238 tests passed、1 skipped（较 V1.5.4 基线净增 2 files / 23 tests）✅；typecheck ✅；lint ✅；production build ✅；`git diff --check` ✅；未运行 portable/installer。
+- 隔离启动 smoke：production Electron 使用独立 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA` app-data 与 `--user-data-dir` 启动，主窗口进程存活、`TeacherWorkspace` 的 `workspace.db`/`search.db`（含 WAL）成功创建；未接触正式工作区或 API Key；冒烟后进程与临时目录已清理。
+- 验收记录：`docs/v1.5.5-acceptance.md` 已写入（含 O(全表) 与"不做 v16"两个已接受设计、行为不变性说明、4 点真实窗口确认清单）。
+- 行为不变性：AI 提示词逐字不变；素材库 overview 返回内容不变；版本发布命名格式不变；解析超时仅在原本会无限卡死的场景生效。
+- Git：里程碑提交 `v1.5.5(V155-E)`；`checkpoint-V1.5.5-pass` 待产品负责人最终确认后创建；未 push。
+
 ## 2026-08-31 · V1.5.6 立项（plan 提交）
 
 - V1.5.6 可维护性技术债清理（V156-A–E）：共享工具收敛、CSS 设计令牌、overview 共享缓存与分页迁移、快速建课向导去重、覆盖率基线与静态渲染测试升级；决策 D20，设计基准 `docs/v1.5.6-maintainability-plan.md`。
