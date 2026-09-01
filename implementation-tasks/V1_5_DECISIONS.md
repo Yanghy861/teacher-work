@@ -138,3 +138,11 @@
 - 解析 worker 增加可注入的单作业超时（默认 120 秒），超时按既有 `parse_failed` 语义处理，不引入新状态机；主窗口增加 `setWindowOpenHandler` 拒绝与 `will-navigate` 白名单守卫；
 - 课件版本发布改为“含软删除文件的锚定 MAX+1”，避免历史版本号复用；`isConstraintError` 改为错误码优先、消息匹配兜底；树操作 O(全表) 维持接受并记录 revisit 条件（节点数 > ~5k）；
 - 不新增 schema/migration 或 IPC 通道；基线 `checkpoint-V1.5.4-pass` 已创建；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer。
+
+## D20 · V1.5.6 可维护性技术债清理（产品负责人确认，2026-08-31）
+
+- V1.5.6 承接分析报告 P2-5 与 P2-7，全部为不改用户可见行为的 Renderer 与测试基建改动；设计基准 `docs/v1.5.6-maintainability-plan.md`；
+- 共享 `toErrorMessage`/`formatBytes` 收敛进 `src/renderer/ui-utils.ts`；CSS 引入 `:root` 设计令牌并机械等值替换，视觉零变化；
+- App 层 `CoreOverviewProvider` 共享缓存消除每页整域拉取与页面间快照漂移，纯 Renderer 改动，分页迁移、每页跑该页既有 UI 合同测试；快速建课向导编排收敛为共享 hook，双入口行为不变；
+- 引入 `@vitest/coverage-v8` 只记录基线不设阈值；大型组件按优先级补充 `renderToStaticMarkup` 静态渲染测试，字符串合同测试全部保留；
+- 不引入路由库、全局 store、CSS 框架或设计系统依赖，不触碰 Main/Preload/IPC/schema；基线为 `checkpoint-V1.5.5-pass`（待 V155-E 验收后创建），基线创建前任何任务不得置为 `IN_PROGRESS`；不运行 portable/installer。

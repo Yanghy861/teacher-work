@@ -62,3 +62,15 @@ V15 任务必须按编号顺序执行；同一时刻最多一个里程碑为 `IN
 | [V155-C](v1.5.5-tasks/V155-C-parser-timeout-and-window-guard.md) | V155-B | 解析单作业超时、窗口导航守卫 | 相关测试 + typecheck + lint |
 | [V155-D](v1.5.5-tasks/V155-D-version-counting-and-constraint-error-code.md) | V155-C | 版本计数 MAX+1、约束错误码修正 | 相关测试 + typecheck + lint |
 | [V155-E](v1.5.5-tasks/V155-E-final-gate.md) | V155-A–D | 全量回归 + 隔离 Windows 冒烟 + 验收文档 | 最终验收；确认后创建 `checkpoint-V1.5.5-pass` |
+
+## V1.5.6 已立项后续增量（可维护性技术债清理）
+
+方案：[`docs/v1.5.6-maintainability-plan.md`](../docs/v1.5.6-maintainability-plan.md)；决策 D20。基线 `checkpoint-V1.5.5-pass`（待 V155-E 验收后创建），基线创建前任何任务不得 `IN_PROGRESS`；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer。
+
+| 里程碑 | 前置 | 核心产物 | 验收 |
+|---|---|---|---|
+| [V156-A](v1.5.6-tasks/V156-A-shared-utils-and-coverage-baseline.md) | `checkpoint-V1.5.5-pass` | ui-utils 收敛 + 覆盖率基线 | 全量测试 + typecheck + lint |
+| [V156-B](v1.5.6-tasks/V156-B-css-design-tokens.md) | V156-A | CSS 设计令牌等值替换 | build + 响应式测试 + 手工冒烟 |
+| [V156-C](v1.5.6-tasks/V156-C-overview-shared-cache.md) | V156-B | overview 共享缓存与分页迁移 | 全量测试 + build |
+| [V156-D](v1.5.6-tasks/V156-D-wizard-dedup-and-render-tests.md) | V156-C | 向导编排收敛 + 静态渲染测试 | v1.3 全组测试 + 新测试 |
+| [V156-E](v1.5.6-tasks/V156-E-final-gate.md) | V156-A–D | 全量回归 + 隔离 Windows 冒烟 + 验收文档 | 最终验收；确认后创建 `checkpoint-V1.5.6-pass` |

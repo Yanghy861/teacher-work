@@ -1051,3 +1051,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - V1.5.5 正确性与健壮性加固（V155-A–E）：AI 修改范围元数据结构化（提示词不变、UI 还原改读 `aiMetadata.modification` 结构化键、旧笔记回退标记解析）、素材库 IPC 补测试、getOverview 恒真 WHERE 简化与行为钉死、解析 worker 单作业超时、窗口导航守卫、版本计数含软删除的锚定 MAX+1 与约束错误码修正；决策 D19，设计基准 `docs/v1.5.5-hardening-plan.md`。
 - 安全边界：不新增 schema/migration/IPC 通道；唯一载荷扩展为 `drafts:generate` 可选键 `modification`（同 D18 先例）；AI 提示词与 `DRAFT_PROMPT_VERSION` 不变；不改写既有 checkpoint 与验收记录。
 - Git：本条目随 `plan(V1.5.5)` 提交；里程碑使用 `v1.5.5(V155-XX)`；不自动 push、不运行 portable/installer。
+
+## 2026-08-31 · V1.5.6 立项（plan 提交）
+
+- V1.5.6 可维护性技术债清理（V156-A–E）：共享工具收敛、CSS 设计令牌、overview 共享缓存与分页迁移、快速建课向导去重、覆盖率基线与静态渲染测试升级；决策 D20，设计基准 `docs/v1.5.6-maintainability-plan.md`。
+- 安全边界：全部为不改用户可见行为的 Renderer 与测试基建改动；不引入路由库、全局 store、CSS 框架或设计系统依赖；不触碰 Main/Preload/IPC/schema。
+- Git：基线 `checkpoint-V1.5.5-pass`（待 V155-E 验收后创建）；本条目随 `plan(V1.5.6)` 提交；里程碑使用 `v1.5.6(V156-XX)`；不自动 push、不运行 portable/installer。
