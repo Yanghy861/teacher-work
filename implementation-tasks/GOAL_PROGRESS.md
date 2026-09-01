@@ -1113,3 +1113,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 新增 `tests/ui-utils.test.ts`（6 tests：B/KB/MB 档位与边界、无 GB 档、Error/非 Error/空白 message 回退），ui-utils.ts 覆盖率 100%。
 - 门禁：全量 60 files / 244 passed / 1 skipped、typecheck 0 错误、lint 通过、`git diff --check` 干净。
 - Git：本地提交 `v1.5.6(V156-A): converge renderer shared utils and record coverage baseline`。
+
+## 2026-09-01 · V156-B 完成：CSS 设计令牌
+
+- `styles.css` 头部新增 14 个设计令牌：indigo 主色系（primary/hover/active/soft）、slate 文本四级（text/strong/muted/faint）、`--color-border`、`--color-page-bg`、danger 双色、`--radius-md`(8px)/`--radius-lg`(10px)；原有 `:root` 基础块不动，令牌定义与其值保持原 hex。
+- 机械等值替换：`styles.css` 291 行、`question-bank.css` 31 处；程序校验令牌目标 hex 在两文件非定义区零残留、`border-radius: 8px/10px` 全值替换计数与替换前逐一相等（17/18 处），多值半径与 50% 未触碰。
+- 可解析性证明：14 个 `var()` 引用全部在 `:root` 定义集合内；production bundle 中令牌定义保留且全部可解析（custom properties 文档级继承，与 bundle 段落顺序无关）。视觉零变化由等值替换 + 保留原值证明，真实窗口视觉走查并入 V1.5.5+V1.5.6 合并验收。
+- 门禁：全量 60 files / 244 passed / 1 skipped（含 5 个 CSS 合同测试）、production build、typecheck、lint、`git diff --check` 全部通过。
+- Git：本地提交 `v1.5.6(V156-B): introduce CSS design tokens with mechanical equivalence`。

@@ -141,7 +141,7 @@
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
 | V156-A 共享工具收敛与覆盖率基线 | DONE | `ui-utils.ts` 收敛 16 处 toErrorMessage 与 4 处 formatBytes（回退文案逐处等值审计）；新增 `tests/ui-utils.test.ts`（6 tests）；引入 coverage-v8 只记基线（73.28% 语句）。全量 60 files / 244 tests、typecheck、lint、diff check 通过 |
-| V156-B CSS 设计令牌 | TODO | `:root` 调色板/圆角/间距令牌，机械等值替换，视觉零变化 |
+| V156-B CSS 设计令牌 | DONE | `:root` 14 令牌（indigo/slate/边线/底色/danger/圆角）落地；styles.css 291 行 + question-bank.css 31 处机械等值替换，目标 hex 零残留、引用全部可解析；全量 244 tests、build、lint、typecheck、diff check 通过 |
 | V156-C overview 共享缓存 | TODO | `CoreOverviewProvider` + `invalidate()`，分页迁移，纯 Renderer 改动 |
 | V156-D 向导去重与静态渲染测试 | TODO | 向导编排收敛为共享 hook；大型组件补 `renderToStaticMarkup` 测试 |
 | V156-E V1.5.6 最终回归与版本验收 | TODO | 全量门 + 隔离 Windows 冒烟 + `docs/v1.5.6-acceptance.md`，确认后创建 `checkpoint-V1.5.6-pass` |
