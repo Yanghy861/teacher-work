@@ -158,6 +158,8 @@
 | V16-B 修改范围收口与参考预算 UX | DONE | 修改对象收口为应用内课件版本（`isAppGeneratedCoursewareFile`，外部 office/pdf/导入 md 置灰提示）、无版本引导先生成；参考 ≤10 份、字符数与占用实时显示、超 30,000 字明确列名确认（`draft-reference-budget.ts` 纯函数）；全量 64 files / 278 tests、typecheck、lint、production build、diff check 通过 |
 | V16-C 流式生成 IPC 与渲染 | DONE | `ai:stream-event` 推送（载荷双向守卫）、Main SSE 解析与静默超时 30s、reasoning 仅计数、四条生成流进度面板（思考进度+逐字上屏+取消）、invoke 最终响应仍返回完整结果；中继式验收留痕于 ai-stream-ipc.test；全量 66 files / 289 tests、typecheck、lint、production build、diff check 通过 |
 | V16-D MinerU 文档解析集成 | DONE（含当日事故修复补记） | migration v16 + search schema v2（两处 index_status CHECK 追加 mineru_ready，测试驱动发现 search_documents 同样需重建）、safeStorage 多槽、Mineru 设置卡与判活 IPC、`MineruService` 上传/轮询/fflate 解压/full.md 入库（下载域白名单+zip 防穿越）、文件右键"增强解析"入口；**2026-09-02 事故**：迁移事务内 PRAGMA FK 无效致 v16 级联清空真实工作区 lesson_files（286 行）——当日从迁移前快照完整恢复、`runMigrations` 事务外 FK 守卫 + 回归测试（先红后绿）修复，门禁全绿，详见任务文件事故补记 |
-| V16-E 最终回归与版本验收 | IN_PROGRESS | 自动门与隔离冒烟完成（全量 70 files / 302 tests、typecheck、lint、build、diff check、中继式流式验收、冒烟库验证 v16+search v2）；`docs/v1.6-acceptance.md` 含事故记录、真实自测清单与费用估算；待产品负责人真实自测 + 最终确认后创建 `checkpoint-V1.6-pass` |
+| V16-E 最终回归与版本验收 | DONE | 自动门与隔离冒烟通过（全量 70 files / 305 tests、typecheck、lint、build、diff check、中继式流式验收、冒烟库验证 v16+search v2）；两轮真实自测反馈（流式观感 A1 秒表、显示公式渲染缺陷修复、MinerU 入口可见性缺陷修复、自测清单按裁决修订）；**2026-09-02 产品负责人最终验收通过**（DeepSeek 真实自测通过、MinerU 按需裁决跳过），`checkpoint-V1.6-pass` 创建于最终确认提交 |
+
+**V1.6 已冻结在 `checkpoint-V1.6-pass`（基线 `checkpoint-V1.5.6-pass`）。** V1.7 需求已由产品负责人提出（见 V16-E 任务文件"V1.7 需求记录"）：① 所有 md 文件可 AI 二次编辑（D23 收口放宽，明确要做）；② md 人工直接编辑（候选）；③ 扫描件就地提示增强（候选）——待产品负责人确认开工后另立 V1.7 设计基准与任务链。
 
 基线 `checkpoint-V1.5.6-pass`（已创建）；设计基准 `docs/v1.6-ai-modification-rewrite-plan.md`，决策 D21–D26（`implementation-tasks/V1_6_DECISIONS.md`）；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer。
