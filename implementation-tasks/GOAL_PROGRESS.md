@@ -1206,3 +1206,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 验收文档 `docs/v1.6-acceptance.md`：实施表、自动门、流式中继验收、冒烟、安全边界复核（token 同规范、上传仅 managed、下载白名单+防穿越）、DeepSeek/MinerU 真实自测清单与费用估算（DeepSeek 一轮 ¥1–3，超 ¥3 先告知；MinerU 通常免费额度内）。
 - 待办：产品负责人完成真实自测 + 最终体验确认 → 最终确认提交上创建 `checkpoint-V1.6-pass`（此前不得创建）。
 - Git：本地提交 `v1.6(V16-E): record automated gates and smoke results`。
+
+## 2026-09-02 · V1.6 事故：migration v16 级联清空真实工作区关联表（当日发现、当日恢复修复）
+
+- 事故：产品负责人真实工作区 19:51 打开应用触发 migration v16，"教学内容工作台"各课次资料列表全空（lesson_files 286 行被清、1 处 origin_file_id 被 SET NULL；文件本体 285 份、课次/学生/文件夹、AI 笔记完好）。
+- 根因：`runMigrations` 用 better-sqlite3 事务包裹迁移，事务内 `PRAGMA foreign_keys=OFF` 为静默 no-op，v16 `DROP TABLE files` 触发 ON DELETE CASCADE；原 v15 外键专项测试 seed 无关联行，未覆盖此路径。
+- 恢复：发现前已抢建完整备份（%APPDATA%\TeacherWorkspace-recovery-backup-20260902\，411MB）；v16 改动当时仅入 WAL 未 checkpoint，备份主文件保留 v15 终态 lesson_files 286 行完整；与 search.db 858 条 scopes 交叉核对一致后 ATTACH 快照原样写回 286 条关联 + 1 条 origin 引用，foreign_key_check 通过，各课次资料计数逐课次吻合；备份与迁移前快照（pre-migration-workspace.db）长期保留于备份目录。
+- 修复（先红后绿）：`runMigrations` 框架级 FK 守卫——迁移事务开启前关闭外键、完成后恢复并强制 foreign_key_check（违例中止启动，try/finally 保证恢复）；migration v16 移除 SQL 内无效 PRAGMA；新增回归测试"带关联行的 v15 → v16 升级关联逐条幸存"，stash 修复验证旧实现下失败、修复后通过。
+- 门禁复跑：全量 70 files / 302 tests（301 passed / 1 skipped）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
+- Git：本地提交 `v1.6(V16-D): fix migration v16 cascade and restore link rows`；完整复盘记入 V16-D 任务文件事故补记与 `docs/v1.6-acceptance.md`。

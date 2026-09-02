@@ -132,6 +132,83 @@ describe('V16-D migration v16 (files index_status CHECK rebuild)', () => {
       (database.prepare("SELECT COUNT(*) AS count FROM lesson_files WHERE file_id = 'f-1'").get() as { count: number }).count,
     ).toBe(0)
   })
+
+  it('keeps child link rows when upgrading a populated v15 workspace to v16 (regression, 2026-09-02)', () => {
+    // 事故复盘：v15 真实工作区（lesson_files 286 行）升级到 v16 时，迁移事务内的
+    // PRAGMA foreign_keys=OFF 是 no-op，DROP TABLE files 级联清空了 lesson_files。
+    // 本测试用带关联行的 v15 库重放升级，钉死关联行必须逐条幸存。
+    const database = createDatabase()
+    seedV15Files(database)
+    database.exec(`
+      CREATE TABLE schema_migrations (
+        version INTEGER PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        applied_at TEXT NOT NULL
+      );
+      INSERT INTO schema_migrations (version, name, applied_at)
+        SELECT version, name, applied_at FROM (
+          SELECT 1 AS version, 'create_workspace_metadata' AS name, '2026-01-01' AS applied_at UNION ALL
+          SELECT 2, 'create_core_data_tree', '2026-01-01' UNION ALL
+          SELECT 3, 'create_managed_files', '2026-01-01' UNION ALL
+          SELECT 4, 'add_managed_file_refresh_metadata', '2026-01-01' UNION ALL
+          SELECT 5, 'add_managed_file_index_state', '2026-01-01' UNION ALL
+          SELECT 6, 'create_ai_settings', '2026-01-01' UNION ALL
+          SELECT 7, 'add_note_draft_metadata', '2026-01-01' UNION ALL
+          SELECT 8, 'create_external_library_root', '2026-01-01' UNION ALL
+          SELECT 9, 'allow_lesson_drafts_without_student', '2026-01-01' UNION ALL
+          SELECT 10, 'create_prompt_skills', '2026-01-01' UNION ALL
+          SELECT 11, 'add_draft_lifecycle', '2026-01-01' UNION ALL
+          SELECT 12, 'add_course_progress_and_attendance', '2026-01-01' UNION ALL
+          SELECT 13, 'add_lesson_session_duration', '2026-01-01' UNION ALL
+          SELECT 14, 'add_historical_course_date_metadata', '2026-01-01' UNION ALL
+          SELECT 15, 'create_material_library_tree', '2026-01-01'
+        );
+
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('course', 'period', 'lesson')),
+        title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+        parent_id TEXT REFERENCES nodes(id) ON DELETE CASCADE,
+        sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT
+      );
+      INSERT INTO nodes (id, kind, title, created_at, updated_at) VALUES
+        ('lesson-fk', 'lesson', '第 1 讲', 't', 't');
+
+      CREATE TABLE lesson_files (
+        file_id TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+        lesson_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (file_id, lesson_id)
+      );
+      INSERT INTO lesson_files (file_id, lesson_id, created_at) VALUES
+        ('f-doc', 'lesson-fk', 't'), ('f-img', 'lesson-fk', 't');
+    `)
+
+    expect(runMigrations(database, workspaceMigrations)).toBe(16)
+
+    // 关联行逐条幸存（旧实现此数为 0）
+    const links = database
+      .prepare('SELECT file_id, lesson_id, created_at FROM lesson_files ORDER BY file_id')
+      .all() as Array<{ file_id: string; lesson_id: string; created_at: string }>
+    expect(links).toEqual([
+      { file_id: 'f-doc', lesson_id: 'lesson-fk', created_at: 't' },
+      { file_id: 'f-img', lesson_id: 'lesson-fk', created_at: 't' },
+    ])
+    expect(database.pragma('foreign_key_check')).toEqual([])
+    // files 表重建后 CHECK 含 mineru_ready 且旧值语义不变
+    expect(
+      (database.prepare("SELECT index_status FROM files WHERE id = 'f-img'").get() as { index_status: string }).index_status,
+    ).toBe('no_text')
+    database.prepare("UPDATE files SET index_status = 'mineru_ready' WHERE id = 'f-img'").run()
+    // 级联删除在重建后的表上仍然有效（外键在迁移完成后恢复）
+    database.prepare("DELETE FROM files WHERE id = 'f-doc'").run()
+    expect(
+      (database.prepare("SELECT COUNT(*) AS count FROM lesson_files WHERE file_id = 'f-doc'").get() as { count: number }).count,
+    ).toBe(0)
+  })
 })
 
 /** 构造一个 v1 形态的 search.db（不含 mineru_ready 的旧 CHECK），模拟既有用户的搜索索引库。 */

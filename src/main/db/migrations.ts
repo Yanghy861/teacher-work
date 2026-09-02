@@ -419,11 +419,13 @@ export const workspaceMigrations: readonly Migration[] = [
     version: 16,
     name: 'extend_files_index_status_for_mineru',
     up: (database) => {
-      // SQLite 不能 ALTER CHECK：按官方 12 步法在迁移事务内重建 files 表。
-      // 外键引用（lesson_files/student_files/material_folder_items）经 PRAGMA foreign_keys=OFF 保持行级完整。
+      // SQLite 不能 ALTER CHECK：按官方 12 步法重建 files 表。
+      // 事故复盘（2026-09-02）：runMigrations 将 up 包在 better-sqlite3 事务里执行，
+      // 事务内的 PRAGMA foreign_keys=OFF 是静默 no-op（SQLite 规定 FK PRAGMA 在事务内不可变更），
+      // DROP TABLE files 触发 ON DELETE CASCADE 把 lesson_files/student_files/material_folder_items 清空。
+      // 因此关闭外键必须在迁移事务开启**之前**执行：这里用 savepoint 之外的全局 PRAGMA，
+      // 由 runMigrations 在 applyMigration 前后显式关闭/恢复（见 runMigrationWithFkGuard）。
       database.exec(`
-        PRAGMA foreign_keys = OFF;
-
         CREATE TABLE files_v16 (
           id TEXT PRIMARY KEY NOT NULL,
           original_name TEXT NOT NULL CHECK (length(trim(original_name)) > 0),
@@ -456,9 +458,6 @@ export const workspaceMigrations: readonly Migration[] = [
           ON files (origin_file_id);
         CREATE INDEX IF NOT EXISTS idx_files_index_status
           ON files (index_status, deleted_at, id);
-
-        PRAGMA foreign_key_check;
-        PRAGMA foreign_keys = ON;
       `)
     },
   },
@@ -492,9 +491,31 @@ export function runMigrations(
       .run(migration.version, migration.name, new Date().toISOString())
   })
 
-  for (const migration of migrations) {
-    if (!appliedVersions.has(migration.version)) {
-      applyMigration.immediate(migration)
+  // FK PRAGMA 在事务内是静默 no-op（SQLite 规定），因此必须在迁移事务开启之前关闭外键：
+  // v16 的 files 表重建依赖 DROP TABLE 不触发级联，否则其隐式 DELETE 会把
+  // lesson_files / student_files / material_folder_items 清空（2026-09-02 真实工作区事故）。
+  // 全部迁移提交后恢复外键并强制 foreign_key_check，失败则让启动显式报错。
+  const foreignKeysWereOn =
+    (database.pragma('foreign_keys', { simple: true }) as number) === 1
+  if (foreignKeysWereOn) {
+    database.pragma('foreign_keys = OFF')
+  }
+  try {
+    for (const migration of migrations) {
+      if (!appliedVersions.has(migration.version)) {
+        applyMigration.immediate(migration)
+      }
+    }
+    if (foreignKeysWereOn) {
+      database.pragma('foreign_keys = ON')
+      const violations = database.pragma('foreign_key_check') as unknown[]
+      if (Array.isArray(violations) && violations.length > 0) {
+        throw new Error(`迁移后外键校验失败：${JSON.stringify(violations.slice(0, 3))}`)
+      }
+    }
+  } finally {
+    if (foreignKeysWereOn) {
+      database.pragma('foreign_keys = ON')
     }
   }
 

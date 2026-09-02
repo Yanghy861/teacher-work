@@ -30,7 +30,7 @@
 
 **实现：**
 
-- Migration v16 `extend_files_index_status_for_mineru`：files 表 12 步法重建，CHECK 追加 `mineru_ready`，`PRAGMA foreign_keys=OFF` → `foreign_key_check` → 恢复；
+- Migration v16 `extend_files_index_status_for_mineru`：files 表 12 步法重建，CHECK 追加 `mineru_ready`；
 - **测试驱动的关键修复**：`search_documents.index_status` 的 CHECK 同样不含 `mineru_ready`（旧 schemaVersion 1）——Service 测试首轮暴露 `SQLITE_CONSTRAINT_CHECK`。新增 search schema v2（`SEARCH_SCHEMA_VERSION = 2`）：`openSearchDatabase` 先读 `search_meta.schemaVersion` 再按 12 步法仅重建 `search_documents`（子表 scopes/chunks/FTS 与数据原样保留，FK-off + `foreign_key_check`）；新库 DDL 直接含 `mineru_ready`；
 - `secure-storage.ts` 多槽化：`createElectronSecureStorage(slot)`，mineru 槽路径 `teacher-workbench-mineru-key.bin`，ai 槽保持旧名 `teacher-workbench-ai-key.bin`（不迁移不改名）；
 - `MineruSettingsService`（token 仅 safeStorage，无 DB 行）+ IPC `mineru:get-settings/update-settings/clear-token/test-connection`（判活 GET `/api/v4/extract-results/batch/<探测ID>`：401/403 → 无效 token、402 → 配额、其余通过）；
@@ -49,3 +49,23 @@
 **真实自测（V16-E 统一执行）：** 本任务真实 MinerU 端到端验证按 D26/V16-E 统一进行（真实 token 留给产品负责人自测；自动化侧以 fake HTTP 全路径覆盖）。
 
 **Git：** 本地提交 `v1.6(V16-D): integrate mineru document parsing`。
+
+## 事故补记：migration v16 级联清空关联表（2026-09-02 当日发现、当日修复）
+
+**事故：** 产品负责人真实工作区于 2026-09-02 19:51 打开应用触发 migration v16 时，"教学内容工作台"各课次资料列表全部变空。
+
+**根因：** `runMigrations` 将迁移 `up` 包在 better-sqlite3 事务中执行；SQLite 规定 `PRAGMA foreign_keys` 在事务内为静默 no-op，因此 migration v16 SQL 内的 `PRAGMA foreign_keys=OFF` 无效。`DROP TABLE files`（12 步法重建第 9 步）触发隐式 `ON DELETE CASCADE`，把 `lesson_files`（286 行）清空，并把 `files.origin_file_id` 的 1 处引用 SET NULL。`student_files` / `material_folder_items` 本为 0 行，无实际损失。文件本体（285 份活动 managed 文件）、课次/学生/文件夹、AI 笔记全部完好（对象副本复制发生在建表之前，且 DROP 只删元数据行）。原 v15 外键专项测试（seed 无关联行）未能覆盖此路径。
+
+**数据恢复（当日完成）：**
+- 发现前已抢建完整备份（`%APPDATA%\TeacherWorkspace-recovery-backup-20260902\`，411MB，含 data/files/search 全量）；
+- 关键证据：v16 改动当时仅写入 WAL、尚未 checkpoint 进主文件，备份中的 `workspace.db` 主文件保留 v15 终态——`lesson_files` 286 行与原始 `created_at` 完整；与 search.db scopes（858 条 file→course/period/lesson 链）交叉核对完全一致（快照 286 条全部 ⊆ scopes；引用的 file/lesson 在当前库全部存在）；
+- 以 ATTACH 快照方式将 286 条 `lesson_files` 原样写回 + 1 条 `origin_file_id` 还原，事务内执行，`foreign_key_check` 通过；恢复后各课次资料计数与快照逐课次一致（期中复习（2）40 份等）；
+- 备份与迁移前快照（`pre-migration-workspace.db`）保留于备份目录备查。
+
+**代码修复（先红后绿验证）：**
+- `runMigrations` 框架级 FK 守卫：迁移事务开启**之前**（事务外）`PRAGMA foreign_keys=OFF`，全部迁移完成后恢复 ON 并强制 `foreign_key_check`，有违例则抛错中止启动；try/finally 确保任何路径下外键恢复；
+- migration v16 移除 SQL 内无效的两条 PRAGMA（注释保留事故复盘）；
+- 新增回归测试 `keeps child link rows when upgrading a populated v15 workspace to v16`：带 2 条 lesson_files 的 v15 库升级后关联行逐条幸存、旧值语义不变、重建后级联仍有效；stash 修复运行该测试确认旧实现下失败（关联被清空）、修复后通过；
+- 门禁复跑：全量 70 files / 302 tests（301 通过、1 跳过）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
+
+**Git：** 本地提交 `v1.6(V16-D): fix migration v16 cascade and restore link rows`。
