@@ -1215,3 +1215,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 修复（先红后绿）：`runMigrations` 框架级 FK 守卫——迁移事务开启前关闭外键、完成后恢复并强制 foreign_key_check（违例中止启动，try/finally 保证恢复）；migration v16 移除 SQL 内无效 PRAGMA；新增回归测试"带关联行的 v15 → v16 升级关联逐条幸存"，stash 修复验证旧实现下失败、修复后通过。
 - 门禁复跑：全量 70 files / 302 tests（301 passed / 1 skipped）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
 - Git：本地提交 `v1.6(V16-D): fix migration v16 cascade and restore link rows`；完整复盘记入 V16-D 任务文件事故补记与 `docs/v1.6-acceptance.md`。
+
+## 2026-09-02 · V16-E 真实自测第一轮反馈：公式渲染修复 + 流式观感与 md 编辑记录
+
+- 反馈 B（缺陷，当日修复）：`\[...\]` 显示公式渲染失败——`renderInline` 缺 `\[` 分支（token 掉进斜体分支被剥首尾以纯文本漏出），且 AI 常把 `\[`/`\]` 各占一行被逐行渲染拆散。修复：新增 `\[` → MathSpan(display) 分支 + `renderParagraphLines` 跨行显示公式行合并；`lesson-material-reader.test.ts` +2 回归例（含 `|` 绝对值公式、跨行定界符）。门禁复跑全绿（70 files / 304 tests、typecheck、lint、build、diff check）。
+- 反馈 A（记录待裁决）：流式观感"不像逐字上屏"——机制走读确认链路真增量（逐 chunk 读取、逐 delta 推送、逐事件上屏，中继测试已覆盖）；成因最可能为 reasoner 模型思考阶段占据几乎全部时长（D22 只允许显示计数）而正文数秒内流完。候选：秒表 / 打字机节流 / 换 deepseek-chat，待产品负责人选择。
+- 反馈 C（记录待裁决）：md 课件直接编辑能力——超出 V1.6 冻结基准；提案 V1.7：阅读器对应用内生成 md 提供编辑入口，保存发布为第 N+1 版（推荐）或直接修改当前版本；外部资料维持只读。待产品负责人确认范围。
+- Git：本地提交 `v1.6(V16-E): fix display math rendering and record self-test feedback`。

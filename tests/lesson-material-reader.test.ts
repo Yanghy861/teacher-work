@@ -37,6 +37,33 @@ describe('lesson material Markdown reader', () => {
     expect(markup).not.toContain('\\($')
   })
 
+  it('renders single-line \\[...\\] display math with absolute values (V1.6 修复回归)', () => {
+    // 修复前：renderInline 缺 \[ 分支，token 掉进斜体分支被剥首尾字符、以纯文本漏出。
+    const markup = renderToStaticMarkup(createElement(MarkdownDocument, {
+      body: '\\[ |a-b|+|b-c|-|a+c|=(b-a)+(c-b)-(-a-c)=2c \\]',
+      files: [],
+    }))
+
+    expect(markup).toContain('material-math-display')
+    expect(markup).toContain('class="katex"')
+    expect(markup).not.toContain('katex-error')
+    // 绝对值竖线必须进入 KaTeX，而不是以裸文本漏出
+    expect(markup).not.toContain('<p>[ |a-b|')
+  })
+
+  it('merges multi-line \\[ ... \\] display math into a rendered formula (V1.6 修复回归)', () => {
+    // 修复前：段落逐行渲染，\[ 与 \] 各占一行时定界符拆散、无法配对。
+    const markup = renderToStaticMarkup(createElement(MarkdownDocument, {
+      body: '解：原式化简如下\n\\[\n |a-b|+|b-c|-|a+c|=(b-a)+(c-b)-(-a-c)=2c \n\\]\n所以结果为 \\(2c\\)。',
+      files: [],
+    }))
+
+    expect(markup).toContain('material-math-display')
+    expect(markup).toContain('class="katex"')
+    expect(markup).not.toContain('katex-error')
+    expect(markup).not.toContain('[ |a-b|')
+  })
+
   it('decodes escaped comparisons and renders bare LaTeX fragments', () => {
     const markup = renderToStaticMarkup(createElement(MarkdownDocument, {
       body: '(1) k&gt;\\frac{5}{4}; (2) 另一个根为 0',

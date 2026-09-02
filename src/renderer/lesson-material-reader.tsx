@@ -440,12 +440,32 @@ function renderParagraphLines(
   keyPrefix: string,
 ): ReactNode[] {
   const nodes: ReactNode[] = []
-  for (let index = 0; index < lines.length; index += 1) {
-    const sourceLine = lines[index]
+  // 显示公式 \[ ... \] 常跨多行（\[ 与 \] 各占一行）；逐行渲染会拆散定界符，
+  // 先把跨行公式合并回单行（软换行本就以空格衔接，语义不变）。
+  const mergedLines: string[] = []
+  let mathBuffer: string | null = null
+  for (const line of lines) {
+    if (mathBuffer === null) {
+      if (/\\\[/u.test(line) && !/\\\]/u.test(line)) {
+        mathBuffer = line
+      } else {
+        mergedLines.push(line)
+      }
+    } else {
+      mathBuffer += ` ${line}`
+      if (/\\\]/u.test(line)) {
+        mergedLines.push(mathBuffer)
+        mathBuffer = null
+      }
+    }
+  }
+  if (mathBuffer !== null) mergedLines.push(mathBuffer)
+  for (let index = 0; index < mergedLines.length; index += 1) {
+    const sourceLine = mergedLines[index]
     const hardBreak = /(?: {2,}|\\)$/u.test(sourceLine)
     const line = hardBreak ? sourceLine.replace(/(?: {2,}|\\)$/u, '') : sourceLine
     nodes.push(...renderInline(line, files, `${keyPrefix}-${index}`))
-    if (index < lines.length - 1) {
+    if (index < mergedLines.length - 1) {
       nodes.push(hardBreak ? <br key={`${keyPrefix}-break-${index}`} /> : ' ')
     }
   }
@@ -476,6 +496,9 @@ function renderInline(text: string, files: readonly ManagedFileRecord[], keyPref
     } else if (token.startsWith('`')) {
       nodes.push(<code key={key}>{token.slice(1, -1)}</code>)
     } else if (token.startsWith('$$')) {
+      nodes.push(<MathSpan key={key} formula={token.slice(2, -2)} display />)
+    } else if (token.startsWith('\\[')) {
+      // \[...\] 显示公式：修复前该 token 掉进斜体分支被剥掉首尾字符、以纯文本漏出。
       nodes.push(<MathSpan key={key} formula={token.slice(2, -2)} display />)
     } else if (token.startsWith('$') || token.startsWith('\\(')) {
       nodes.push(<MathSpan key={key} formula={token.startsWith('\\(') ? token.slice(2, -2) : token.slice(1, -1)} />)
