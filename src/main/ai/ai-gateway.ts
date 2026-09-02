@@ -39,6 +39,9 @@ export interface AiFetchResponse {
 
 export type AiFetch = (input: string, init: { method: string; headers: Record<string, string>; body: string; signal: AbortSignal }) => Promise<AiFetchResponse>
 
+// thinking 型后端（reasoning_content 计入输出）需要远高于普通请求的等待窗口，默认超时放大到 120s（D21）。
+export const DEFAULT_AI_TIMEOUT_MS = 120_000
+
 export interface AiGatewayOptions {
   readonly fetch?: AiFetch
   readonly timeoutMs?: number
@@ -62,14 +65,14 @@ export class AiGateway {
     options: AiGatewayOptions = {},
   ) {
     this.fetcher = options.fetch ?? ((input, init) => fetch(input, init))
-    this.timeoutMs = options.timeoutMs ?? 15_000
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS
     this.logger = options.logger
   }
 
   async testConnection(requestId: string): Promise<AiConnectionTestResult> {
     const settings = this.settings.getSettings()
     const startedAt = Date.now()
-    await this.request(requestId, settings.provider, settings.model, settings.endpoint, 'ping', 1)
+    await this.request(requestId, settings.provider, settings.model, settings.endpoint, 'ping', 1, 'structure')
     return { provider: settings.provider, model: settings.model, latencyMs: Date.now() - startedAt }
   }
 
@@ -96,6 +99,7 @@ export class AiGateway {
     endpoint: string,
     prompt: string,
     maxTokens?: number,
+    responseParsing: 'text' | 'structure' = 'text',
   ): Promise<{ readonly text: string; readonly model: string }> {
     if (provider !== 'openai-compatible') {
       throw new AiGatewayError('AI_UPSTREAM', '当前仅支持 OpenAI-compatible provider。')
@@ -140,7 +144,7 @@ export class AiGateway {
         throw mapHttpError(response.status)
       }
       const payload = await response.json().catch(() => undefined)
-      const parsed = parseChatResponse(payload)
+      const parsed = parseChatResponse(payload, responseParsing)
       return {
         text: parsed.text,
         model: typeof parsed.model === 'string' && parsed.model.trim() !== '' ? parsed.model : model,
@@ -190,12 +194,22 @@ function mapHttpError(status: number): AiGatewayError {
   return new AiGatewayError('AI_UPSTREAM', 'AI 服务拒绝了请求。', status)
 }
 
-function parseChatResponse(payload: unknown): { readonly text: string; readonly model?: string } {
+function parseChatResponse(
+  payload: unknown,
+  parsing: 'text' | 'structure' = 'text',
+): { readonly text: string; readonly model?: string } {
   if (typeof payload !== 'object' || payload === null) {
     throw new AiGatewayError('AI_INVALID_RESPONSE', 'AI 服务返回了无法识别的响应。')
   }
   const candidate = payload as OpenAiChatResponse
-  const content = candidate.choices?.[0]?.message?.content
+  if (!Array.isArray(candidate.choices) || candidate.choices.length === 0) {
+    throw new AiGatewayError('AI_INVALID_RESPONSE', 'AI 服务返回了无法识别的响应。')
+  }
+  if (parsing === 'structure') {
+    // 连通性检查与正文质量解耦：思考型后端在 max_tokens 极小时 content 为空属正常行为。
+    return { text: '', model: typeof candidate.model === 'string' ? candidate.model : undefined }
+  }
+  const content = candidate.choices[0]?.message?.content
   if (typeof content !== 'string' || content.trim() === '') {
     throw new AiGatewayError('AI_INVALID_RESPONSE', 'AI 服务返回了空响应。')
   }

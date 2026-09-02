@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { AiGateway, AiGatewayError, type AiFetch, type AiFetchResponse } from '../src/main/ai/ai-gateway'
+import { AiGateway, AiGatewayError, DEFAULT_AI_TIMEOUT_MS, type AiFetch, type AiFetchResponse } from '../src/main/ai/ai-gateway'
 import { AiSettingsService } from '../src/main/ai/ai-settings-service'
 import type { SecureStoragePort } from '../src/main/ai/secure-storage'
 import { initializeWorkspace, type WorkspaceHandle } from '../src/main/workspace/workspace-service'
@@ -112,5 +112,39 @@ describe('L08 secure settings and AI gateway', () => {
     service.updateSettings({ provider: 'openai-compatible', model: 'fake', endpoint: 'not-a-url', apiKey: 'KEY' })
     await expect(gateway.requestText('bad-endpoint', 'hello')).rejects.toMatchObject({ code: 'AI_INVALID_ENDPOINT' })
     expect(new AiGatewayError('AI_NETWORK', 'safe')).toBeInstanceOf(Error)
+  })
+
+  it('exposes a 120s default timeout constant for thinking-mode backends (V16-A)', () => {
+    expect(DEFAULT_AI_TIMEOUT_MS).toBe(120_000)
+  })
+
+  it('treats a structurally valid chat.completion with empty content as a passing connection test (V16-A)', async () => {
+    const { service } = fixture(true)
+    service.updateSettings({ provider: 'openai-compatible', model: 'deepseek-thinking', endpoint: 'https://fake.local/v1', apiKey: 'KEY' })
+    const fetcher: AiFetch = async () => response(200, {
+      model: 'deepseek-thinking',
+      choices: [{ message: { content: '', reasoning_content: 'pong' } }],
+    })
+    const gateway = new AiGateway(service, { fetch: fetcher, timeoutMs: 100 })
+    await expect(gateway.testConnection('thinking-ping')).resolves.toMatchObject({
+      provider: 'openai-compatible',
+      model: 'deepseek-thinking',
+    })
+  })
+
+  it('still rejects empty business responses but requires a real chat.completion shape for connection tests (V16-A)', async () => {
+    const { service } = fixture(true)
+    service.updateSettings({ provider: 'openai-compatible', model: 'fake', endpoint: 'https://fake.local/v1', apiKey: 'KEY' })
+    const emptyContent: AiFetch = async () => response(200, { model: 'fake', choices: [{ message: { content: '' } }] })
+    const business = new AiGateway(service, { fetch: emptyContent, timeoutMs: 100 })
+    await expect(business.requestText('empty-body', 'hello')).rejects.toMatchObject({ code: 'AI_INVALID_RESPONSE' })
+
+    const notChatCompletion: AiFetch = async () => response(200, { ok: true })
+    const connection = new AiGateway(service, { fetch: notChatCompletion, timeoutMs: 100 })
+    await expect(connection.testConnection('bad-structure')).rejects.toMatchObject({ code: 'AI_INVALID_RESPONSE' })
+
+    const noChoices: AiFetch = async () => response(200, { model: 'fake', choices: [] })
+    const emptyChoices = new AiGateway(service, { fetch: noChoices, timeoutMs: 100 })
+    await expect(emptyChoices.testConnection('empty-choices')).rejects.toMatchObject({ code: 'AI_INVALID_RESPONSE' })
   })
 })

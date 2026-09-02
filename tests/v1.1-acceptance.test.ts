@@ -124,8 +124,8 @@ describe('V11-05 V1.1 acceptance', () => {
       const generationBase = {
         lessonId: lesson.id,
         sources: lessonFiles.map((file) => ({ fileId: file.id })),
-        maxChars: 12_000,
-        maxTokens: 2_000,
+        maxChars: 30_000,
+        maxTokens: 16_000,
       } as const
 
       const lecture = await drafts.generate({

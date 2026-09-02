@@ -1163,3 +1163,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 立项依据：2026-09-01/02 DeepSeek 实测诊断（测试连接 `max_tokens:1` 与修改两阶段 2,000 token 均被 thinking 思维链耗尽致 content 为空；实测复现记录见设计基准第 0 节）；产品负责人逐项裁决 thinking 保留、流式替代死等、修改仅限应用内生成文件、MinerU 云端 opt-in、30,000 字/10 份预算。
 - 范围边界：新增 IPC 通道（`ai:stream-event` + `mineru:*` 六通道）与 migration v16 均经产品负责人批准；MinerU 上传对象仅限 managed 副本、外部根目录只读资料无上传入口；token 走 safeStorage 多槽，不进日志/备份/Git；非目标（Anthropic provider、docx 导出、vision 直读、thinking 开关）记 D26。
 - Git：基线 `checkpoint-V1.5.6-pass`（已创建）；本条目随 `plan(V1.6)` 提交；里程碑使用 `v1.6(V16-XX)`；不自动 push、不运行 portable/installer。
+
+## 2026-09-02 · V16-A 完成：网关预算修复与测试连接判定修正
+
+- `ai-gateway.ts`：默认超时提取为 `DEFAULT_AI_TIMEOUT_MS = 120_000`（原内联 15s，`timeoutMs` 注入点不变）；`testConnection` 判据与正文质量解耦——`parseChatResponse` 增加 `parsing: 'text' | 'structure'` 模式，结构模式只要求合法对象 + 非空 `choices` 数组（思考型后端 `max_tokens: 1` 时 content 为空属正常），业务 `requestText` 的正文非空校验与 `AI_INVALID_RESPONSE` 语义不变（choices 非数组/为空改判"无法识别的响应"更贴合实际错误）。请求体不发送 `thinking`/`reasoning_effort`（D21）。
+- `draft-contracts.ts`：`DRAFT_DEFAULT_MAX_CHARS` 12,000 → 30,000、`DRAFT_DEFAULT_MAX_TOKENS` 2,000 → 16,000（合同上限 100,000 / 32,000 不变）；渲染层 `draft-panel.tsx` 经常量引用自动受益，v1.1-acceptance 中的历史硬编码值同步为 30,000/16,000。
+- 测试：`ai-gateway.test.ts` +3（120s 常量合同；结构合法 + content 为空的 testConnection 通过；业务空正文仍报 `AI_INVALID_RESPONSE`，连接测试遇坏结构/空 choices 报 `AI_INVALID_RESPONSE`）。
+- 门禁：全量 63 files / 268 passed / 1 skipped（基线 265 + 3）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
+- Git：本地提交 `v1.6(V16-A): fix gateway budget and connection test criteria`。

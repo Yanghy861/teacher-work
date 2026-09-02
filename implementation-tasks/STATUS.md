@@ -154,7 +154,7 @@
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
-| V16-A 网关预算修复与测试连接判定 | TODO | 测试连接改为结构判定不依赖正文非空；超时 15s→120s；`DRAFT_DEFAULT_MAX_CHARS`→30,000、`DRAFT_DEFAULT_MAX_TOKENS`→16,000；不发送 thinking 参数 |
+| V16-A 网关预算修复与测试连接判定 | DONE | testConnection 改结构判定（choices 非空即可，content 可空）且业务空正文语义不变；`DEFAULT_AI_TIMEOUT_MS = 120_000`；默认预算 30,000 字 / 16,000 token；不发送 thinking 参数；全量 63 files / 268 tests、typecheck、lint、production build、diff check 通过 |
 | V16-B 修改范围收口与参考预算 UX | TODO | 修改对象仅限应用内生成文件（外部 office 置灰提示、无版本引导先生成）；参考 ≤10 份、选择区占用显示、超 30,000 字明确列名提示不静默截断 |
 | V16-C 流式生成 IPC 与渲染 | TODO | `ai:stream-event` 推送通道、SSE 解析、思考进度（不展示思维链原文）、正文逐字上屏、静默超时 30s、取消复用；invoke 最终响应仍返回完整结果 |
 | V16-D MinerU 文档解析集成 | TODO | migration v16（index_status 追加 mineru_ready）、safeStorage 多槽、Mineru 设置卡与判活 IPC、`MineruService` 上传/轮询/fflate 解压/full.md 入库、文件右键"增强解析"入口 |

@@ -12,8 +12,8 @@ export const DRAFT_KINDS = {
 export type DraftKind = (typeof DRAFT_KINDS)[keyof typeof DRAFT_KINDS]
 
 export const DRAFT_PROMPT_VERSION = 'v11-03-v1'
-export const DRAFT_DEFAULT_MAX_CHARS = 12_000
-export const DRAFT_DEFAULT_MAX_TOKENS = 2_000
+export const DRAFT_DEFAULT_MAX_CHARS = 30_000
+export const DRAFT_DEFAULT_MAX_TOKENS = 16_000
 export const DRAFT_MAX_CHARS = 100_000
 export const DRAFT_MAX_TOKENS = 32_000
 export const DRAFT_REQUIREMENT_MAX_CHARS = 4_000
