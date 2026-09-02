@@ -1,6 +1,6 @@
 # V16-E · V1.6 最终回归与版本验收
 
-**状态：** `TODO`
+**状态：** `IN_PROGRESS`（2026-09-02 自动门与隔离冒烟完成；DeepSeek/MinerU 真实自测与最终体验确认待产品负责人）
 
 ## 范围
 
@@ -22,3 +22,13 @@
 
 - 全部自动门通过 + 两轮真实自测通过 + 产品负责人最终体验确认；
 - 最终确认提交上创建 `checkpoint-V1.6-pass`（标签说明注明基线 `checkpoint-V1.5.6-pass`）。
+
+## 完成记录（2026-09-02，自动部分）
+
+- 自动门：全量 70 files / 301 tests（300 passed / 1 skipped）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净；未运行 portable/installer、未 push；
+- 中继式流式验收：`tests/ai-stream-ipc.test.ts` 5 例（SSE 解析 → `ai:stream-event` 推送 → 渲染状态机 → done 与 invoke 一致性；含静默超时与取消）；
+- 隔离 Windows 冒烟：独立 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA` + `--user-data-dir` 启动 production Electron，4 进程两次采样存活，`workspace.db` / `search.db`（含 WAL/SHM）创建成功，stderr 无错误；冒烟库验证 `schema_migrations` 应用至 v16、files CHECK 含 `mineru_ready`、search schemaVersion=2；进程与临时目录已清理，未接触正式工作区与任何凭据；
+- 验收文档 `docs/v1.6-acceptance.md`：实施内容表、自动门数字、中继式流式验收、冒烟记录、安全边界复核、DeepSeek/MinerU 真实自测清单与费用估算（DeepSeek 一轮约 ¥1–3，超 ¥3 先告知；MinerU 通常免费额度内）；
+- 待办：产品负责人完成两份真实自测清单并最终体验确认后，创建 `checkpoint-V1.6-pass`（在此之前不得创建）。
+
+**Git：** 本地提交 `v1.6(V16-E): record automated gates and smoke results`。

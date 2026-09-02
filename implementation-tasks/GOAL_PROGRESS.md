@@ -1197,3 +1197,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 测试：新增 mineru-migration（5，含 search v1→v2）、mineru-service（6，fake fetcher 全管道/拒绝/轮询/失败/白名单/重复提交）、static-render-v156-d 钉测扩展（设置卡/右键/阅读器）；历史版本 schema 版本 pin 15→16 按既有惯例同步（workspace-foundation / v1.1 / v1.2 / v1.3；roll-back 测试失败迁移改 version 17），验收标准未改写。
 - 门禁：全量 70 files / 301 tests（300 passed / 1 skipped，+12）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
 - Git：本地提交 `v1.6(V16-D): integrate mineru document parsing`。
+
+## 2026-09-02 · V16-E 自动门与隔离冒烟完成（IN_PROGRESS，真实自测待产品负责人）
+
+- 自动门：全量 70 files / 301 tests（300 passed / 1 skipped；V1.5.6 基线 63/265，净增 7 files / 36 tests）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净；历史测试仅同步 schema 版本钉测（15→16），验收标准未改写。
+- 中继式流式验收（D15 先例）：ai-stream-ipc 5 例覆盖 SSE→推送→渲染状态机→done 与 invoke 一致性（含 reasoning 计数、静默超时、取消）。
+- 隔离冒烟：独立 app-data + `--user-data-dir` 启动 production Electron，4 进程两次采样存活，workspace.db / search.db（含 WAL/SHM）创建成功、stderr 无错误；冒烟库直接验证 migration 1–16 应用、files CHECK 含 mineru_ready、search schemaVersion=2；进程与临时目录已清理。
+- 验收文档 `docs/v1.6-acceptance.md`：实施表、自动门、流式中继验收、冒烟、安全边界复核（token 同规范、上传仅 managed、下载白名单+防穿越）、DeepSeek/MinerU 真实自测清单与费用估算（DeepSeek 一轮 ¥1–3，超 ¥3 先告知；MinerU 通常免费额度内）。
+- 待办：产品负责人完成真实自测 + 最终体验确认 → 最终确认提交上创建 `checkpoint-V1.6-pass`（此前不得创建）。
+- Git：本地提交 `v1.6(V16-E): record automated gates and smoke results`。
