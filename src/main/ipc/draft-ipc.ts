@@ -20,9 +20,10 @@ import {
 import { isNoteRecord } from '../../shared/core-contracts'
 import { isPublishDraftVersionRequest, type PublishDraftVersionRequest } from '../../shared/draft-contracts'
 import { AiGatewayError } from '../ai/ai-gateway'
+import { buildStreamEventSink, pushAiStreamEvent } from './ai-ipc'
 import { DraftService, DraftServiceError } from '../draft/draft-service'
 import type { ManagedFileService } from '../files/managed-file-service'
-import type { IpcLogger, IpcMainPort } from './app-ipc'
+import { extractIpcSender, type IpcEventSender, type IpcLogger, type IpcMainPort } from './app-ipc'
 import type { WorkspaceActivityGate } from '../workspace/activity-gate'
 import { WorkspaceActivityError } from '../workspace/activity-gate'
 
@@ -47,10 +48,10 @@ export function registerDraftIpc(
   logger: IpcLogger,
 ): () => void {
   for (const channel of DRAFT_CHANNELS) {
-    ipcMain.handle(channel, (_event, payload) =>
+    ipcMain.handle(channel, (event, payload) =>
       dependencies.activityGate === undefined
-        ? dispatchDraftIpc(channel, payload, dependencies, logger)
-        : dependencies.activityGate.run(() => dispatchDraftIpc(channel, payload, dependencies, logger)).catch((error: unknown) => {
+        ? dispatchDraftIpc(channel, payload, dependencies, logger, extractIpcSender(event))
+        : dependencies.activityGate.run(() => dispatchDraftIpc(channel, payload, dependencies, logger, extractIpcSender(event))).catch((error: unknown) => {
           if (error instanceof WorkspaceActivityError) return failure(IPC_ERROR_CODES.WORKSPACE_BUSY, error.message)
           throw error
         }),
@@ -66,6 +67,7 @@ export async function dispatchDraftIpc(
   payload: unknown,
   dependencies: DraftIpcDependencies,
   logger: IpcLogger,
+  sender?: IpcEventSender,
 ): Promise<IpcResponse<unknown>> {
   if (!DRAFT_CHANNELS.includes(channel as IpcChannel)) {
     logger.log('warn', 'ipc.unknown_draft_channel', { channel })
@@ -76,17 +78,27 @@ export async function dispatchDraftIpc(
     switch (channel) {
       case DRAFT_IPC_CHANNELS.generate: {
         assertRequest(payload, isGenerateDraftRequest)
-        const result = await service.generate(payload as GenerateDraftRequest)
+        const request = payload as GenerateDraftRequest
+        const sink = sender === undefined ? undefined : buildStreamEventSink(request.requestId, sender)
+        const result = await service.generate(request, sink)
         if (!isGenerateDraftResult(result)) {
           throw new Error('Draft service returned an invalid generation response')
+        }
+        if (sink !== undefined) {
+          pushAiStreamEvent(sender, { requestId: request.requestId, kind: 'done', chars: result.bodyMd.length, model: result.metadata.model })
         }
         return success(result)
       }
       case DRAFT_IPC_CHANNELS.regenerate: {
         assertRequest(payload, isRegenerateDraftRequest)
-        const result = await service.regenerate(payload as RegenerateDraftRequest)
+        const request = payload as RegenerateDraftRequest
+        const sink = sender === undefined ? undefined : buildStreamEventSink(request.requestId, sender)
+        const result = await service.regenerate(request, sink)
         if (!isGenerateDraftResult(result)) {
           throw new Error('Draft service returned an invalid regeneration response')
+        }
+        if (sink !== undefined) {
+          pushAiStreamEvent(sender, { requestId: request.requestId, kind: 'done', chars: result.bodyMd.length, model: result.metadata.model })
         }
         return success(result)
       }

@@ -102,6 +102,13 @@ export default function DraftPanel({
   const [compareOpen, setCompareOpen] = useState(false)
   const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
   const [referenceCharCounts, setReferenceCharCounts] = useState<ReadonlyMap<string, number>>(new Map())
+  const [streamState, setStreamState] = useState<{
+    readonly phase: 'reasoning' | 'text'
+    readonly reasoningChars: number
+    readonly textPreview: string
+    readonly requestId: string
+  } | null>(null)
+  const streamRequestId = useRef('')
   const [referenceNotice, setReferenceNotice] = useState('')
   const confirmedBudgetSignature = useRef('')
   const knownLessonFileIds = useRef<Set<string>>(new Set())
@@ -314,6 +321,37 @@ export default function DraftPanel({
     confirmedBudgetSignature.current = ''
   }, [selectedReferenceFileIds, targetFileId, lessonBaselineFileIds])
 
+  // D22：订阅流事件（按 requestId 过滤）——reasoning 只累计进度计数（不展示思维链原文），text 逐字上屏。
+  useEffect(() => window.teacherWorkbench.ai.onStreamEvent((event) => {
+    if (event.requestId !== streamRequestId.current) return
+    if (event.kind === 'reasoning') {
+      setStreamState((current) => current === null
+        ? current
+        : { ...current, phase: 'reasoning', reasoningChars: event.chars ?? current.reasoningChars })
+      return
+    }
+    if (event.kind === 'text' && event.text !== undefined) {
+      setStreamState((current) => current === null
+        ? current
+        : { ...current, phase: 'text', textPreview: current.textPreview + event.text })
+    }
+  }), [])
+
+  function beginStreaming(requestId: string): void {
+    streamRequestId.current = requestId
+    setStreamState({ phase: 'reasoning', reasoningChars: 0, textPreview: '', requestId })
+  }
+
+  function endStreaming(): void {
+    streamRequestId.current = ''
+    setStreamState(null)
+  }
+
+  async function cancelStreaming(): Promise<void> {
+    if (streamState === null) return
+    await window.teacherWorkbench.ai.cancel({ requestId: streamState.requestId }).catch(() => undefined)
+  }
+
   async function reload(): Promise<CoreOverview | null> {
     try {
       const [nextFiles, nextSkills, nextCore] = await Promise.all([
@@ -383,11 +421,13 @@ export default function DraftPanel({
       return
     }
     setBusyAction(kind)
+    const requestId = globalThis.crypto.randomUUID()
     setMessage(`正在生成${kindLabels[kind]}…`)
     setError('')
+    beginStreaming(requestId)
     try {
       const result = await window.teacherWorkbench.drafts.generate({
-        requestId: globalThis.crypto.randomUUID(),
+        requestId,
         kind,
         lessonId: context.lessonId,
         ...(context.studentId === undefined ? {} : { studentId: context.studentId }),
@@ -408,6 +448,7 @@ export default function DraftPanel({
       setMessage('')
       setError(toErrorMessage(generationError, '操作失败，请稍后重试。'))
     } finally {
+      endStreaming()
       setBusyAction('')
     }
   }
@@ -464,9 +505,11 @@ export default function DraftPanel({
       setImproveError('已取消。请删减补充参考后重试，或再次发起并选择“继续生成”。')
       return
     }
+    const planRequestId = globalThis.crypto.randomUUID()
     setImproveBusy(true)
     setImproveError('')
     setMessage('正在生成修改方案…')
+    beginStreaming(planRequestId)
     try {
       const scopedText = await readScopedTextParts(
         baselineFiles,
@@ -482,9 +525,10 @@ export default function DraftPanel({
       }
       const prompt = buildPlanPrompt(prepMode, requirement.trim(), scopedText)
       const result = await window.teacherWorkbench.ai.requestText({
-        requestId: globalThis.crypto.randomUUID(),
+        requestId: planRequestId,
         prompt,
         maxTokens: DRAFT_DEFAULT_MAX_TOKENS,
+        stream: true,
       })
       setImprovePlan(result.text)
       setImproveBase(buildComparisonBase(prepMode, scopedText.baselineParts))
@@ -496,6 +540,7 @@ export default function DraftPanel({
       setMessage('')
       setImproveError(toErrorMessage(planError, '操作失败，请稍后重试。'))
     } finally {
+      endStreaming()
       setImproveBusy(false)
     }
   }
@@ -515,11 +560,13 @@ export default function DraftPanel({
     }
     const orderedSources = uniqueFiles([...baselineFiles, ...selectedReferenceFiles])
     const generatedKind = prepMode === 'lesson' ? DRAFT_KINDS.lecture : kind
+    const streamRequestId = globalThis.crypto.randomUUID()
     setImproveBusy(true)
     setImproveError('')
     setMessage(prepMode === 'single'
       ? `正在按确认的方案修订《${baselineFiles[0].originalName}》…`
       : '正在按确认的方案重做整课课件…')
+    beginStreaming(streamRequestId)
     try {
       const teacherRequirement = requirement.trim()
       const confirmedPlan = improvePlan.trim()
@@ -538,7 +585,7 @@ export default function DraftPanel({
         confirmedPlan,
       )
       const result = await window.teacherWorkbench.drafts.generate({
-        requestId: globalThis.crypto.randomUUID(),
+        requestId: streamRequestId,
         kind: generatedKind,
         lessonId: context.lessonId,
         ...(context.studentId === undefined ? {} : { studentId: context.studentId }),
@@ -565,6 +612,7 @@ export default function DraftPanel({
       setMessage('')
       setImproveError(toErrorMessage(generationError, '操作失败，请稍后重试。'))
     } finally {
+      endStreaming()
       setImproveBusy(false)
     }
   }
@@ -688,11 +736,13 @@ export default function DraftPanel({
       destructive: true,
     })) return
     setBusyAction('regenerate')
+    const requestId = globalThis.crypto.randomUUID()
     setMessage('正在重新生成，旧结果会继续保留…')
     setError('')
+    beginStreaming(requestId)
     try {
       const result = await window.teacherWorkbench.drafts.regenerate({
-        requestId: globalThis.crypto.randomUUID(),
+        requestId,
         noteId: selectedNote.id,
       })
       await reload()
@@ -704,6 +754,7 @@ export default function DraftPanel({
       setMessage('')
       setError(toErrorMessage(regenerationError, '操作失败，请稍后重试。'))
     } finally {
+      endStreaming()
       setBusyAction('')
     }
   }
@@ -847,6 +898,20 @@ export default function DraftPanel({
               </div>
             )}
           </div>
+          {streamState !== null && (
+            <div className="draft-stream-panel" role="status">
+              <div className="draft-stream-head">
+                <strong>{streamState.phase === 'reasoning' ? 'AI 正在思考…' : 'AI 正在生成正文…'}</strong>
+                <button className="secondary-button" type="button" onClick={() => { void cancelStreaming() }}>取消生成</button>
+              </div>
+              <p className="draft-stream-reasoning">AI 思考中…（已思考 {streamState.reasoningChars.toLocaleString('zh-CN')} 字）</p>
+              {streamState.textPreview !== '' && (
+                <div className="draft-stream-preview">
+                  <MarkdownDocument body={streamState.textPreview} files={[]} />
+                </div>
+              )}
+            </div>
+          )}
           {improvePhase === 'review' && (
             <div className="improve-review-card">
               <div className="card-heading"><div><p className="section-kicker">改进流程</p><h2>修改方案（先审阅，再生成）</h2></div></div>

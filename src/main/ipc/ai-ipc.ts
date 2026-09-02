@@ -1,5 +1,6 @@
 import {
   AI_IPC_CHANNELS,
+  AI_IPC_EVENTS,
   failure,
   IPC_ERROR_CODES,
   isEmptyIpcRequest,
@@ -14,14 +15,16 @@ import {
   isAiConnectionTestResult,
   isAiTextResult,
   isAiCancelResult,
+  isAiStreamEvent,
   isUpdateAiSettingsRequest,
+  type AiStreamEvent,
   type AiTextRequest,
   type AiRequestIdRequest,
   type UpdateAiSettingsRequest,
 } from '../../shared/ai-contracts'
-import { AiGateway, AiGatewayError } from '../ai/ai-gateway'
+import { AiGateway, AiGatewayError, type AiGatewayStreamChunk } from '../ai/ai-gateway'
 import { AiSettingsService } from '../ai/ai-settings-service'
-import type { IpcLogger, IpcMainPort } from './app-ipc'
+import { extractIpcSender, type IpcEventSender, type IpcLogger, type IpcMainPort } from './app-ipc'
 import type { WorkspaceActivityGate } from '../workspace/activity-gate'
 import { WorkspaceActivityError } from '../workspace/activity-gate'
 
@@ -29,6 +32,25 @@ export interface AiIpcDependencies {
   readonly getSettingsService: () => AiSettingsService
   readonly getGateway: () => AiGateway
   readonly activityGate?: WorkspaceActivityGate
+}
+
+/** D22：推送流事件到 Renderer（载荷经 isAiStreamEvent 校验后才发送）。 */
+export function pushAiStreamEvent(sender: IpcEventSender | undefined, event: AiStreamEvent): void {
+  if (sender === undefined || !isAiStreamEvent(event)) return
+  sender.send(AI_IPC_EVENTS.streamEvent, event)
+}
+
+/** D22：把网关 chunk 翻译为推送事件——reasoning 只推进度计数（不转发思维链原文），text 逐块转发。 */
+export function buildStreamEventSink(requestId: string, sender: IpcEventSender | undefined) {
+  let reasoningChars = 0
+  return (chunk: AiGatewayStreamChunk): void => {
+    if (chunk.kind === 'reasoning') {
+      reasoningChars += chunk.chars
+      pushAiStreamEvent(sender, { requestId, kind: 'reasoning', chars: reasoningChars })
+      return
+    }
+    pushAiStreamEvent(sender, { requestId, kind: 'text', text: chunk.text })
+  }
 }
 
 export const AI_CHANNELS: readonly IpcChannel[] = Object.values(AI_IPC_CHANNELS)
@@ -46,10 +68,10 @@ export function registerAiIpc(
   logger: IpcLogger,
 ): () => void {
   for (const channel of AI_CHANNELS) {
-    ipcMain.handle(channel, (_event, payload) =>
+    ipcMain.handle(channel, (event, payload) =>
       dependencies.activityGate === undefined
-        ? dispatchAiIpc(channel, payload, dependencies, logger)
-        : dependencies.activityGate.run(() => dispatchAiIpc(channel, payload, dependencies, logger)).catch((error: unknown) => {
+        ? dispatchAiIpc(channel, payload, dependencies, logger, extractIpcSender(event))
+        : dependencies.activityGate.run(() => dispatchAiIpc(channel, payload, dependencies, logger, extractIpcSender(event))).catch((error: unknown) => {
           if (error instanceof WorkspaceActivityError) return failure(IPC_ERROR_CODES.WORKSPACE_BUSY, error.message)
           throw error
         }),
@@ -65,6 +87,7 @@ export async function dispatchAiIpc(
   payload: unknown,
   dependencies: AiIpcDependencies,
   logger: IpcLogger,
+  sender?: IpcEventSender,
 ): Promise<IpcResponse<unknown>> {
   if (!AI_CHANNELS.includes(channel as IpcChannel)) {
     logger.log('warn', 'ipc.unknown_ai_channel', { channel })
@@ -84,16 +107,28 @@ export async function dispatchAiIpc(
       case AI_IPC_CHANNELS.testConnection:
         assertRequest(payload, isAiRequestIdRequest)
         return ensureResponse(await dependencies.getGateway().testConnection((payload as AiRequestIdRequest).requestId), isAiConnectionTestResult)
-      case AI_IPC_CHANNELS.requestText:
+      case AI_IPC_CHANNELS.requestText: {
         assertRequest(payload, isAiTextRequest)
+        const request = payload as AiTextRequest
+        if (request.stream === true) {
+          const result = await dependencies.getGateway().requestStreamText(
+            request.requestId,
+            request.prompt,
+            request.maxTokens,
+            buildStreamEventSink(request.requestId, sender),
+          )
+          pushAiStreamEvent(sender, { requestId: request.requestId, kind: 'done', chars: result.text.length, model: result.model })
+          return ensureResponse(result, isAiTextResult)
+        }
         return ensureResponse(
           await dependencies.getGateway().requestText(
-            (payload as AiTextRequest).requestId,
-            (payload as AiTextRequest).prompt,
-            (payload as AiTextRequest).maxTokens,
+            request.requestId,
+            request.prompt,
+            request.maxTokens,
           ),
           isAiTextResult,
         )
+      }
       case AI_IPC_CHANNELS.cancel:
         assertRequest(payload, isAiRequestIdRequest)
         return ensureResponse(

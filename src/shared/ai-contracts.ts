@@ -38,6 +38,26 @@ export interface AiRequestIdRequest {
 export interface AiTextRequest extends AiRequestIdRequest {
   readonly prompt: string
   readonly maxTokens?: number
+  /** D22：存在且为 true 时走流式请求，chunk 经 `ai:stream-event` 推送；缺省 = 非流式，既有行为不变。 */
+  readonly stream?: true
+}
+
+export const AI_STREAM_EVENT_KINDS = {
+  reasoning: 'reasoning',
+  text: 'text',
+  done: 'done',
+  error: 'error',
+} as const
+
+export type AiStreamEventKind = (typeof AI_STREAM_EVENT_KINDS)[keyof typeof AI_STREAM_EVENT_KINDS]
+
+export interface AiStreamEvent {
+  readonly requestId: string
+  readonly kind: AiStreamEventKind
+  readonly text?: string
+  readonly chars?: number
+  readonly model?: string
+  readonly code?: string
 }
 
 export interface AiConnectionTestResult {
@@ -95,15 +115,36 @@ export function isAiRequestIdRequest(value: unknown): value is AiRequestIdReques
 }
 
 export function isAiTextRequest(value: unknown): value is AiTextRequest {
-  if (!isRecord(value) || !hasOnlyKeys(value, ['requestId', 'prompt', 'maxTokens']) || !isNonEmptyString(value.requestId, 128)) {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['requestId', 'prompt', 'maxTokens', 'stream']) || !isNonEmptyString(value.requestId, 128)) {
     return false
   }
   const record = value as unknown as AiTextRequest
   if (!isNonEmptyString(record.prompt, 200_000)) return false
-  return (
-    (!('maxTokens' in record) ||
+  if (!('maxTokens' in record) ||
     record.maxTokens === undefined ||
-    (typeof record.maxTokens === 'number' && Number.isInteger(record.maxTokens) && record.maxTokens > 0 && record.maxTokens <= 32_000))
+    (typeof record.maxTokens === 'number' && Number.isInteger(record.maxTokens) && record.maxTokens > 0 && record.maxTokens <= 32_000)) {
+    // maxTokens 校验通过（缺省/合法值）
+  } else {
+    return false
+  }
+  return !('stream' in record) || record.stream === undefined || record.stream === true
+}
+
+export function isAiStreamEvent(value: unknown): value is AiStreamEvent {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['requestId', 'kind', 'text', 'chars', 'model', 'code'])) {
+    return false
+  }
+  const record = value as unknown as AiStreamEvent
+  if (!isNonEmptyString(record.requestId, 128)) return false
+  if (!Object.values(AI_STREAM_EVENT_KINDS).includes(record.kind)) return false
+  if (!('text' in record) && !('chars' in record) && !('model' in record) && !('code' in record)) {
+    // 载荷可为空（done/error 事件允许只带 kind）
+  }
+  return (
+    (record.text === undefined || typeof record.text === 'string') &&
+    (record.chars === undefined || (typeof record.chars === 'number' && Number.isInteger(record.chars) && record.chars >= 0)) &&
+    (record.model === undefined || isNonEmptyString(record.model, 200)) &&
+    (record.code === undefined || (typeof record.code === 'string' && record.code.length > 0 && record.code.length <= 64))
   )
 }
 

@@ -156,7 +156,7 @@
 |---|---|---|
 | V16-A 网关预算修复与测试连接判定 | DONE | testConnection 改结构判定（choices 非空即可，content 可空）且业务空正文语义不变；`DEFAULT_AI_TIMEOUT_MS = 120_000`；默认预算 30,000 字 / 16,000 token；不发送 thinking 参数；全量 63 files / 268 tests、typecheck、lint、production build、diff check 通过 |
 | V16-B 修改范围收口与参考预算 UX | DONE | 修改对象收口为应用内课件版本（`isAppGeneratedCoursewareFile`，外部 office/pdf/导入 md 置灰提示）、无版本引导先生成；参考 ≤10 份、字符数与占用实时显示、超 30,000 字明确列名确认（`draft-reference-budget.ts` 纯函数）；全量 64 files / 278 tests、typecheck、lint、production build、diff check 通过 |
-| V16-C 流式生成 IPC 与渲染 | TODO | `ai:stream-event` 推送通道、SSE 解析、思考进度（不展示思维链原文）、正文逐字上屏、静默超时 30s、取消复用；invoke 最终响应仍返回完整结果 |
+| V16-C 流式生成 IPC 与渲染 | DONE | `ai:stream-event` 推送（载荷双向守卫）、Main SSE 解析与静默超时 30s、reasoning 仅计数、四条生成流进度面板（思考进度+逐字上屏+取消）、invoke 最终响应仍返回完整结果；中继式验收留痕于 ai-stream-ipc.test；全量 66 files / 289 tests、typecheck、lint、production build、diff check 通过 |
 | V16-D MinerU 文档解析集成 | TODO | migration v16（index_status 追加 mineru_ready）、safeStorage 多槽、Mineru 设置卡与判活 IPC、`MineruService` 上传/轮询/fflate 解压/full.md 入库、文件右键"增强解析"入口 |
 | V16-E 最终回归与版本验收 | TODO | 全量测试、typecheck、lint、production build、diff check；中继式流式验收；隔离 Windows 冒烟；DeepSeek/MinerU 真实自测；`docs/v1.6-acceptance.md` |
 

@@ -16,6 +16,7 @@ import {
   type AiConnectionTestResult,
   type AiRequestIdRequest,
   type AiSettings,
+  type AiStreamEvent,
   type AiTextRequest,
   type AiTextResult,
   type UpdateAiSettingsRequest,
@@ -226,7 +227,9 @@ export type {
 } from './file-contracts'
 export { isManagedFileContent } from './file-contracts'
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
-export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
+export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiStreamEvent, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
+export { isAiStreamEvent } from './ai-contracts'
+export { AI_IPC_EVENTS } from './ipc-contracts'
 export type { DraftIdRequest, DraftNoteMetadata, DraftSourceSelection, GenerateDraftRequest, GenerateDraftResult, PublishDraftVersionRequest, PublishDraftVersionResult, RegenerateDraftRequest, SaveDraftRequest } from './draft-contracts'
 export { isPublishDraftVersionRequest, isPublishDraftVersionResult } from './draft-contracts'
 export type {
@@ -322,6 +325,7 @@ export interface TeacherWorkbenchApi {
     testConnection: (request: AiRequestIdRequest) => Promise<AiConnectionTestResult>
     requestText: (request: AiTextRequest) => Promise<AiTextResult>
     cancel: (request: AiRequestIdRequest) => Promise<AiCancelResult>
+    onStreamEvent: (listener: (event: AiStreamEvent) => void) => () => void
   }
   drafts: {
     generate: (request: GenerateDraftRequest) => Promise<GenerateDraftResult>

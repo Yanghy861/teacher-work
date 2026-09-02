@@ -3219,3 +3219,41 @@ button.quick-status { cursor: pointer; }
   color: #b45309;
   font-weight: 600;
 }
+
+
+/* V16-C：流式生成进度面板（思考进度 + 正文逐字上屏） */
+.draft-stream-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #a5b4fc;
+  border-radius: 8px;
+  background: var(--color-primary-soft);
+}
+
+.draft-stream-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #312e81;
+  font-size: 12px;
+}
+
+.draft-stream-reasoning {
+  margin: 0;
+  color: #475569;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-stream-preview {
+  max-height: 320px;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+}

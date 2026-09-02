@@ -8,6 +8,7 @@ import {
   IPC_CHANNELS,
   SEARCH_IPC_CHANNELS,
   AI_IPC_CHANNELS,
+  AI_IPC_EVENTS,
   DRAFT_IPC_CHANNELS,
   BACKUP_IPC_CHANNELS,
   EXTERNAL_LIBRARY_IPC_CHANNELS,
@@ -36,6 +37,7 @@ import {
   isSearchRebuildResult,
   isAiCancelResult,
   isAiConnectionTestResult,
+  isAiStreamEvent,
   isAiSettings,
   isAiTextResult,
   isGenerateDraftResult,
@@ -84,6 +86,7 @@ import {
   type SearchQuery,
   type SearchHit,
   type AiRequestIdRequest,
+  type AiStreamEvent,
   type AiTextRequest,
   type UpdateAiSettingsRequest,
   type GenerateDraftRequest,
@@ -205,6 +208,15 @@ const api = Object.freeze({
     testConnection: (request: AiRequestIdRequest) => invoke(AI_IPC_CHANNELS.testConnection, request, isAiConnectionTestResult),
     requestText: (request: AiTextRequest) => invoke(AI_IPC_CHANNELS.requestText, request, isAiTextResult),
     cancel: (request: AiRequestIdRequest) => invoke(AI_IPC_CHANNELS.cancel, request, isAiCancelResult),
+    onStreamEvent: (listener: (event: AiStreamEvent) => void): (() => void) => {
+      const handler = (_event: unknown, payload: unknown): void => {
+        if (isAiStreamEvent(payload)) {
+          listener(payload)
+        }
+      }
+      ipcRenderer.on(AI_IPC_EVENTS.streamEvent, handler)
+      return () => ipcRenderer.removeListener(AI_IPC_EVENTS.streamEvent, handler)
+    },
   }),
   drafts: Object.freeze({
     generate: (request: GenerateDraftRequest) => invoke(DRAFT_IPC_CHANNELS.generate, request, isGenerateDraftResult),

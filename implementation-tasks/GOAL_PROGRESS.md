@@ -1179,3 +1179,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 测试：新增 v1.6-scope-budget（4）与 draft-reference-budget（6）；重定向 v1.2-prep-files-ui / v1.5.3.1-scope-flow 共 3 处旧文案 pin（意图不变）。
 - 门禁：全量 64 files / 278 passed / 1 skipped（+13）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
 - Git：本地提交 `v1.6(V16-B): narrow modification scope and add reference budget ux`。
+
+## 2026-09-02 · V16-C 完成：流式生成 IPC 与渲染（D22）
+
+- Main：`requestStreamText` SSE 逐行解析（跨 chunk 缓冲、[DONE]、坏行/心跳跳过），`reasoning_content` 只推累计计数不转发原文，`content` 逐块转发并组装全文；静默超时 30s（任何 chunk 重置、总时长无上限、`idleTimeoutMs` 注入点），取消复用同一 AbortController；非流式路径与测试连接零变化。
+- 推送通道 `ai:stream-event`：`dispatchAiIpc`/`dispatchDraftIpc` 增可选 sender（`extractIpcSender` 安全收窄）；`requestText(stream:true)` 与 `drafts.generate/regenerate` 生成过程推送，载荷经 `isAiStreamEvent` 校验后发送，完成推送 done；invoke 最终响应仍返回完整 `{text, model}`（最终 note 内容以此为准）。
+- Preload `ai.onStreamEvent` 订阅/退订；Renderer 生成中面板：思考进度"已思考 N 字"+ 正文只读逐字上屏 + 取消（复用 `ai.cancel`），生成/方案/确认/重新生成四条流接入，完成后进入既有编辑/对比流程。
+- 测试：ai-gateway-stream（6）+ ai-stream-ipc（5，含中继式验收：SSE→推送→渲染状态机回放→done 组装与 invoke 一致性）；既有非流式测试不动全绿。
+- 门禁：全量 66 files / 289 passed / 1 skipped（+11）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
+- Git：本地提交 `v1.6(V16-C): add streaming generation with reasoning progress and idle timeout`。

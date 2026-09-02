@@ -62,6 +62,11 @@ export const AI_IPC_CHANNELS = {
   cancel: 'ai:cancel',
 } as const
 
+/** D22：Main→Renderer 单向推送（非 invoke 白名单通道），载荷经 isAiStreamEvent 双向校验。 */
+export const AI_IPC_EVENTS = {
+  streamEvent: 'ai:stream-event',
+} as const
+
 export const DRAFT_IPC_CHANNELS = {
   generate: 'draft:generate',
   regenerate: 'draft:regenerate',

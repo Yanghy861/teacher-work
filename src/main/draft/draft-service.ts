@@ -1,5 +1,5 @@
 import type { AiSettingsService } from '../ai/ai-settings-service'
-import { AiGateway } from '../ai/ai-gateway'
+import { AiGateway, type AiGatewayStreamSink } from '../ai/ai-gateway'
 import type { NoteRecord } from '../../shared/core-contracts'
 import type { CoreDataService } from '../data/core-data-service'
 import type { SearchChunkInput } from '../../shared/search-contracts'
@@ -67,7 +67,7 @@ export class DraftService {
     private readonly skills: SkillService,
   ) {}
 
-  async generate(request: GenerateDraftRequest): Promise<GenerateDraftResult> {
+  async generate(request: GenerateDraftRequest, onStream?: AiGatewayStreamSink): Promise<GenerateDraftResult> {
     if (request.sources.length === 0) {
       throw new DraftServiceError('DRAFT_INVALID_REQUEST', '请至少选择一份资料或文本片段。')
     }
@@ -85,10 +85,10 @@ export class DraftService {
         ? {}
         : { requirement: normalizeRequirement(request.requirement) }),
       ...(request.modification === undefined ? {} : { modification: request.modification }),
-    })
+    }, onStream)
   }
 
-  async regenerate(request: RegenerateDraftRequest): Promise<GenerateDraftResult> {
+  async regenerate(request: RegenerateDraftRequest, onStream?: AiGatewayStreamSink): Promise<GenerateDraftResult> {
     const original = this.resolveAiResult(request.noteId)
     if (original.aiMetadata === undefined) {
       throw new DraftServiceError('DRAFT_INVALID_REQUEST', '所选结果缺少重新生成所需的历史信息。')
@@ -116,7 +116,7 @@ export class DraftService {
       ...(original.aiMetadata.modification === undefined
         ? {}
         : { modification: original.aiMetadata.modification }),
-    })
+    }, onStream)
   }
 
   saveToLesson(request: SaveDraftRequest): NoteRecord {
@@ -141,7 +141,7 @@ export class DraftService {
     }
   }
 
-  private async generateResolved(input: ResolvedGenerationInput): Promise<GenerateDraftResult> {
+  private async generateResolved(input: ResolvedGenerationInput, onStream?: AiGatewayStreamSink): Promise<GenerateDraftResult> {
     const context = this.buildContext(input.sources, input.maxChars)
     if (context.text.trim() === '') {
       throw new DraftServiceError('DRAFT_EMPTY_CONTEXT', '所选资料没有可发送的文本。')
@@ -155,7 +155,9 @@ export class DraftService {
       input.skill,
       input.requirement,
     )
-    const result = await this.aiGateway.requestText(input.requestId, prompt, input.maxTokens)
+    const result = onStream === undefined
+      ? await this.aiGateway.requestText(input.requestId, prompt, input.maxTokens)
+      : await this.aiGateway.requestStreamText(input.requestId, prompt, input.maxTokens, onStream)
 
     const metadata: DraftNoteMetadata = {
       kind: input.kind,

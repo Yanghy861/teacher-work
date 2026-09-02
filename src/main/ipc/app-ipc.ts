@@ -21,6 +21,20 @@ export interface IpcMainPort {
   removeHandler(channel: string): void
 }
 
+/** V16-C/D22：Main→Renderer 单向推送所需的 sender 端口（Electron IpcMainInvokeEvent.sender 的最小面）。 */
+export interface IpcEventSender {
+  send(channel: string, ...args: readonly unknown[]): void
+}
+
+export function extractIpcSender(event: unknown): IpcEventSender | undefined {
+  if (typeof event !== 'object' || event === null) return undefined
+  const sender = (event as { sender?: unknown }).sender
+  if (typeof sender !== 'object' || sender === null) return undefined
+  return typeof (sender as { send?: unknown }).send === 'function'
+    ? (sender as IpcEventSender)
+    : undefined
+}
+
 export interface AppIpcDependencies {
   readonly getAppVersion: () => string
   readonly getWorkspaceInfo: () => WorkspaceInfo
