@@ -149,3 +149,15 @@
 基线 `checkpoint-V1.5.5-pass`（待 V155-E 验收后创建）；设计基准 `docs/v1.5.6-maintainability-plan.md`，决策 D20；基线创建前任何任务不得置为 `IN_PROGRESS`。
 
 > 2026-08-31 产品负责人裁决：V1.5.5 与 V1.5.6 合并验收。V155-E 保持 `IN_PROGRESS`；V1.5.6 链经产品负责人明确豁免基线提前激活；两链任务与提交保持独立，确认通过后依版本顺序创建两个 checkpoint。
+
+## V1.6 已立项（AI 修改逻辑重做：预算修复、流式生成与 MinerU 文档解析）
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V16-A 网关预算修复与测试连接判定 | TODO | 测试连接改为结构判定不依赖正文非空；超时 15s→120s；`DRAFT_DEFAULT_MAX_CHARS`→30,000、`DRAFT_DEFAULT_MAX_TOKENS`→16,000；不发送 thinking 参数 |
+| V16-B 修改范围收口与参考预算 UX | TODO | 修改对象仅限应用内生成文件（外部 office 置灰提示、无版本引导先生成）；参考 ≤10 份、选择区占用显示、超 30,000 字明确列名提示不静默截断 |
+| V16-C 流式生成 IPC 与渲染 | TODO | `ai:stream-event` 推送通道、SSE 解析、思考进度（不展示思维链原文）、正文逐字上屏、静默超时 30s、取消复用；invoke 最终响应仍返回完整结果 |
+| V16-D MinerU 文档解析集成 | TODO | migration v16（index_status 追加 mineru_ready）、safeStorage 多槽、Mineru 设置卡与判活 IPC、`MineruService` 上传/轮询/fflate 解压/full.md 入库、文件右键"增强解析"入口 |
+| V16-E 最终回归与版本验收 | TODO | 全量测试、typecheck、lint、production build、diff check；中继式流式验收；隔离 Windows 冒烟；DeepSeek/MinerU 真实自测；`docs/v1.6-acceptance.md` |
+
+基线 `checkpoint-V1.5.6-pass`（已创建）；设计基准 `docs/v1.6-ai-modification-rewrite-plan.md`，决策 D21–D26（`implementation-tasks/V1_6_DECISIONS.md`）；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer。

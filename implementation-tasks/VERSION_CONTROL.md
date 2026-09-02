@@ -33,6 +33,7 @@
 - V1.5.3 方案提交使用 `plan(V1.5.3): <摘要>`，里程碑提交使用 `v1.5.3(V153-XX): <摘要>`；V153-A–B 已完成但最终体验确认尚未结束。
 - V1.5.3.1 是 V1.5.3 最终验收前的小版本修正：方案提交使用 `plan(V1.5.3.1): <摘要>`，里程碑提交使用 `v1.5.3.1(V1531-XX): <摘要>`；任务链位于 `implementation-tasks/v1.5.3.1-tasks/`，V1531-B 完成并获产品负责人确认后仍创建 `checkpoint-V1.5.3-pass`，不创建 `checkpoint-V1.5.3.1-pass`。
 - V1.5.3 已在 `checkpoint-V1.5.3-pass` 冻结；V1.5.4 方案提交使用 `plan(V1.5.4): <摘要>`，里程碑提交使用 `v1.5.4(V154-XX): <摘要>`；任务链位于 `implementation-tasks/v1.5.4-tasks/`，最终体验确认前不得创建或移动任何通过标签。
+- V1.5.4 已在 `checkpoint-V1.5.4-pass` 冻结（后续 V1.5.5/V1.5.6 依序冻结于各自 pass 标签）；V1.6 方案提交使用 `plan(V1.6): <摘要>`，里程碑提交使用 `v1.6(V16-XX): <摘要>`；任务链位于 `implementation-tasks/v1.6-tasks/`；V16-E 完成全部自动门、代表性本地 Windows 流程与 DeepSeek/MinerU 两轮真实自测且产品负责人最终体验确认后，才可在最终提交上创建 `checkpoint-V1.6-pass`。
 
 ## 3. 实施里程碑提交
 

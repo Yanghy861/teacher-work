@@ -74,3 +74,15 @@ V15 任务必须按编号顺序执行；同一时刻最多一个里程碑为 `IN
 | [V156-C](v1.5.6-tasks/V156-C-overview-shared-cache.md) | V156-B | overview 共享缓存与分页迁移 | 全量测试 + build |
 | [V156-D](v1.5.6-tasks/V156-D-wizard-dedup-and-render-tests.md) | V156-C | 向导编排收敛 + 静态渲染测试 | v1.3 全组测试 + 新测试 |
 | [V156-E](v1.5.6-tasks/V156-E-final-gate.md) | V156-A–D | 全量回归 + 隔离 Windows 冒烟 + 验收文档 | 最终验收；确认后创建 `checkpoint-V1.5.6-pass` |
+
+## V1.6 已立项当前活动链（AI 修改逻辑重做：预算修复、流式生成与 MinerU 文档解析）
+
+方案：[`docs/v1.6-ai-modification-rewrite-plan.md`](../docs/v1.6-ai-modification-rewrite-plan.md)；决策 D21–D26（[`V1_6_DECISIONS.md`](V1_6_DECISIONS.md)）。基线 `checkpoint-V1.5.6-pass`（已创建）；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer。
+
+| 里程碑 | 前置 | 核心产物 | 验收 |
+|---|---|---|---|
+| [V16-A](v1.6-tasks/V16-A-gateway-budget-and-test-fix.md) | `checkpoint-V1.5.6-pass` | 测试连接结构判定、超时 120s、30,000 字 / 16,000 token 预算 | 相关测试 + typecheck + lint |
+| [V16-B](v1.6-tasks/V16-B-scope-and-reference-budget.md) | V16-A | 修改对象收口应用内文件、参考 ≤10 份与超量列名提示 | 合同与预算模块测试 + typecheck + lint |
+| [V16-C](v1.6-tasks/V16-C-streaming.md) | V16-B | `ai:stream-event` 推送、SSE 解析、思考进度与正文上屏、静默超时 | fake 流式 provider 测试 + build + 中继式一轮 |
+| [V16-D](v1.6-tasks/V16-D-mineru-integration.md) | V16-C | migration v16、safeStorage 多槽、MinerU 设置卡与判活、解析服务与入库、右键入口 | 迁移专项 + fake HTTP + 真实文件开发验证 |
+| [V16-E](v1.6-tasks/V16-E-final-gate.md) | V16-A–D | 全量回归 + 隔离 Windows 冒烟 + DeepSeek/MinerU 真实自测 + 验收文档 | 最终验收；确认后创建 `checkpoint-V1.6-pass` |
