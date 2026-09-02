@@ -81,6 +81,11 @@ export function isSelectableLessonPrepFile(file: ManagedFileRecord): boolean {
   return !file.mimeType.startsWith('image/')
 }
 
+/** D23：应用内生成的课件版本（工作台发布的“标题 · 第 N 版.md”）。AI 修改对象仅限此类文件；外部导入文件（含 .md）不在此列。 */
+export function isAppGeneratedCoursewareFile(file: ManagedFileRecord): boolean {
+  return file.mimeType === 'text/markdown' && lessonVersionPattern.test(file.originalName)
+}
+
 export function classifyLessonCoursewareFiles(
   files: readonly ManagedFileRecord[],
 ): LessonCoursewareFiles {

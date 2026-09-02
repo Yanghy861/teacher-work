@@ -17,6 +17,8 @@ export const DRAFT_DEFAULT_MAX_TOKENS = 16_000
 export const DRAFT_MAX_CHARS = 100_000
 export const DRAFT_MAX_TOKENS = 32_000
 export const DRAFT_REQUIREMENT_MAX_CHARS = 4_000
+export const DRAFT_MAX_REFERENCE_FILES = 10
+export const DRAFT_MAX_SOURCE_FILES = 32
 
 export interface DraftSourceSelection {
   readonly fileId: string
@@ -140,7 +142,7 @@ export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRe
     (value.modification === undefined || isDraftModificationScope(value.modification)) &&
     Array.isArray(value.sources) &&
     value.sources.length > 0 &&
-    value.sources.length <= 100 &&
+    value.sources.length <= DRAFT_MAX_SOURCE_FILES &&
     value.sources.every(isDraftSourceSelection) &&
     isSafeLimit(value.maxChars, DRAFT_MAX_CHARS) &&
     isSafeLimit(value.maxTokens, DRAFT_MAX_TOKENS)

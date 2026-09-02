@@ -39,7 +39,7 @@ describe('V12-04 lesson files and prep renderer contract', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
     const managed = source('../src/renderer/managed-files-panel.tsx')
     const service = source('../src/main/files/managed-file-service.ts')
-    expect(draft).toContain('选择一份文件')
+    expect(draft).toContain('选择一份课件版本')
     expect(draft).toContain('补充参考')
     expect(draft).toContain('只帮助 AI 理解要求，不会改变修改对象。')
     expect(draft).toContain('保存到本次课次')

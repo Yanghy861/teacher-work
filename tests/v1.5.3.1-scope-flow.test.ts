@@ -25,7 +25,7 @@ describe('V1.5.3.1 scoped AI modification contract', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
 
     expect(draft).toContain('修改对象')
-    expect(draft).toContain('选择一份文件')
+    expect(draft).toContain('选择一份课件版本')
     expect(draft).toContain('本课全部内容')
     expect(draft).toContain('补充参考')
     expect(draft).toContain('selection="radio"')
@@ -105,7 +105,9 @@ describe('V1.5.3.1 scoped AI modification contract', () => {
     expect(draft.indexOf('const baselineParts = await readGroup(baselineFiles)')).toBeLessThan(
       draft.indexOf('const referenceParts = await readGroup(referenceFiles)'),
     )
-    expect(draft).toContain('内容超过本次读取上限。AI 已优先读取修改对象或整课基线')
+    expect(draft).toContain('planDraftBudget(')
+    expect(draft).toContain('confirmReferenceBudget(')
+    expect(draft).toContain('部分参考未完整纳入本次 AI 请求')
     expect(scope).toContain("if (scope?.mode === 'single') return '单文件修订'")
     expect(scope).toContain("if (scope?.mode === 'lesson') return '整课重做'")
     expect(scope).toContain('的单文件修订发布为本课课件新版本')

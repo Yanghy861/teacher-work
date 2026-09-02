@@ -7,12 +7,19 @@ import {
   DRAFT_DEFAULT_MAX_CHARS,
   DRAFT_DEFAULT_MAX_TOKENS,
   DRAFT_KINDS,
+  DRAFT_MAX_REFERENCE_FILES,
   DRAFT_REQUIREMENT_MAX_CHARS,
   type DraftKind,
 } from '../shared/draft-contracts'
+import {
+  formatExcludedReferenceNames,
+  planDraftBudget,
+  type DraftBudgetEntry,
+} from '../shared/draft-reference-budget'
 import type { SkillRecord } from '../shared/skill-contracts'
 import {
   classifyLessonCoursewareFiles,
+  isAppGeneratedCoursewareFile,
   isSelectableLessonPrepFile,
   filterLessonMaterialFiles,
   listLessonPrepFiles,
@@ -94,7 +101,9 @@ export default function DraftPanel({
   const [improveBase, setImproveBase] = useState<{ title: string; body: string } | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
   const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
-  const [scopeTruncated, setScopeTruncated] = useState(false)
+  const [referenceCharCounts, setReferenceCharCounts] = useState<ReadonlyMap<string, number>>(new Map())
+  const [referenceNotice, setReferenceNotice] = useState('')
+  const confirmedBudgetSignature = useRef('')
   const knownLessonFileIds = useRef<Set<string>>(new Set())
   const scopeInitialized = useRef(false)
 
@@ -109,17 +118,33 @@ export default function DraftPanel({
   const classifiedFiles = useMemo(() => classifyLessonCoursewareFiles(lessonFiles), [lessonFiles])
   const selectableLessonFiles = lessonFiles.filter(isSelectableLessonPrepFile)
   const selectableCurrentFiles = classifiedFiles.currentMaterials.filter(isSelectableLessonPrepFile)
-  const hasCourseware = selectableCurrentFiles.length > 0
+  const appGeneratedCurrentFiles = selectableCurrentFiles.filter(isAppGeneratedCoursewareFile)
+  const hasCourseware = appGeneratedCurrentFiles.length > 0
   const targetFile = selectableLessonFiles.find((file) => file.id === targetFileId) ?? null
   const lessonBaselineFiles = lessonBaselineFileIds
     .map((fileId) => selectableLessonFiles.find((file) => file.id === fileId))
     .filter((file): file is ManagedFileRecord => file !== undefined)
+  // D23：单文件修改的候选目标仅列工作台生成的课件版本（“标题 · 第 N 版.md”），外部导入文件不出现在修改目标里。
+  const modifiableCurrentFiles = prepMode === 'single'
+    ? selectableCurrentFiles.filter(isAppGeneratedCoursewareFile)
+    : selectableCurrentFiles
   const referenceCandidates = prepMode === 'single'
     ? selectableCurrentFiles.filter((file) => file.id !== targetFile?.id)
     : prepMode === 'lesson'
       ? selectableCurrentFiles.filter((file) => !lessonBaselineFiles.some((base) => base.id === file.id))
       : selectableCurrentFiles
   const selectedReferenceFiles = referenceCandidates.filter((file) => selectedReferenceFileIds.includes(file.id))
+  const referenceCandidatesKey = referenceCandidates.map((file) => file.id).join('|')
+  const referenceCharTotal = selectedReferenceFiles.reduce(
+    (sum, file) => sum + (referenceCharCounts.get(file.id) ?? 0),
+    0,
+  )
+  const referenceFilesFull = selectedReferenceFiles.length >= DRAFT_MAX_REFERENCE_FILES
+  const baselineCharTotal = prepMode === 'single'
+    ? referenceCharCounts.get(targetFile?.id ?? '') ?? 0
+    : lessonBaselineFiles.reduce((sum, file) => sum + (referenceCharCounts.get(file.id) ?? 0), 0)
+  const scopedCharTotal = baselineCharTotal + referenceCharTotal
+  const referenceBudgetExceeded = scopedCharTotal > DRAFT_DEFAULT_MAX_CHARS
   const selectedFiles = uniqueFiles(prepMode === 'single'
     ? [...(targetFile === null ? [] : [targetFile]), ...selectedReferenceFiles]
     : prepMode === 'lesson'
@@ -167,7 +192,7 @@ export default function DraftPanel({
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
-    setScopeTruncated(false)
+    setReferenceNotice('')
     void (async () => {
       const loadedCore = await reload()
       if (cancelled || context === null || loadedCore === null) return
@@ -192,20 +217,18 @@ export default function DraftPanel({
     const previousKnown = knownLessonFileIds.current
     if (!scopeInitialized.current) {
       const requestedMode = launchIntent?.mode
-      const nextMode: PrepLaunchMode = selectableCurrentFiles.length === 0
+      const nextMode: PrepLaunchMode = appGeneratedCurrentFiles.length === 0
         ? 'new'
         : requestedMode === 'lesson' ? 'lesson' : 'single'
-      const requestedTarget = selectableCurrentFiles.find((file) => file.id === launchIntent?.targetFileId)
+      const requestedTarget = appGeneratedCurrentFiles.find((file) => file.id === launchIntent?.targetFileId)
       const nextTarget = requestedTarget
-        ?? (classifiedFiles.currentVersion !== null && isSelectableLessonPrepFile(classifiedFiles.currentVersion)
+        ?? (classifiedFiles.currentVersion !== null && isAppGeneratedCoursewareFile(classifiedFiles.currentVersion)
           ? classifiedFiles.currentVersion
-          : selectableCurrentFiles[0])
+          : appGeneratedCurrentFiles[0])
       setPrepMode(nextMode)
       setTargetFileId(nextTarget?.id ?? '')
       setLessonBaselineFileIds(nextMode === 'lesson'
-        ? classifiedFiles.currentVersion !== null && isSelectableLessonPrepFile(classifiedFiles.currentVersion)
-          ? [classifiedFiles.currentVersion.id]
-          : selectableCurrentFiles.map((file) => file.id)
+        ? appGeneratedCurrentFiles.map((file) => file.id)
         : [])
       setSelectedReferenceFileIds(nextMode === 'new' ? selectableCurrentFiles.map((file) => file.id) : [])
       knownLessonFileIds.current = currentSet
@@ -249,13 +272,11 @@ export default function DraftPanel({
     setImprovePlan('')
     setImproveError('')
     setCompareOpen(false)
-    setScopeTruncated(false)
 
     void (async () => {
       const scopedText = await readScopedTextParts(baselineFiles, [], DRAFT_DEFAULT_MAX_CHARS)
       if (cancelled) return
       setImproveBase(buildComparisonBase(scope.mode, scopedText.baselineParts))
-      setScopeTruncated(scopedText.truncated)
     })().catch((restoreError: unknown) => {
       if (cancelled) return
       setImproveBase(null)
@@ -264,6 +285,34 @@ export default function DraftPanel({
 
     return () => { cancelled = true }
   }, [files, lessonFileKey, selectedNote?.id])
+
+  // D25：选择区实时显示每份候选参考的字符数与累计占用；readContent 顺序读、小文件成本可接受。
+  useEffect(() => {
+    let cancelled = false
+    if (files === null) return
+    const targets = prepMode === 'single'
+      ? [...(targetFile === null ? [] : [targetFile]), ...referenceCandidates]
+      : [...lessonBaselineFiles, ...referenceCandidates]
+    void (async () => {
+      const counts = new Map<string, number>()
+      for (const file of targets) {
+        try {
+          const content = await window.teacherWorkbench.files.readContent({ fileId: file.id })
+          if (cancelled) return
+          if (content.kind === 'text') counts.set(file.id, content.content.length)
+        } catch {
+          if (cancelled) return
+        }
+      }
+      if (cancelled) return
+      setReferenceCharCounts(new Map(counts))
+    })()
+    return () => { cancelled = true }
+  }, [files, lessonFileKey, prepMode, targetFileId, lessonBaselineFileIds.length, referenceCandidatesKey])
+
+  useEffect(() => {
+    confirmedBudgetSignature.current = ''
+  }, [selectedReferenceFileIds, targetFileId, lessonBaselineFileIds])
 
   async function reload(): Promise<CoreOverview | null> {
     try {
@@ -285,13 +334,20 @@ export default function DraftPanel({
   function toggleReferenceFile(fileId: string): void {
     const file = referenceCandidates.find((candidate) => candidate.id === fileId)
     if (file === undefined) return
-    setSelectedReferenceFileIds((current) => current.includes(fileId)
-      ? current.filter((id) => id !== fileId)
-      : [...current, fileId])
+    setSelectedReferenceFileIds((current) => {
+      if (current.includes(fileId)) return current.filter((id) => id !== fileId)
+      // D25：补充参考最多 10 份，超限禁止继续勾选并提示。
+      if (current.length >= DRAFT_MAX_REFERENCE_FILES) {
+        setReferenceNotice(`补充参考最多选择 ${DRAFT_MAX_REFERENCE_FILES} 份，请先取消一份再勾选。`)
+        return current
+      }
+      setReferenceNotice('')
+      return [...current, fileId]
+    })
   }
 
   function selectTargetFile(fileId: string): void {
-    if (!selectableCurrentFiles.some((file) => file.id === fileId)) return
+    if (!modifiableCurrentFiles.some((file) => file.id === fileId)) return
     setTargetFileId(fileId)
     setSelectedReferenceFileIds((current) => current.filter((id) => id !== fileId))
     setImprovePhase('')
@@ -299,28 +355,25 @@ export default function DraftPanel({
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
-    setScopeTruncated(false)
     setMessage('')
   }
 
   function changePrepMode(nextMode: Exclude<PrepLaunchMode, 'new'>): void {
     if (!hasCourseware || prepMode === nextMode) return
     setPrepMode(nextMode)
-    if (nextMode === 'single' && !selectableCurrentFiles.some((file) => file.id === targetFileId)) {
-      setTargetFileId(classifiedFiles.currentVersion?.id ?? selectableCurrentFiles[0]?.id ?? '')
+    if (nextMode === 'single' && !modifiableCurrentFiles.some((file) => file.id === targetFileId)) {
+      setTargetFileId(classifiedFiles.currentVersion?.id ?? modifiableCurrentFiles[0]?.id ?? '')
     }
     if (nextMode === 'lesson') {
-      setLessonBaselineFileIds(classifiedFiles.currentVersion !== null && isSelectableLessonPrepFile(classifiedFiles.currentVersion)
-        ? [classifiedFiles.currentVersion.id]
-        : selectableCurrentFiles.map((file) => file.id))
+      setLessonBaselineFileIds(appGeneratedCurrentFiles.map((file) => file.id))
     }
     setSelectedReferenceFileIds([])
+    setReferenceNotice('')
     setImprovePhase('')
     setImprovePlan('')
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
-    setScopeTruncated(false)
     setMessage('')
   }
 
@@ -359,6 +412,41 @@ export default function DraftPanel({
     }
   }
 
+  function buildBudgetEntries(files: readonly ManagedFileRecord[]): DraftBudgetEntry[] {
+    return files.flatMap((file) => {
+      const chars = referenceCharCounts.get(file.id)
+      return chars === undefined ? [] : [{ fileId: file.id, title: file.originalName, chars }]
+    })
+  }
+
+  /** D25：发起前预算检查——预算耗尽时明确列出未纳入/未完整纳入的参考，需老师确认继续或删减（同一确认在方案与确认生成间复用）。 */
+  async function confirmReferenceBudget(baselineFiles: readonly ManagedFileRecord[]): Promise<boolean> {
+    const baseline = buildBudgetEntries(baselineFiles)
+    const references = buildBudgetEntries(selectedReferenceFiles)
+    const plan = planDraftBudget(baseline, references, DRAFT_DEFAULT_MAX_CHARS)
+    const unmeasuredCount = selectedReferenceFiles.filter(
+      (file) => !referenceCharCounts.has(file.id),
+    ).length
+    const overflowCount = plan.excludedReferences.length
+    if (overflowCount === 0 && unmeasuredCount === 0) return true
+    const signature = `${baselineFiles.map((file) => file.id).join(',')}#${selectedReferenceFiles.map((file) => file.id).join(',')}:${overflowCount}`
+    if (signature === confirmedBudgetSignature.current) return true
+    const overflowNames = overflowCount > 0
+      ? `按 ${DRAFT_DEFAULT_MAX_CHARS} 字预算，以下参考未纳入或未完整纳入：${formatExcludedReferenceNames(plan.excludedReferences)}。`
+      : ''
+    const unmeasuredHint = unmeasuredCount > 0
+      ? `${unmeasuredCount} 份参考（如 Office/PDF）无法预读字符数，实际发送时按解析文本优先计入。`
+      : ''
+    const confirmed = await confirm({
+      title: '部分参考未完整纳入本次 AI 请求',
+      description: <>{overflowNames}{overflowNames !== '' && unmeasuredHint !== '' ? ' ' : ''}{unmeasuredHint}<br />可以继续生成，也可以返回取消勾选。</>,
+      confirmLabel: '继续生成',
+    })
+    if (!confirmed) return false
+    confirmedBudgetSignature.current = signature
+    return true
+  }
+
   async function startImprovePlan(): Promise<void> {
     if (prepMode === 'new') return
     const baselineFiles = prepMode === 'single'
@@ -370,6 +458,10 @@ export default function DraftPanel({
     }
     if (requirement.trim() === '') {
       setImproveError('请先填写本次修改要求，AI 需要知道你想怎么改。')
+      return
+    }
+    if (!await confirmReferenceBudget(baselineFiles)) {
+      setImproveError('已取消。请删减补充参考后重试，或再次发起并选择“继续生成”。')
       return
     }
     setImproveBusy(true)
@@ -396,7 +488,6 @@ export default function DraftPanel({
       })
       setImprovePlan(result.text)
       setImproveBase(buildComparisonBase(prepMode, scopedText.baselineParts))
-      setScopeTruncated(scopedText.truncated)
       setImprovePhase('review')
       setMessage(prepMode === 'single'
         ? '单文件修改方案已生成，请审阅确认后再生成新副本。'
@@ -416,6 +507,10 @@ export default function DraftPanel({
       : lessonBaselineFiles
     if (baselineFiles.length === 0) {
       setImproveError('修改对象或整课基线已变化，请重新发起修改。')
+      return
+    }
+    if (!await confirmReferenceBudget(baselineFiles)) {
+      setImproveError('已取消。请删减补充参考后重试，或再次确认并选择“继续生成”。')
       return
     }
     const orderedSources = uniqueFiles([...baselineFiles, ...selectedReferenceFiles])
@@ -521,7 +616,6 @@ export default function DraftPanel({
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
-    setScopeTruncated(false)
     setMessage('')
     setError('')
   }
@@ -678,8 +772,8 @@ export default function DraftPanel({
             </>
           ) : prepMode === 'single' ? (
             <>
-              <div className="card-heading"><div><p className="section-kicker">修改对象</p><h2>选择一份文件</h2></div><span className="count-label">单选</span></div>
-              <ScopeFileList files={selectableCurrentFiles} selection="radio" selectedIds={targetFile === null ? [] : [targetFile.id]} onSelect={selectTargetFile} currentVersionId={classifiedFiles.currentVersion?.id} emptyText="本课没有可修改的文本文件。" />
+              <div className="card-heading"><div><p className="section-kicker">修改对象</p><h2>选择一份课件版本</h2></div><span className="count-label">单选</span></div>
+              <ScopeFileList files={modifiableCurrentFiles} selection="radio" selectedIds={targetFile === null ? [] : [targetFile.id]} onSelect={selectTargetFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课还没有工作台生成的课件版本。仅支持修改工作台生成的讲义/教案/作业；外部 Office 文档请用系统应用打开修改。" />
             </>
           ) : (
             <>
@@ -693,9 +787,13 @@ export default function DraftPanel({
           )}
           {prepMode !== 'new' && (
             <div className="prep-reference-section">
-              <div className="card-heading"><div><p className="section-kicker">可选</p><h2>补充参考</h2></div><span className="count-label">{selectedReferenceFiles.length} 份</span></div>
+              <div className="card-heading"><div><p className="section-kicker">可选</p><h2>补充参考</h2></div><span className="count-label">{selectedReferenceFiles.length} / {DRAFT_MAX_REFERENCE_FILES} 份</span></div>
               <p className="prep-reference-hint">只帮助 AI 理解要求，不会改变修改对象。</p>
-              <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} emptyText="没有额外参考；可从外部资料或素材库添加。" />
+              <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="没有额外参考；可从外部资料或素材库添加。" />
+              <p className={`prep-budget-hint${referenceBudgetExceeded ? ' is-over' : ''}`} role="status">
+                {referenceNotice !== '' ? `${referenceNotice} ` : ''}
+                参考已占用 {referenceCharTotal.toLocaleString('zh-CN')} / {DRAFT_DEFAULT_MAX_CHARS.toLocaleString('zh-CN')} 字（含修改对象共 {scopedCharTotal.toLocaleString('zh-CN')} 字）{referenceFilesFull ? `；已选满 ${DRAFT_MAX_REFERENCE_FILES} 份` : ''}
+              </p>
             </div>
           )}
           <div className="prep-source-actions">
@@ -743,9 +841,9 @@ export default function DraftPanel({
               ))}
             </div>
             {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
-            {scopeTruncated && prepMode !== 'new' && (
-              <div className="inline-notice prep-scope-truncated" role="status">
-                内容超过本次读取上限。AI 已优先读取修改对象或整课基线，后部内容及补充参考可能被截断。
+            {prepMode !== 'new' && appGeneratedCurrentFiles.length === 0 && (
+              <div className="inline-notice" role="status">
+                本课还没有应用内生成的课件版本，先用 AI 生成第一版课件，之后才能“修改这份 / 整课重做”。
               </div>
             )}
           </div>
@@ -805,33 +903,38 @@ export default function DraftPanel({
   )
 }
 
-function ScopeFileList({ files, selection, selectedIds, onSelect, currentVersionId, emptyText }: {
+function ScopeFileList({ files, selection, selectedIds, onSelect, currentVersionId, charCounts, emptyText }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selection: 'checkbox' | 'radio' | 'summary'
   readonly selectedIds: readonly string[]
   readonly onSelect: (fileId: string) => void
   readonly currentVersionId?: string
+  readonly charCounts?: ReadonlyMap<string, number>
   readonly emptyText: string
 }): React.JSX.Element {
   if (files.length === 0) return <p className="empty-state prep-scope-empty">{emptyText}</p>
   return (
     <ul className="prep-scope-file-list">
-      {files.map((file) => (
-        <li key={file.id}>
-          <label className={selectedIds.includes(file.id) ? 'is-selected' : ''}>
-            {selection !== 'summary' && (
-              <input
-                type={selection}
-                name={selection === 'radio' ? 'prep-target-file' : undefined}
-                checked={selectedIds.includes(file.id)}
-                onChange={() => onSelect(file.id)}
-              />
-            )}
-            <span className="prep-scope-file-name">{file.originalName}</span>
-            {file.id === currentVersionId && <span className="prep-current-badge">当前</span>}
-          </label>
-        </li>
-      ))}
+      {files.map((file) => {
+        const chars = charCounts?.get(file.id)
+        return (
+          <li key={file.id}>
+            <label className={selectedIds.includes(file.id) ? 'is-selected' : ''}>
+              {selection !== 'summary' && (
+                <input
+                  type={selection}
+                  name={selection === 'radio' ? 'prep-target-file' : undefined}
+                  checked={selectedIds.includes(file.id)}
+                  onChange={() => onSelect(file.id)}
+                />
+              )}
+              <span className="prep-scope-file-name">{file.originalName}</span>
+              {chars !== undefined && <span className="prep-scope-file-chars">{chars.toLocaleString('zh-CN')} 字</span>}
+              {file.id === currentVersionId && <span className="prep-current-badge">当前</span>}
+            </label>
+          </li>
+        )
+      })}
     </ul>
   )
 }

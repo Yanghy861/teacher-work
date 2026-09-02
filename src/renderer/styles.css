@@ -3040,7 +3040,7 @@ button.quick-status { cursor: pointer; }
 
 .prep-scope-file-list label {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 7px;
   min-height: 34px;
@@ -3198,4 +3198,24 @@ button.quick-status { cursor: pointer; }
     position: static;
     max-height: none;
   }
+}
+
+/* V16-B：参考预算占用提示与单份字符数徽标 */
+.prep-scope-file-chars {
+  flex-shrink: 0;
+  color: var(--color-text-faint);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.prep-budget-hint {
+  margin: -2px 0 8px;
+  color: var(--color-text-faint);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.prep-budget-hint.is-over {
+  color: #b45309;
+  font-weight: 600;
 }

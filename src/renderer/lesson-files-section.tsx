@@ -5,7 +5,7 @@ import type { ManagedFileOverview } from '../shared/file-contracts'
 import {
   classifyLessonCoursewareFiles,
   filterLessonMaterialFiles,
-  isSelectableLessonPrepFile,
+  isAppGeneratedCoursewareFile,
   listLessonPrepFiles,
   type LessonPrepContext,
 } from './lesson-prep-context'
@@ -54,9 +54,10 @@ export default function LessonFilesSection({
   const currentVersionFile = classifiedFiles.currentVersion
   const historyFiles = classifiedFiles.history
   const displayFiles = classifiedFiles.currentMaterials
-  const hasCourseware = displayFiles.some(isSelectableLessonPrepFile)
   const selectedFile = displayFiles.find((file) => file.id === selectedFileId) ?? null
-  const canModifySelectedFile = selectedFile !== null && isSelectableLessonPrepFile(selectedFile)
+  // D23：AI 修改仅面向工作台生成的课件版本；外部 office/pdf/导入 md 保持只读浏览。
+  const canModifySelectedFile = selectedFile !== null && isAppGeneratedCoursewareFile(selectedFile)
+  const hasAppGeneratedCourseware = displayFiles.some(isAppGeneratedCoursewareFile)
 
   useEffect(() => {
     if (currentVersionFile !== null && selectedFileId === '') {
@@ -126,7 +127,7 @@ export default function LessonFilesSection({
   }
 
   function modifySelectedFile(): void {
-    if (prepContext === null || selectedFile === null || !isSelectableLessonPrepFile(selectedFile)) return
+    if (prepContext === null || selectedFile === null || !isAppGeneratedCoursewareFile(selectedFile)) return
     onStartPrep(prepContext, { mode: 'single', targetFileId: selectedFile.id })
   }
 
@@ -157,10 +158,25 @@ export default function LessonFilesSection({
         <div className="lesson-files-actions">
           <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
           {onToggleImmersive !== undefined && <button className="secondary-button" type="button" onClick={onToggleImmersive}>{immersive ? '退出沉浸阅读' : '沉浸阅读'}</button>}
-          {!readOnly && !hasCourseware && <button className="primary-button" type="button" disabled={busy} onClick={openNewPrep}>{draft === null ? 'AI 新建备课' : '继续上次备课'}</button>}
-          {!readOnly && hasCourseware && draft !== null && <button className="secondary-button" type="button" disabled={busy} onClick={() => prepContext !== null && onOpenDraft(prepContext, draft.id)}>继续上次修改</button>}
-          {!readOnly && hasCourseware && <button className="primary-button" type="button" disabled={busy || !canModifySelectedFile} title={canModifySelectedFile ? `修改${selectedFile.originalName}` : '请选择一份可读文档'} onClick={modifySelectedFile}>✦ 修改这份</button>}
-          {!readOnly && hasCourseware && <button className="secondary-button" type="button" disabled={busy} onClick={rebuildLesson}>整课重做</button>}
+          {!readOnly && !hasAppGeneratedCourseware && (
+            <span className="lesson-files-guide" role="status">本课还没有工作台生成的课件，先用 AI 生成第一版课件，才能“修改这份 / 整课重做”。</span>
+          )}
+          {!readOnly && !hasAppGeneratedCourseware && <button className="primary-button" type="button" disabled={busy} onClick={openNewPrep}>{draft === null ? 'AI 新建备课' : '继续上次备课'}</button>}
+          {!readOnly && hasAppGeneratedCourseware && draft !== null && <button className="secondary-button" type="button" disabled={busy} onClick={() => prepContext !== null && onOpenDraft(prepContext, draft.id)}>继续上次修改</button>}
+          {!readOnly && hasAppGeneratedCourseware && (
+            <button
+              className="primary-button"
+              type="button"
+              disabled={busy || !canModifySelectedFile}
+              title={canModifySelectedFile
+                ? `修改${selectedFile?.originalName}`
+                : '仅支持修改工作台生成的讲义/教案/作业；外部 Office 文档请用系统应用打开修改'}
+              onClick={modifySelectedFile}
+            >
+              ✦ 修改这份
+            </button>
+          )}
+          {!readOnly && hasAppGeneratedCourseware && <button className="secondary-button" type="button" disabled={busy} onClick={rebuildLesson}>整课重做</button>}
         </div>
       </header>
       {overview === null ? (

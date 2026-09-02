@@ -1171,3 +1171,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 测试：`ai-gateway.test.ts` +3（120s 常量合同；结构合法 + content 为空的 testConnection 通过；业务空正文仍报 `AI_INVALID_RESPONSE`，连接测试遇坏结构/空 choices 报 `AI_INVALID_RESPONSE`）。
 - 门禁：全量 63 files / 268 passed / 1 skipped（基线 265 + 3）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
 - Git：本地提交 `v1.6(V16-A): fix gateway budget and connection test criteria`。
+
+## 2026-09-02 · V16-B 完成：修改范围收口与参考预算 UX
+
+- D23 收口：`lesson-prep-context.ts` 新增 `isAppGeneratedCoursewareFile`（text/markdown 且匹配 " · 第 N 版.md"）；draft-panel 单文件候选仅列应用内课件版本（`modifiableCurrentFiles`），`selectTargetFile`/初始化/`changePrepMode` 同步收口；lesson-files-section 入口以同判定启用，外部文件置灰并提示"仅支持修改工作台生成的讲义/教案/作业；外部 Office 文档请用系统应用打开修改"；无应用内版本课次显示"先用 AI 生成第一版课件"引导，修改模式收敛为新建。
+- D25 预算：新增 `src/shared/draft-reference-budget.ts` 纯函数（基线优先、参考按选择顺序、部分纳入入 excluded 列名、`baselineTruncated`）；合同新增 `DRAFT_MAX_REFERENCE_FILES = 10` / `DRAFT_MAX_SOURCE_FILES = 32`，`isGenerateDraftRequest` sources 守卫 1..32；选择区逐份字符数徽标 + "参考已占用 N / 30,000 字" + 10 份上限拒绝提示；方案与确认生成共用 `confirmReferenceBudget` 明确列名确认（签名缓存防重复弹，选择变化失效）；静默截断角标移除；Main 侧 `buildContext` 兜底不变（双层保险）。
+- 测试：新增 v1.6-scope-budget（4）与 draft-reference-budget（6）；重定向 v1.2-prep-files-ui / v1.5.3.1-scope-flow 共 3 处旧文案 pin（意图不变）。
+- 门禁：全量 64 files / 278 passed / 1 skipped（+13）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
+- Git：本地提交 `v1.6(V16-B): narrow modification scope and add reference budget ux`。
