@@ -1228,3 +1228,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 裁决 A1：`draft-panel` 流式面板新增本地秒表——`streamState.startedAt` + 显示期间每秒 interval 更新 `streamElapsedSeconds`，思考行改为"AI 思考中…（已思考 N 字，已耗时 M 秒）"；推理模型数十秒无流事件期间秒数仍推进（纯事件驱动计数会静止，秒表补足"在动"实感）。A2 打字机节流、A3 换模型不做。门禁复跑全绿（70 files / 304 tests、typecheck、lint、build、diff check）。
 - 裁决 C：md 课件直接编辑按产品负责人确认作为 V1.7 候选保留记录（保存语义第 N+1 版 vs 直接改当前版，立项时定）；V1.6 内不实现。
 - Git：本地提交 `v1.6(V16-E): add reasoning elapsed timer to stream panel`。
+
+## 2026-09-02 · V16-E 第二轮反馈：MinerU 入口可见性修复 + 自测清单修订
+
+- 反馈 D：产品负责人反映素材库右键找不到"增强解析"且期望 MinerU 无感。定位：素材库菜单项存在（未配 token 灰显）；**缺陷**：课次阅读器按钮未配 token 时整体隐藏，违背基准"置灰+引导"。
+- 修复：阅读器对 office/pdf/图片始终渲染入口——未配 token 灰显"增强解析（需配置 token）"+ title 引导；配置后启用；进行中"增强解析中…"；done 隐藏；md 不显示。lesson-files-section 恒传 onEnhanceFile + 新 props（mineruTokenConfigured/mineruBusy）。static-render-v156-d +1 例 4 场景钉测。门禁全绿（70 files / 305 tests、typecheck、lint、build、diff check）。
+- 架构澄清记入：参考生成走双层解析——正常文档本机解析全程无感（产品负责人已确认）；MinerU 仅扫描件增量、按 D26 显式 opt-in；"完全自动上传"与冻结边界冲突，仅作 V1.7 候选记录（含"参考选择时就地提示一键增强"的无感方案）。
+- 自测清单修订（docs/v1.6-acceptance.md）：MinerU 手动流为按需能力，无 token/无扫描件需求可整项跳过；核心验收项"参考文档无感流转生成"已由产品负责人确认。
+- Git：本地提交 `v1.6(V16-E): keep reader enhance entry visible with token guidance`。

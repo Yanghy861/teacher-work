@@ -9,6 +9,7 @@ import {
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
 import { normalizeMarkdownImageReferences, normalizeRichText } from './rich-text'
+import { isMineruEnhanceableFile } from './managed-files-panel'
 import { formatBytes, toErrorMessage } from './ui-utils'
 
 export default function LessonMaterialReader({
@@ -19,6 +20,8 @@ export default function LessonMaterialReader({
   onShowInFolder,
   onRemoveFile,
   onEnhanceFile,
+  mineruTokenConfigured = false,
+  mineruBusy = false,
   mineruStatus,
   hideTree = false,
   treeTitle = '本课资料',
@@ -30,6 +33,8 @@ export default function LessonMaterialReader({
   readonly onShowInFolder?: (fileId: string) => void
   readonly onRemoveFile?: (fileId: string) => void
   readonly onEnhanceFile?: (fileId: string) => void
+  readonly mineruTokenConfigured?: boolean
+  readonly mineruBusy?: boolean
   readonly mineruStatus?: { readonly state: 'queued' | 'running' | 'done' | 'failed'; readonly message?: string } | null
   readonly hideTree?: boolean
   readonly treeTitle?: string
@@ -94,15 +99,23 @@ export default function LessonMaterialReader({
             <div className="material-reader-actions">
               {onOpenFile !== undefined && <button className="link-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>系统打开</button>}
               {onShowInFolder !== undefined && <button className="link-button" type="button" onClick={() => onShowInFolder(selectedFile.id)}>所在文件夹</button>}
-              {onEnhanceFile !== undefined && mineruStatus !== undefined && mineruStatus !== null && mineruStatus.state !== 'done' && (
+              {onEnhanceFile !== undefined && isMineruEnhanceableFile(selectedFile) && mineruStatus?.state !== 'done' && (
                 <button
                   className="link-button"
                   type="button"
-                  disabled={mineruStatus.state === 'running' || mineruStatus.state === 'queued'}
-                  title={mineruStatus.state === 'running' || mineruStatus.state === 'queued' ? '增强解析进行中' : '上传到 MinerU 云端解析，公式转 LaTeX、扫描件识别'}
+                  disabled={!mineruTokenConfigured || mineruBusy || mineruStatus?.state === 'running' || mineruStatus?.state === 'queued'}
+                  title={!mineruTokenConfigured
+                    ? '扫描件增强解析需先在设置中配置 MinerU token（会配置后此处即可点击）'
+                    : mineruBusy || mineruStatus?.state === 'running' || mineruStatus?.state === 'queued'
+                      ? '增强解析进行中'
+                      : '上传到 MinerU 云端解析，公式转 LaTeX、扫描件识别'}
                   onClick={() => onEnhanceFile(selectedFile.id)}
                 >
-                  {mineruStatus.state === 'running' || mineruStatus.state === 'queued' ? '增强解析中…' : '增强解析'}
+                  {!mineruTokenConfigured
+                    ? '增强解析（需配置 token）'
+                    : mineruBusy || mineruStatus?.state === 'running' || mineruStatus?.state === 'queued'
+                      ? '增强解析中…'
+                      : '增强解析'}
                 </button>
               )}
               {onRemoveFile !== undefined && <button className="danger-button" type="button" onClick={() => onRemoveFile(selectedFile.id)}>从本课移除</button>}

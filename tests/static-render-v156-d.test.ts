@@ -21,6 +21,7 @@ import ManagedFilesPanel, {
 } from '../src/renderer/managed-files-panel'
 import { LessonsSection } from '../src/renderer/course-detail'
 import { buildCourseSummaries } from '../src/renderer/course-view-model'
+import LessonMaterialReader from '../src/renderer/lesson-material-reader'
 import { createLessonPrepContext } from '../src/renderer/lesson-prep-context'
 
 const stamp = '2026-09-01T00:00:00.000Z'
@@ -194,6 +195,58 @@ describe('V156-D static render upgrades (additive)', () => {
       expect(folderMenu).toContain('重命名')
       expect(folderMenu).toContain('移到顶层')
       expect(folderMenu).toContain('删除文件夹')
+    })
+
+    it('keeps the reader enhance entry visible with setup guidance before a token is saved', () => {
+      // 基准要求"token 未配置置灰 + 引导设置"：入口不得整体消失，否则老师无从得知该能力。
+      const scan = materialFile('file-scan', '扫描件.pdf', 'application/pdf')
+      const markdown = materialFile('file-md', '讲义.md', 'text/markdown')
+      const baseProps = {
+        files: [scan, markdown],
+        selectedFileId: 'file-scan',
+        onSelectFile: () => {},
+        onOpenFile: () => {},
+        onEnhanceFile: () => {},
+        mineruBusy: false,
+        mineruStatus: null,
+      }
+
+      const locked = renderToStaticMarkup(createElement(LessonMaterialReader, {
+        ...baseProps,
+        mineruTokenConfigured: false,
+      }))
+      expect(locked).toContain('增强解析（需配置 token）')
+      expect(locked).toContain('disabled=""')
+
+      const ready = renderToStaticMarkup(createElement(LessonMaterialReader, {
+        ...baseProps,
+        mineruTokenConfigured: true,
+      }))
+      expect(ready).toContain('增强解析')
+      expect(ready).not.toContain('需配置 token')
+
+      // 进行中状态：按钮禁用并显示"增强解析中…"
+      const running = renderToStaticMarkup(createElement(LessonMaterialReader, {
+        ...baseProps,
+        mineruTokenConfigured: true,
+        mineruStatus: { state: 'running' },
+      }))
+      expect(running).toContain('增强解析中…')
+      expect(running).toContain('disabled=""')
+
+      // 非 office/pdf/图片文件（如 md）不显示入口；已完成（done）不再重复展示
+      const mdOnly = renderToStaticMarkup(createElement(LessonMaterialReader, {
+        ...baseProps,
+        selectedFileId: 'file-md',
+        mineruTokenConfigured: true,
+      }))
+      expect(mdOnly).not.toContain('增强解析')
+      const done = renderToStaticMarkup(createElement(LessonMaterialReader, {
+        ...baseProps,
+        mineruTokenConfigured: true,
+        mineruStatus: { state: 'done' },
+      }))
+      expect(done).not.toContain('增强解析')
     })
   })
 

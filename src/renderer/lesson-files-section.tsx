@@ -223,8 +223,10 @@ export default function LessonFilesSection({
           onOpenFile={(fileId) => { void openFile(fileId) }}
           onShowInFolder={(fileId) => { void openFile(fileId, true) }}
           onRemoveFile={readOnly ? undefined : (fileId) => { void removeFile(fileId) }}
-          onEnhanceFile={readOnly || !mineruTokenConfigured || mineruBusy ? undefined : (fileId) => { void enhanceWithMineru(fileId) }}
-          mineruStatus={mineruTokenConfigured ? mineruStatus : null}
+          onEnhanceFile={readOnly ? undefined : (fileId) => { void enhanceWithMineru(fileId) }}
+          mineruTokenConfigured={mineruTokenConfigured}
+          mineruBusy={mineruBusy}
+          mineruStatus={mineruStatus}
           hideTree={immersive}
           treeTitle={lesson.title}
         />
