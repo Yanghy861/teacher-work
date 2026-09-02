@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import type { AiKeyStorageMode, AiSettings, ExternalRootSummary } from '../shared/preload-api'
+import type { AiKeyStorageMode, AiSettings, ExternalRootSummary, MineruSettings } from '../shared/preload-api'
 import SkillSettingsPanel from './skill-settings-panel'
 import { toErrorMessage } from './ui-utils'
 
@@ -23,6 +23,9 @@ export default function SettingsPanel(): React.JSX.Element {
   const [backupBusy, setBackupBusy] = useState(false)
   const [externalRoot, setExternalRoot] = useState<ExternalRootSummary | null>(null)
   const [externalBusy, setExternalBusy] = useState(false)
+  const [mineruSettings, setMineruSettings] = useState<MineruSettings>({ tokenConfigured: false, tokenStorage: 'unavailable' })
+  const [mineruToken, setMineruToken] = useState('')
+  const [mineruBusy, setMineruBusy] = useState(false)
 
   useEffect(() => {
     void window.teacherWorkbench.ai.getSettings().then((value) => {
@@ -35,6 +38,12 @@ export default function SettingsPanel(): React.JSX.Element {
   useEffect(() => {
     void window.teacherWorkbench.externalLibrary.getRoot()
       .then(setExternalRoot)
+      .catch((loadError: unknown) => setError(toErrorMessage(loadError, '操作失败，请稍后重试。')))
+  }, [])
+
+  useEffect(() => {
+    void window.teacherWorkbench.mineru.getSettings()
+      .then(setMineruSettings)
       .catch((loadError: unknown) => setError(toErrorMessage(loadError, '操作失败，请稍后重试。')))
   }, [])
 
@@ -124,6 +133,59 @@ export default function SettingsPanel(): React.JSX.Element {
       setMessage('')
     } finally {
       setBackupBusy(false)
+    }
+  }
+
+  async function saveMineruToken(): Promise<void> {
+    setMineruBusy(true)
+    setMessage('')
+    setError('')
+    try {
+      const next = await window.teacherWorkbench.mineru.updateSettings({
+        ...(mineruToken.trim() === '' ? {} : { token: mineruToken.trim() }),
+      })
+      setMineruSettings(next)
+      setMineruToken('')
+      setMessage('MinerU token 已保存。')
+    } catch (saveError) {
+      setError(toErrorMessage(saveError, '操作失败，请稍后重试。'))
+    } finally {
+      setMineruBusy(false)
+    }
+  }
+
+  async function clearMineruToken(): Promise<void> {
+    setMineruBusy(true)
+    setMessage('')
+    setError('')
+    try {
+      setMineruSettings(await window.teacherWorkbench.mineru.clearToken())
+      setMessage('已删除已保存的 MinerU token。')
+    } catch (clearError) {
+      setError(toErrorMessage(clearError, '操作失败，请稍后重试。'))
+    } finally {
+      setMineruBusy(false)
+    }
+  }
+
+  async function testMineruConnection(): Promise<void> {
+    setMineruBusy(true)
+    setMessage('正在测试 MinerU 连接…')
+    setError('')
+    try {
+      const token = mineruToken.trim()
+      if (token === '') {
+        setError('请先保存 token，再使用已保存的 token 测试连接。')
+        setMessage('')
+        return
+      }
+      const result = await window.teacherWorkbench.mineru.testConnection({ token })
+      setMessage(`MinerU 连接成功 · ${result.latencyMs} ms`)
+    } catch (testError) {
+      setError(toErrorMessage(testError, '操作失败，请稍后重试。'))
+      setMessage('')
+    } finally {
+      setMineruBusy(false)
     }
   }
 
@@ -226,6 +288,37 @@ export default function SettingsPanel(): React.JSX.Element {
       <div className="workspace-card">
         <div className="card-heading">
           <div>
+            <p className="section-kicker">文档增强解析</p>
+            <h2>MinerU</h2>
+          </div>
+          <span className={`key-status key-status-${mineruSettings.tokenConfigured ? 'ready' : 'empty'}`}>
+            {mineruSettings.tokenConfigured ? `Token 已配置 · ${mineruStorageLabel(mineruSettings.tokenStorage)}` : 'Token 未配置'}
+          </span>
+        </div>
+        <p className="settings-note">用 MinerU 云端解析数学公式（转 LaTeX）、表格与扫描件，增强 AI 备课的资料理解。仅在您对文件主动执行“增强解析”时才会上传该文件副本；外部资料目录永不上传。</p>
+        <div className="stacked-form">
+          <label>
+            新 MinerU Token
+            <input
+              type="password"
+              value={mineruToken}
+              onChange={(event) => setMineruToken(event.target.value)}
+              placeholder={mineruSettings.tokenConfigured ? '留空表示保持当前 token' : '仅在保存时提交'}
+              autoComplete="new-password"
+              disabled={mineruBusy}
+            />
+          </label>
+        </div>
+        <div className="file-toolbar">
+          <button className="primary-button" type="button" onClick={() => void saveMineruToken()} disabled={mineruBusy || mineruToken.trim() === ''}>保存 Token</button>
+          <button className="secondary-button" type="button" onClick={() => void testMineruConnection()} disabled={mineruBusy || (mineruToken.trim() === '' && !mineruSettings.tokenConfigured)}>测试连接</button>
+          <button className="danger-button" type="button" onClick={() => void clearMineruToken()} disabled={mineruBusy || !mineruSettings.tokenConfigured}>删除 Token</button>
+        </div>
+        <p className="settings-note">Token 加密存储于本机，不进入日志与备份，也不会回显。</p>
+      </div>
+      <div className="workspace-card">
+        <div className="card-heading">
+          <div>
             <p className="section-kicker">工作区</p>
             <h2>备份与恢复</h2>
           </div>
@@ -237,6 +330,10 @@ export default function SettingsPanel(): React.JSX.Element {
       </div>
     </section>
   )
+}
+
+function mineruStorageLabel(mode: MineruSettings['tokenStorage']): string {
+  return mode === 'secure' ? '安全存储' : mode === 'session' ? '本次会话' : mode === 'none' ? '未配置' : '不可用'
 }
 
 function storageLabel(mode: AiKeyStorageMode): string {

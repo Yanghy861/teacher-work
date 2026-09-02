@@ -1,4 +1,4 @@
-export type SearchIndexStatus = 'pending' | 'indexed' | 'no_text' | 'parse_failed'
+export type SearchIndexStatus = 'pending' | 'indexed' | 'no_text' | 'parse_failed' | 'mineru_ready'
 
 export type SearchSourceType = 'file' | 'node' | 'note'
 
@@ -148,7 +148,7 @@ function isSearchMatchSource(value: unknown): value is SearchMatchSource {
 }
 
 function isSearchIndexStatus(value: unknown): value is SearchIndexStatus {
-  return value === 'pending' || value === 'indexed' || value === 'no_text' || value === 'parse_failed'
+  return value === 'pending' || value === 'indexed' || value === 'no_text' || value === 'parse_failed' || value === 'mineru_ready'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

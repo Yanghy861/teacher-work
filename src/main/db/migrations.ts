@@ -415,6 +415,53 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 16,
+    name: 'extend_files_index_status_for_mineru',
+    up: (database) => {
+      // SQLite 不能 ALTER CHECK：按官方 12 步法在迁移事务内重建 files 表。
+      // 外键引用（lesson_files/student_files/material_folder_items）经 PRAGMA foreign_keys=OFF 保持行级完整。
+      database.exec(`
+        PRAGMA foreign_keys = OFF;
+
+        CREATE TABLE files_v16 (
+          id TEXT PRIMARY KEY NOT NULL,
+          original_name TEXT NOT NULL CHECK (length(trim(original_name)) > 0),
+          size_bytes INTEGER NOT NULL CHECK (size_bytes >= 0),
+          mime_type TEXT NOT NULL,
+          origin_file_id TEXT REFERENCES files(id) ON DELETE SET NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT,
+          mtime_ms REAL,
+          content_hash TEXT,
+          indexed_hash TEXT,
+          index_status TEXT NOT NULL DEFAULT 'pending'
+            CHECK (index_status IN ('pending', 'indexed', 'no_text', 'parse_failed', 'mineru_ready'))
+        );
+
+        INSERT INTO files_v16
+          (id, original_name, size_bytes, mime_type, origin_file_id, created_at,
+           updated_at, deleted_at, mtime_ms, content_hash, indexed_hash, index_status)
+        SELECT id, original_name, size_bytes, mime_type, origin_file_id, created_at,
+               updated_at, deleted_at, mtime_ms, content_hash, indexed_hash, index_status
+          FROM files;
+
+        DROP TABLE files;
+        ALTER TABLE files_v16 RENAME TO files;
+
+        CREATE INDEX IF NOT EXISTS idx_files_active_created
+          ON files (deleted_at, created_at, id);
+        CREATE INDEX IF NOT EXISTS idx_files_origin
+          ON files (origin_file_id);
+        CREATE INDEX IF NOT EXISTS idx_files_index_status
+          ON files (index_status, deleted_at, id);
+
+        PRAGMA foreign_key_check;
+        PRAGMA foreign_keys = ON;
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

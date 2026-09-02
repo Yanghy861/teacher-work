@@ -34,6 +34,7 @@ export default function ManagedFilesPanel({ compact = false, heading = '素材�
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [mineruTokenConfigured, setMineruTokenConfigured] = useState(false)
   const lessons = useMemo(() => coreOverview?.nodes.filter((node) => node.kind === 'lesson') ?? [], [coreOverview])
   const activeLessonId = lessonId ?? selectedLessonId
   const activeFolderId = view.startsWith('folder:') ? view.slice('folder:'.length) : null
@@ -55,6 +56,11 @@ export default function ManagedFilesPanel({ compact = false, heading = '素材�
   const contextFile = contextMenu?.kind === 'file' ? standaloneFiles.find((file) => file.id === contextMenu.fileId) ?? null : null
 
   useEffect(() => { void reload() }, [])
+  useEffect(() => {
+    void window.teacherWorkbench.mineru.getSettings()
+      .then((settings) => setMineruTokenConfigured(settings.tokenConfigured))
+      .catch(() => setMineruTokenConfigured(false))
+  }, [])
   useEffect(() => { if (lessonId === undefined && selectedLessonId === '' && lessons[0] !== undefined) setSelectedLessonId(lessons[0].id) }, [lessonId, lessons, selectedLessonId])
   useEffect(() => {
     if (overview === null || expansionInitialized) return
@@ -100,6 +106,20 @@ export default function ManagedFilesPanel({ compact = false, heading = '素材�
       await reload()
       return result
     } catch (actionError) { setError(toErrorMessage(actionError, '素材库操作失败，请稍后重试。')); return undefined } finally { setBusy(false) }
+  }
+
+  async function enhanceWithMineru(file: ManagedFileRecord): Promise<void> {
+    setContextMenu(null)
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const accepted = await window.teacherWorkbench.mineru.enhanceFile({ fileId: file.id })
+      setNotice(accepted.state === 'running' || accepted.state === 'queued'
+        ? `已提交“${file.originalName}”的增强解析，后台进行中，完成后可直接用于 AI 备课。`
+        : `“${file.originalName}”增强解析已在进行中。`)
+      await reload()
+    } catch (enhanceError) {
+      setError(toErrorMessage(enhanceError, '增强解析提交失败，请稍后重试。'))
+    } finally { setBusy(false) }
   }
 
   function importFile(): void { void runAction(async () => { const imported = await window.teacherWorkbench.files.importFromPicker(); if (imported !== null) await window.teacherWorkbench.materialLibrary.moveFile({ fileId: imported.id, folderId: activeFolderId }) }, activeFolder === null ? '资料已保存到待整理。' : `资料已保存到「${activeFolder.name}」。`) }
@@ -181,7 +201,7 @@ export default function ManagedFilesPanel({ compact = false, heading = '素材�
       <div className="material-library-layout"><aside className="material-library-tree" aria-label="素材库逻辑目录"><div className="material-library-tree-heading"><strong>素材库目录</strong><small>{standaloneFiles.filter((file) => file.deletedAt === null).length} 项</small></div><nav className="material-library-tree-list"><LibraryButton label="全部素材" active={view === 'all'} count={standaloneFiles.filter((file) => file.deletedAt === null).length} onClick={() => setView('all')} /><LibraryButton label="最近使用" active={view === 'recent'} count={standaloneFiles.filter((file) => file.deletedAt === null).length} onClick={() => setView('recent')} /><LibraryButton label="待整理" active={view === 'unfiled'} count={standaloneFiles.filter((file) => file.deletedAt === null && fileFolder.get(file.id) === null).length} onClick={() => setView('unfiled')} dropActive={dropTarget?.kind === 'unfiled'} onDragOver={(event) => dragOverSpecial(event, 'unfiled')} onDrop={(event) => dropOnSpecial(event, 'unfiled')} /><div className={`material-library-custom-heading${dropTarget?.kind === 'root' ? ' is-drop-target' : ''}`} onContextMenu={(event) => openContextMenu(event, { kind: 'root' })} onDragOver={(event) => dragOverSpecial(event, 'root')} onDrop={(event) => dropOnSpecial(event, 'root')}><span>我的文件夹</span><button className="material-tree-add" type="button" title="新建顶层文件夹" aria-label="新建顶层文件夹" onClick={() => void requestCreateFolder(null)} disabled={busy}>+</button></div>{listMaterialFolderChildren(folders, null).map((folder) => <FolderBranch key={folder.id} folder={folder} folders={folders} fileFolder={fileFolder} view={view} expandedFolderIds={expandedFolderIds} draggedMaterial={draggedMaterial} dropTarget={dropTarget} busy={busy} onSelect={setView} onToggle={toggleFolder} onContextMenu={openContextMenu} onButtonMenu={openButtonMenu} onDragStart={startDrag} onDragEnd={finishDrag} onDragOver={dragOverFolder} onDrop={dropOnFolder} />)}</nav></aside>
         <section className="material-library-results"><div className="material-library-results-heading"><strong>{view === 'all' ? '素材库 / 全部素材' : view === 'recent' ? '素材库 / 最近使用' : view === 'unfiled' ? '素材库 / 待整理' : `素材库 / ${activeFolder === null ? '文件夹' : materialFolderPath(folders, activeFolder.id)}`}</strong><span>{visibleFiles.length} 项</span></div><div className="material-type-filter" role="group" aria-label="类型筛选">{(['all', 'documents', 'images', 'other'] as const).map((filter) => <button key={filter} className={typeFilter === filter ? 'is-active' : ''} type="button" onClick={() => setTypeFilter(filter)}>{filter === 'all' ? '全部类型' : filter === 'documents' ? '文档' : filter === 'images' ? '图片' : '其他'}</button>)}</div><FileList files={visibleFiles} busy={busy} lessonId={activeLessonId} onAction={runAction} onContextMenu={openContextMenu} onDragStart={startDrag} onDragEnd={finishDrag} draggedMaterial={draggedMaterial} />{removedFiles.length > 0 && <details className="deleted-files"><summary>已移除素材（{removedFiles.length}）</summary><ul className="file-list">{removedFiles.map((file) => <li className="file-row is-deleted" key={file.id}><FileSummary file={file} /><button className="link-button" type="button" onClick={() => void runAction(() => window.teacherWorkbench.files.restoreFile({ fileId: file.id }), '素材已恢复。')} disabled={busy}>恢复</button></li>)}</ul></details>}</section></div>
     </section>
-    {contextMenu !== null && <MaterialContextMenu menu={contextMenu} folder={contextFolder} file={contextFile} folderOptions={folderOptions} fileFolder={fileFolder} activeLessonId={activeLessonId} onCreateFolder={requestCreateFolder} onRename={requestRename} onMoveToRoot={(folder) => { setContextMenu(null); void moveFolder(buildFolderRootMoveRequest(folders, folder.id)) }} onDeleteFolder={requestDelete} onOpenFile={(file) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.files.openFile({ fileId: file.id })) }} onShowInFolder={(file) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.files.showFileInFolder({ fileId: file.id })) }} onCopyToLesson={(file) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.files.copyToLesson({ fileId: file.id, lessonId: activeLessonId }), '素材已复制到指定课次。') }} onMoveFile={(file, folderId, message) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.materialLibrary.moveFile({ fileId: file.id, folderId }), message) }} onRemoveFile={(file) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.files.softDeleteFile({ fileId: file.id }), '素材已移除。') }} />}
+    {contextMenu !== null && <MaterialContextMenu menu={contextMenu} folder={contextFolder} file={contextFile} folderOptions={folderOptions} fileFolder={fileFolder} activeLessonId={activeLessonId} mineruTokenConfigured={mineruTokenConfigured} onEnhanceFile={(file) => { void enhanceWithMineru(file) }} onCreateFolder={requestCreateFolder} onRename={requestRename} onMoveToRoot={(folder) => { setContextMenu(null); void moveFolder(buildFolderRootMoveRequest(folders, folder.id)) }} onDeleteFolder={requestDelete} onOpenFile={(file) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.files.openFile({ fileId: file.id })) }} onShowInFolder={(file) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.files.showFileInFolder({ fileId: file.id })) }} onCopyToLesson={(file) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.files.copyToLesson({ fileId: file.id, lessonId: activeLessonId }), '素材已复制到指定课次。') }} onMoveFile={(file, folderId, message) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.materialLibrary.moveFile({ fileId: file.id, folderId }), message) }} onRemoveFile={(file) => { setContextMenu(null); void runAction(() => window.teacherWorkbench.files.softDeleteFile({ fileId: file.id }), '素材已移除。') }} />}
   </div>
 }
 
@@ -192,6 +212,7 @@ interface MaterialContextMenuProps {
   readonly folderOptions: readonly { readonly folder: MaterialFolder; readonly path: string }[]
   readonly fileFolder: ReadonlyMap<string, string | null>
   readonly activeLessonId: string
+  readonly mineruTokenConfigured: boolean
   readonly onCreateFolder: (parentId: string | null) => void | Promise<void>
   readonly onRename: (folder: MaterialFolder) => void | Promise<void>
   readonly onMoveToRoot: (folder: MaterialFolder) => void
@@ -201,17 +222,19 @@ interface MaterialContextMenuProps {
   readonly onCopyToLesson: (file: ManagedFileRecord) => void
   readonly onMoveFile: (file: ManagedFileRecord, folderId: string | null, message: string) => void
   readonly onRemoveFile: (file: ManagedFileRecord) => void
+  readonly onEnhanceFile: (file: ManagedFileRecord) => void
 }
 
 export function MaterialContextMenu({
-  menu, folder, file, folderOptions, fileFolder, activeLessonId,
+  menu, folder, file, folderOptions, fileFolder, activeLessonId, mineruTokenConfigured,
   onCreateFolder, onRename, onMoveToRoot, onDeleteFolder,
-  onOpenFile, onShowInFolder, onCopyToLesson, onMoveFile, onRemoveFile,
+  onOpenFile, onShowInFolder, onCopyToLesson, onMoveFile, onRemoveFile, onEnhanceFile,
 }: MaterialContextMenuProps): React.JSX.Element {
+  const mineruEligible = file !== null && isMineruEnhanceableFile(file)
   return <div className="material-context-menu" role="menu" style={{ left: menu.x, top: menu.y }} onPointerDown={(event) => event.stopPropagation()}>
     {menu.kind === 'root' && <button type="button" role="menuitem" onClick={() => void onCreateFolder(null)}>新建顶层文件夹</button>}
     {folder !== null && <><button type="button" role="menuitem" onClick={() => void onCreateFolder(folder.id)}>新建子文件夹</button><button type="button" role="menuitem" onClick={() => void onRename(folder)}>重命名</button>{folder.parentId !== null && <button type="button" role="menuitem" onClick={() => onMoveToRoot(folder)}>移到顶层</button>}<span className="material-context-separator" /><button className="is-danger" type="button" role="menuitem" onClick={() => void onDeleteFolder(folder)}>删除文件夹</button></>}
-    {file !== null && <><button type="button" role="menuitem" onClick={() => onOpenFile(file)}>打开</button><button type="button" role="menuitem" onClick={() => onShowInFolder(file)}>在资源管理器中显示</button><button type="button" role="menuitem" disabled={activeLessonId === ''} onClick={() => onCopyToLesson(file)}>复制到当前课次</button><span className="material-context-label">移动到</span><button type="button" role="menuitem" disabled={fileFolder.get(file.id) === null} onClick={() => onMoveFile(file, null, '素材已移到待整理。')}>待整理</button><div className="material-context-folder-list">{folderOptions.map(({ folder: option, path }) => <button key={option.id} type="button" role="menuitem" title={path} disabled={fileFolder.get(file.id) === option.id} onClick={() => onMoveFile(file, option.id, `素材已移动到「${path}」。`)}>{path}</button>)}</div><span className="material-context-separator" /><button className="is-danger" type="button" role="menuitem" onClick={() => onRemoveFile(file)}>移除素材</button></>}
+    {file !== null && <><button type="button" role="menuitem" onClick={() => onOpenFile(file)}>打开</button><button type="button" role="menuitem" title={mineruTokenConfigured ? '上传到 MinerU 云端解析，公式转 LaTeX、扫描件识别' : '请先在设置中配置 MinerU token'} disabled={!mineruTokenConfigured || !mineruEligible} onClick={() => onEnhanceFile(file)}>{mineruTokenConfigured ? '增强解析（MinerU）' : '增强解析（需配置 token）'}</button><button type="button" role="menuitem" onClick={() => onShowInFolder(file)}>在资源管理器中显示</button><button type="button" role="menuitem" disabled={activeLessonId === ''} onClick={() => onCopyToLesson(file)}>复制到当前课次</button><span className="material-context-label">移动到</span><button type="button" role="menuitem" disabled={fileFolder.get(file.id) === null} onClick={() => onMoveFile(file, null, '素材已移到待整理。')}>待整理</button><div className="material-context-folder-list">{folderOptions.map(({ folder: option, path }) => <button key={option.id} type="button" role="menuitem" title={path} disabled={fileFolder.get(file.id) === option.id} onClick={() => onMoveFile(file, option.id, `素材已移动到「${path}」。`)}>{path}</button>)}</div><span className="material-context-separator" /><button className="is-danger" type="button" role="menuitem" onClick={() => onRemoveFile(file)}>移除素材</button></>}
   </div>
 }
 
@@ -258,4 +281,13 @@ interface FileListProps { readonly files: readonly ManagedFileRecord[]; readonly
 export function FileList({ files, busy, lessonId, onAction, onContextMenu, onDragStart, onDragEnd, draggedMaterial }: FileListProps): React.JSX.Element { return <ul className="file-list">{files.map((file) => <li className={`file-row is-draggable${draggedMaterial?.kind === 'file' && draggedMaterial.id === file.id ? ' is-dragging' : ''}`} key={file.id} draggable={!busy} onDragStart={(event) => onDragStart(event, { kind: 'file', id: file.id })} onDragEnd={onDragEnd} onContextMenu={(event) => onContextMenu(event, { kind: 'file', fileId: file.id })}><FileSummary file={file} /><div className="file-actions"><button className="link-button" type="button" draggable={false} onClick={() => void onAction(() => window.teacherWorkbench.files.openFile({ fileId: file.id }))} disabled={busy}>打开</button><button className="link-button" type="button" draggable={false} onClick={() => void onAction(() => window.teacherWorkbench.files.showFileInFolder({ fileId: file.id }))} disabled={busy}>所在文件夹</button><button className="link-button" type="button" draggable={false} onClick={() => void onAction(() => window.teacherWorkbench.files.copyToLesson({ fileId: file.id, lessonId }), '素材已复制到指定课次。')} disabled={busy || lessonId === ''}>复制到课次</button><button className="danger-button" type="button" draggable={false} onClick={() => void onAction(() => window.teacherWorkbench.files.softDeleteFile({ fileId: file.id }), '素材已移除。')} disabled={busy}>移除</button></div></li>)}{files.length === 0 && <li className="empty-state">这里还没有符合条件的素材。</li>}</ul> }
 export function FileSummary({ file }: { readonly file: ManagedFileRecord }): React.JSX.Element { const kind = materialKind(file); return <div className="file-summary"><strong title={file.originalName}>{file.originalName}</strong><small>{formatBytes(file.sizeBytes)} · {kind === 'documents' ? '文档' : kind === 'images' ? '图片' : '其他'} · {file.originFileId === null ? '素材原件' : '保存自副本'}</small></div> }
 function getFolderDropPosition(event: DragEvent<HTMLElement>): FolderDropPosition { const rect = event.currentTarget.getBoundingClientRect(); const ratio = rect.height === 0 ? 0.5 : (event.clientY - rect.top) / rect.height; return ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside' }
+/** D24：MinerU 增强解析适用对象 = managed 副本中的 office/pdf/图片文件。 */
+export function isMineruEnhanceableFile(file: ManagedFileRecord): boolean {
+  if (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf') return true
+  return file.mimeType.startsWith('application/vnd.openxmlformats-officedocument.') ||
+    file.mimeType === 'application/msword' ||
+    file.mimeType === 'application/vnd.ms-powerpoint' ||
+    file.mimeType === 'application/vnd.ms-excel'
+}
+
 function menuPosition(x: number, y: number): { readonly x: number; readonly y: number } { return { x: Math.max(8, Math.min(x, window.innerWidth - 252)), y: Math.max(8, Math.min(y, window.innerHeight - 360)) } }

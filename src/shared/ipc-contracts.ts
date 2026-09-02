@@ -67,6 +67,15 @@ export const AI_IPC_EVENTS = {
   streamEvent: 'ai:stream-event',
 } as const
 
+export const MINERU_IPC_CHANNELS = {
+  getSettings: 'mineru:get-settings',
+  updateSettings: 'mineru:update-settings',
+  clearToken: 'mineru:clear-token',
+  testConnection: 'mineru:test-connection',
+  enhanceFile: 'mineru:enhance-file',
+  getStatus: 'mineru:get-status',
+} as const
+
 export const DRAFT_IPC_CHANNELS = {
   generate: 'draft:generate',
   regenerate: 'draft:regenerate',
@@ -134,6 +143,7 @@ export type IpcChannel =
   | (typeof EXTERNAL_LIBRARY_IPC_CHANNELS)[keyof typeof EXTERNAL_LIBRARY_IPC_CHANNELS]
   | (typeof QUESTION_BANK_IPC_CHANNELS)[keyof typeof QUESTION_BANK_IPC_CHANNELS]
   | (typeof MATERIAL_LIBRARY_IPC_CHANNELS)[keyof typeof MATERIAL_LIBRARY_IPC_CHANNELS]
+  | (typeof MINERU_IPC_CHANNELS)[keyof typeof MINERU_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -153,6 +163,7 @@ export const IPC_ERROR_CODES = {
   EXTERNAL_LIBRARY_ERROR: 'EXTERNAL_LIBRARY_ERROR',
   QUESTION_BANK_ERROR: 'QUESTION_BANK_ERROR',
   MATERIAL_LIBRARY_ERROR: 'MATERIAL_LIBRARY_ERROR',
+  MINERU_ERROR: 'MINERU_ERROR',
 } as const
 
 export type IpcErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES]

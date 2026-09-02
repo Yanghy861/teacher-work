@@ -15,6 +15,10 @@ import { registerSkillIpc } from './ipc/skill-ipc'
 import { registerAttendanceIpc } from './ipc/attendance-ipc'
 import { registerQuestionBankIpc } from './ipc/question-bank-ipc'
 import { registerMaterialLibraryIpc } from './ipc/material-library-ipc'
+import { registerMineruIpc } from './ipc/mineru-ipc'
+import { MineruSettingsService } from './ai/mineru-settings-service'
+import { MineruService } from './parser/mineru-service'
+import { createElectronSecureStorage } from './ai/secure-storage'
 import { CoreDataService } from './data/core-data-service'
 import { ManagedFileService } from './files/managed-file-service'
 import { MaterialLibraryService } from './files/material-library-service'
@@ -61,6 +65,7 @@ let unregisterSkillIpc: (() => void) | null = null
 let unregisterAttendanceIpc: (() => void) | null = null
 let unregisterQuestionBankIpc: (() => void) | null = null
 let unregisterMaterialLibraryIpc: (() => void) | null = null
+let unregisterMineruIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
@@ -69,6 +74,8 @@ let externalLibraryService: ExternalLibraryService | null = null
 let skillService: SkillService | null = null
 let questionBankService: QuestionBankService | null = null
 let materialLibraryService: MaterialLibraryService | null = null
+let mineruSettingsService: MineruSettingsService | null = null
+let mineruService: MineruService | null = null
 const deferredIndexIds = new Set<string>()
 const deferredRefreshTriggers = new Set<string>()
 let servicesClosed = false
@@ -222,6 +229,23 @@ function getMaterialLibraryService(): MaterialLibraryService {
   if (workspaceHandle === null) throw new Error('Workspace was not initialized')
   materialLibraryService ??= new MaterialLibraryService(workspaceHandle.database.raw, getManagedFiles())
   return materialLibraryService
+}
+
+function getMineruSettings(): MineruSettingsService {
+  mineruSettingsService ??= new MineruSettingsService(createElectronSecureStorage('mineru'))
+  return mineruSettingsService
+}
+
+function getMineruService(): MineruService {
+  if (workspaceHandle === null) getWorkspaceInfo()
+  if (workspaceHandle === null) throw new Error('Workspace was not initialized')
+  mineruService ??= new MineruService(
+    workspaceHandle.database.raw,
+    workspaceHandle.paths,
+    getSearchService(),
+    getMineruSettings(),
+  )
+  return mineruService
 }
 
 function enqueueIndex(fileId: string): void {
@@ -393,6 +417,11 @@ void app.whenReady().then(() => {
     { getSkillService, activityGate },
     logger,
   )
+  unregisterMineruIpc = registerMineruIpc(
+    ipcMain,
+    { getSettingsService: getMineruSettings, getMineruService, activityGate },
+    logger,
+  )
   unregisterBackupIpc = registerBackupIpc(
     ipcMain,
     {
@@ -525,6 +554,10 @@ app.on('before-quit', (event) => {
   unregisterAttendanceIpc?.()
   unregisterQuestionBankIpc?.()
   unregisterMaterialLibraryIpc?.()
+  unregisterMineruIpc?.()
+  mineruService?.close()
+  mineruService = null
+  mineruSettingsService = null
   coreDataService = null
   managedFileService = null
   aiGateway = null

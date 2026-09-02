@@ -57,9 +57,9 @@ describe('V13-01 course setup core', () => {
          VALUES (?, ?, NULL, NULL, ?)`,
       ).run(lesson.id, '2026-08-24T06:00:00.000Z', '2026-08-24T00:00:00.000Z')
 
-      expect(runMigrations(database)).toBe(15)
+      expect(runMigrations(database)).toBe(16)
       expect(getAppliedMigrationVersions(database)).toEqual([
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
       ])
       expect(database.prepare(
         'SELECT scheduled_at, duration_minutes FROM lesson_sessions WHERE lesson_id = ?',

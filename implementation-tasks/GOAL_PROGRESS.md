@@ -1188,3 +1188,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 测试：ai-gateway-stream（6）+ ai-stream-ipc（5，含中继式验收：SSE→推送→渲染状态机回放→done 组装与 invoke 一致性）；既有非流式测试不动全绿。
 - 门禁：全量 66 files / 289 passed / 1 skipped（+11）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
 - Git：本地提交 `v1.6(V16-C): add streaming generation with reasoning progress and idle timeout`。
+
+## 2026-09-02 · V16-D 完成：MinerU 文档解析集成（D24/D26）
+
+- 迁移：workspace migration v16（files 表 12 步法重建，`index_status` CHECK 追加 `mineru_ready`，FK-off → `foreign_key_check` → 恢复）；测试驱动发现 search.db `search_documents` 同名 CHECK 也不含新值（Service 测试首轮 `SQLITE_CONSTRAINT_CHECK`），新增 search schema v2（`SEARCH_SCHEMA_VERSION=2`，`openSearchDatabase` 先读 `search_meta.schemaVersion` 再仅重建 `search_documents`，子表 scopes/chunks/FTS 与数据原样保留）。
+- 多槽 safeStorage：`createElectronSecureStorage(slot)`，mineru 槽 `teacher-workbench-mineru-key.bin`，ai 槽保持旧名不迁移；`MineruSettingsService` token 仅 safeStorage 不落 DB；设置卡 token 密码框不回显、留空保持、测试连接（GET batch/<探测ID> 判活：401/403 无效、402 配额）、删除，文案注明不进日志/备份。
+- `MineruService.enhanceFile`：active/≤200MB/office-pdf-图片校验 → upload-urls → 域白名单 PUT → extract 任务（vlm/ch/OCR+公式+表格）→ 5s/30min 轮询（超时 `parse_failed`；`close()` 清理定时器；`pollDriver` 测试注入）→ zip 下载（白名单 mineru.net/*.aliyuncs.com）→ fflate 内存解压 + 条目路径锚定防穿越 → `full.md` 走既有 SearchService 管道（`mineru_ready` + chunks）；token 仅注入 Authorization 头。IPC `mineru:*` 五通道（载荷守卫）+ 状态拉取；素材右键"增强解析（MinerU）"（未配置 token 置灰引导）与课次资料阅读器按钮（进行中显示状态）。
+- 测试：新增 mineru-migration（5，含 search v1→v2）、mineru-service（6，fake fetcher 全管道/拒绝/轮询/失败/白名单/重复提交）、static-render-v156-d 钉测扩展（设置卡/右键/阅读器）；历史版本 schema 版本 pin 15→16 按既有惯例同步（workspace-foundation / v1.1 / v1.2 / v1.3；roll-back 测试失败迁移改 version 17），验收标准未改写。
+- 门禁：全量 70 files / 301 tests（300 passed / 1 skipped，+12）、typecheck 0 错误、lint 通过、production build 通过、`git diff --check` 干净。
+- Git：本地提交 `v1.6(V16-D): integrate mineru document parsing`。

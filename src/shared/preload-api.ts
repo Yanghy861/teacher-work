@@ -229,7 +229,35 @@ export { isManagedFileContent } from './file-contracts'
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
 export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiStreamEvent, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
 export { isAiStreamEvent } from './ai-contracts'
-export { AI_IPC_EVENTS } from './ipc-contracts'
+export { AI_IPC_EVENTS, MINERU_IPC_CHANNELS } from './ipc-contracts'
+export type {
+  MineruConnectionTestResult,
+  MineruEnhanceResult,
+  MineruFileIdRequest,
+  MineruSettings,
+  MineruStatus,
+  MineruTaskState,
+  MineruTokenRequest,
+  UpdateMineruSettingsRequest,
+} from './mineru-contracts'
+import type {
+  MineruConnectionTestResult,
+  MineruEnhanceResult,
+  MineruFileIdRequest,
+  MineruSettings,
+  MineruStatus,
+  MineruTokenRequest,
+  UpdateMineruSettingsRequest,
+} from './mineru-contracts'
+export {
+  isMineruConnectionTestResult,
+  isMineruEnhanceResult,
+  isMineruFileIdRequest,
+  isMineruSettings,
+  isMineruStatus,
+  isMineruTokenRequest,
+  isUpdateMineruSettingsRequest,
+} from './mineru-contracts'
 export type { DraftIdRequest, DraftNoteMetadata, DraftSourceSelection, GenerateDraftRequest, GenerateDraftResult, PublishDraftVersionRequest, PublishDraftVersionResult, RegenerateDraftRequest, SaveDraftRequest } from './draft-contracts'
 export { isPublishDraftVersionRequest, isPublishDraftVersionResult } from './draft-contracts'
 export type {
@@ -326,6 +354,14 @@ export interface TeacherWorkbenchApi {
     requestText: (request: AiTextRequest) => Promise<AiTextResult>
     cancel: (request: AiRequestIdRequest) => Promise<AiCancelResult>
     onStreamEvent: (listener: (event: AiStreamEvent) => void) => () => void
+  }
+  mineru: {
+    getSettings: () => Promise<MineruSettings>
+    updateSettings: (request: UpdateMineruSettingsRequest) => Promise<MineruSettings>
+    clearToken: () => Promise<MineruSettings>
+    testConnection: (request: MineruTokenRequest) => Promise<MineruConnectionTestResult>
+    enhanceFile: (request: MineruFileIdRequest) => Promise<MineruEnhanceResult>
+    getStatus: (request: MineruFileIdRequest) => Promise<MineruStatus>
   }
   drafts: {
     generate: (request: GenerateDraftRequest) => Promise<GenerateDraftResult>

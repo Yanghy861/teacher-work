@@ -170,6 +170,8 @@ describe('V156-D static render upgrades (additive)', () => {
         onCopyToLesson: vi.fn(),
         onMoveFile: vi.fn(),
         onRemoveFile: vi.fn(),
+        onEnhanceFile: vi.fn(),
+        mineruTokenConfigured: false,
       }
       const fileMenu = renderToStaticMarkup(createElement(MaterialContextMenu, { ...menuProps, menu: { kind: 'file', fileId: 'file-a', x: 8, y: 8 } }))
       expect(fileMenu).toContain('role="menu"')

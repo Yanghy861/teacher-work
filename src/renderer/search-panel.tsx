@@ -162,7 +162,7 @@ function sourceLabel(source: SearchHit['source']): string {
 }
 
 function indexStatusLabel(status: NonNullable<SearchHit['indexStatus']>): string {
-  return status === 'indexed' ? '可用' : status === 'pending' ? '准备中' : status === 'no_text' ? '无文本' : '解析失败'
+  return status === 'indexed' ? '可用' : status === 'mineru_ready' ? '增强解析' : status === 'pending' ? '准备中' : status === 'no_text' ? '无文本' : '解析失败'
 }
 
 function positionLabel(type: string, value: string | number | undefined): string {

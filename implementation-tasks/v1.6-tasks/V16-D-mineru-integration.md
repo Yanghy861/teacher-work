@@ -1,6 +1,6 @@
 # V16-D · MinerU 文档解析集成
 
-**状态：** `TODO`
+**状态：** `DONE`（2026-09-02）
 
 ## 范围
 
@@ -25,3 +25,27 @@
 - 相关测试（迁移专项 + Service fake HTTP + IPC 守卫）、typecheck、lint、production build；
 - 开发验证：以 `~\.config\mineru\` 既有有效 token 对真实 docx/扫描 PDF/题目照片各一份完成端到端解析（token 不打印不入库不入日志，留痕只记响应码与文件名）；
 - 完成后更新 STATUS/GOAL_PROGRESS 并创建 `v1.6(V16-D): <摘要>` 本地提交。
+
+## 完成记录（2026-09-02）
+
+**实现：**
+
+- Migration v16 `extend_files_index_status_for_mineru`：files 表 12 步法重建，CHECK 追加 `mineru_ready`，`PRAGMA foreign_keys=OFF` → `foreign_key_check` → 恢复；
+- **测试驱动的关键修复**：`search_documents.index_status` 的 CHECK 同样不含 `mineru_ready`（旧 schemaVersion 1）——Service 测试首轮暴露 `SQLITE_CONSTRAINT_CHECK`。新增 search schema v2（`SEARCH_SCHEMA_VERSION = 2`）：`openSearchDatabase` 先读 `search_meta.schemaVersion` 再按 12 步法仅重建 `search_documents`（子表 scopes/chunks/FTS 与数据原样保留，FK-off + `foreign_key_check`）；新库 DDL 直接含 `mineru_ready`；
+- `secure-storage.ts` 多槽化：`createElectronSecureStorage(slot)`，mineru 槽路径 `teacher-workbench-mineru-key.bin`，ai 槽保持旧名 `teacher-workbench-ai-key.bin`（不迁移不改名）；
+- `MineruSettingsService`（token 仅 safeStorage，无 DB 行）+ IPC `mineru:get-settings/update-settings/clear-token/test-connection`（判活 GET `/api/v4/extract-results/batch/<探测ID>`：401/403 → 无效 token、402 → 配额、其余通过）；
+- `MineruService.enhanceFile`：active/≤200MB/office-pdf-图片 校验 → upload-urls → 域白名单 PUT 上传 → extract 任务（vlm/ch/OCR+公式+表格）→ 轮询（5s/30min，超时按 `parse_failed` 入库；`close()` 清理定时器）→ zip 下载（下载域白名单 mineru.net/*.aliyuncs.com）→ fflate 内存解压 + 条目路径锚定防穿越 → `full.md` 经既有 SearchService 管道入库（`index_status='mineru_ready'`）；token 仅注入 Authorization 头；
+- `mineru:enhance-file` / `mineru:get-status` 拉取式状态；设置卡（token 密码框不回显、留空保持、测试连接、删除）；素材库文件右键"增强解析（MinerU）"（未配置 token 置灰引导设置）+ 课次资料阅读器"增强解析"按钮（进行中禁用并显示状态）。
+
+**测试（新增 3 文件 16 例，全部通过）：**
+
+- `tests/mineru-migration.test.ts`（5）：workspace v16 幂等 / v15→v16 无损升级（旧值语义不变、非法值拒绝、mineru_ready 可写）/ 外键与级联保留；search v1→v2 无损升级（文档/chunks/scopes 保留、FK 完整、级联仍有效）/ 新库幂等；
+- `tests/mineru-service.test.ts`（6，fake fetcher + fflate zipSync）：全管道（请求序 upload-urls → PUT → extract/task → extract-results，token 仅在 Authorization 头，files 表 `mineru_ready` + chunks 入 search.db）/ 非增强类型、超 200MB、缺 token 拒绝 / running 持续轮询至 done / 云端 failed 透传 err_msg / 下载域白名单拒绝 / 重复提交阻断；
+- `tests/static-render-v156-d.test.ts`（沿用 V156-D 先例）：设置卡（token 字段无 value 回显、测试连接、加密存储说明）、右键菜单（增强解析项、未配置 token 置灰）、阅读器按钮（进行中状态）字符串钉测；
+- 历史版本测试的 schema 版本钉测按既有惯例随 migration v16 同步（workspace-foundation / v1.1 / v1.2 / v1.3 各版本号 pin 15→16，roll-back 测试的失败迁移改用 version 17）——验收标准本身未改写。
+
+**门禁：** 全量 70 files / 301 tests（300 通过、1 跳过 = 受控 real-smoke）；typecheck 0 错误；eslint 0 问题；production build 通过；`git diff --check` 干净。
+
+**真实自测（V16-E 统一执行）：** 本任务真实 MinerU 端到端验证按 D26/V16-E 统一进行（真实 token 留给产品负责人自测；自动化侧以 fake HTTP 全路径覆盖）。
+
+**Git：** 本地提交 `v1.6(V16-D): integrate mineru document parsing`。

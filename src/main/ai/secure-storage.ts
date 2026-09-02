@@ -16,27 +16,43 @@ export interface StoredApiKey {
   readonly value?: string
 }
 
-export const electronSecureStorage: SecureStoragePort = {
-  isAvailable: () => safeStorage.isEncryptionAvailable(),
-  encrypt: (value) => safeStorage.encryptString(value),
-  decrypt: (value) => safeStorage.decryptString(value),
-  read: () => {
-    const path = secureKeyPath()
-    return existsSync(path) ? readFileSync(path) : undefined
-  },
-  write: (value) => {
-    const path = secureKeyPath()
-    const directory = app.getPath('userData')
-    mkdirSync(directory, { recursive: true })
-    const temporaryPath = join(directory, `.teacher-workbench-ai-key-${process.pid}-${Date.now()}.tmp`)
-    writeFileSync(temporaryPath, value, { flag: 'wx' })
-    renameSync(temporaryPath, path)
-  },
-  clear: () => {
-    const path = secureKeyPath()
-    if (existsSync(path)) unlinkSync(path)
-  },
+export type SecureStorageSlot = 'ai' | 'mineru'
+
+/** V16-D：多槽路径。ai 槽维持历史文件名（不迁移不改名）；mineru 槽走通用 `<slot>-key` 模式。 */
+export function secureSlotKeyPath(slot: SecureStorageSlot): string {
+  const fileName = slot === 'ai'
+    ? 'teacher-workbench-ai-key.bin'
+    : `teacher-workbench-${slot}-key.bin`
+  return join(app.getPath('userData'), fileName)
 }
+
+export function createElectronSecureStorage(slot: SecureStorageSlot): SecureStoragePort {
+  const secureKeyPath = (): string => secureSlotKeyPath(slot)
+  return {
+    isAvailable: () => safeStorage.isEncryptionAvailable(),
+    encrypt: (value) => safeStorage.encryptString(value),
+    decrypt: (value) => safeStorage.decryptString(value),
+    read: () => {
+      const path = secureKeyPath()
+      return existsSync(path) ? readFileSync(path) : undefined
+    },
+    write: (value) => {
+      const path = secureKeyPath()
+      const directory = app.getPath('userData')
+      mkdirSync(directory, { recursive: true })
+      const temporaryPath = join(directory, `.teacher-workbench-${slot}-key-${process.pid}-${Date.now()}.tmp`)
+      writeFileSync(temporaryPath, value, { flag: 'wx' })
+      renameSync(temporaryPath, path)
+    },
+    clear: () => {
+      const path = secureKeyPath()
+      if (existsSync(path)) unlinkSync(path)
+    },
+  }
+}
+
+/** V16-D 之前的历史单槽实例（ai 槽，保持既有引用不变）。 */
+export const electronSecureStorage: SecureStoragePort = createElectronSecureStorage('ai')
 
 export function encodeSecureKey(storage: SecureStoragePort, value: string): Buffer {
   if (!storage.isAvailable()) {
@@ -50,8 +66,4 @@ export function decodeSecureKey(storage: SecureStoragePort, value: Buffer): stri
     throw new Error('Secure storage is unavailable')
   }
   return storage.decrypt(value)
-}
-
-function secureKeyPath(): string {
-  return join(app.getPath('userData'), 'teacher-workbench-ai-key.bin')
 }

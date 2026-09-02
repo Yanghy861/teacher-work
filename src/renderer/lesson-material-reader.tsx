@@ -18,6 +18,8 @@ export default function LessonMaterialReader({
   onOpenFile,
   onShowInFolder,
   onRemoveFile,
+  onEnhanceFile,
+  mineruStatus,
   hideTree = false,
   treeTitle = '本课资料',
 }: {
@@ -27,6 +29,8 @@ export default function LessonMaterialReader({
   readonly onOpenFile?: (fileId: string) => void
   readonly onShowInFolder?: (fileId: string) => void
   readonly onRemoveFile?: (fileId: string) => void
+  readonly onEnhanceFile?: (fileId: string) => void
+  readonly mineruStatus?: { readonly state: 'queued' | 'running' | 'done' | 'failed'; readonly message?: string } | null
   readonly hideTree?: boolean
   readonly treeTitle?: string
 }): React.JSX.Element {
@@ -90,6 +94,17 @@ export default function LessonMaterialReader({
             <div className="material-reader-actions">
               {onOpenFile !== undefined && <button className="link-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>系统打开</button>}
               {onShowInFolder !== undefined && <button className="link-button" type="button" onClick={() => onShowInFolder(selectedFile.id)}>所在文件夹</button>}
+              {onEnhanceFile !== undefined && mineruStatus !== undefined && mineruStatus !== null && mineruStatus.state !== 'done' && (
+                <button
+                  className="link-button"
+                  type="button"
+                  disabled={mineruStatus.state === 'running' || mineruStatus.state === 'queued'}
+                  title={mineruStatus.state === 'running' || mineruStatus.state === 'queued' ? '增强解析进行中' : '上传到 MinerU 云端解析，公式转 LaTeX、扫描件识别'}
+                  onClick={() => onEnhanceFile(selectedFile.id)}
+                >
+                  {mineruStatus.state === 'running' || mineruStatus.state === 'queued' ? '增强解析中…' : '增强解析'}
+                </button>
+              )}
               {onRemoveFile !== undefined && <button className="danger-button" type="button" onClick={() => onRemoveFile(selectedFile.id)}>从本课移除</button>}
             </div>
           )}

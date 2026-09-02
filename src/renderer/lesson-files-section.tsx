@@ -43,6 +43,9 @@ export default function LessonFilesSection({
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [selectedFileId, setSelectedFileId] = useState('')
+  const [mineruTokenConfigured, setMineruTokenConfigured] = useState(false)
+  const [mineruStatus, setMineruStatus] = useState<{ state: 'queued' | 'running' | 'done' | 'failed'; message?: string } | null>(null)
+  const [mineruBusy, setMineruBusy] = useState(false)
   const lessonFiles = useMemo(
     () => overview === null || lesson === null ? [] : filterLessonMaterialFiles(
       listLessonPrepFiles(overview, lesson.id),
@@ -69,6 +72,21 @@ export default function LessonFilesSection({
     setSelectedFileId(currentVersionFile?.id ?? '')
     void reload()
   }, [lesson?.id])
+
+  useEffect(() => {
+    void window.teacherWorkbench.mineru.getSettings()
+      .then((settings) => setMineruTokenConfigured(settings.tokenConfigured))
+      .catch(() => setMineruTokenConfigured(false))
+  }, [])
+
+  useEffect(() => {
+    if (selectedFileId === '') { setMineruStatus(null); return }
+    let cancelled = false
+    void window.teacherWorkbench.mineru.getStatus({ fileId: selectedFileId })
+      .then((status) => { if (!cancelled) setMineruStatus(status) })
+      .catch(() => { if (!cancelled) setMineruStatus(null) })
+    return () => { cancelled = true }
+  }, [selectedFileId])
 
   useEffect(() => window.teacherWorkbench.files.onContentChanged(() => { void reload() }), [])
 
@@ -131,6 +149,22 @@ export default function LessonFilesSection({
     onStartPrep(prepContext, { mode: 'single', targetFileId: selectedFile.id })
   }
 
+  async function enhanceWithMineru(fileId: string): Promise<void> {
+    setMineruBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await window.teacherWorkbench.mineru.enhanceFile({ fileId })
+      const status = await window.teacherWorkbench.mineru.getStatus({ fileId })
+      setMineruStatus(status)
+      setNotice('已提交增强解析，云端进行中，完成后此文件在 AI 备课与搜索中自动使用增强文本。')
+    } catch (enhanceError) {
+      setError(toErrorMessage(enhanceError, '增强解析提交失败，请稍后重试。'))
+    } finally {
+      setMineruBusy(false)
+    }
+  }
+
   function rebuildLesson(): void {
     if (prepContext === null) return
     onStartPrep(prepContext, { mode: 'lesson' })
@@ -189,6 +223,8 @@ export default function LessonFilesSection({
           onOpenFile={(fileId) => { void openFile(fileId) }}
           onShowInFolder={(fileId) => { void openFile(fileId, true) }}
           onRemoveFile={readOnly ? undefined : (fileId) => { void removeFile(fileId) }}
+          onEnhanceFile={readOnly || !mineruTokenConfigured || mineruBusy ? undefined : (fileId) => { void enhanceWithMineru(fileId) }}
+          mineruStatus={mineruTokenConfigured ? mineruStatus : null}
           hideTree={immersive}
           treeTitle={lesson.title}
         />

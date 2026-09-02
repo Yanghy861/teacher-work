@@ -15,6 +15,7 @@ import {
   SKILL_IPC_CHANNELS,
   QUESTION_BANK_IPC_CHANNELS,
   MATERIAL_LIBRARY_IPC_CHANNELS,
+  MINERU_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContent,
   isManagedFileContentChanged,
@@ -52,6 +53,10 @@ import {
   isQuestionBankSearchResult,
   isQuestionBankSummary,
   isMaterialLibraryOverview,
+  isMineruConnectionTestResult,
+  isMineruEnhanceResult,
+  isMineruSettings,
+  isMineruStatus,
   isMaterialFolder,
   isMaterialFolderItem,
   parseIpcResponse,
@@ -102,6 +107,11 @@ import {
   type QuestionBankLessonCopyRequest,
   type QuestionBankQuestionRequest,
   type QuestionBankSearchRequest,
+} from '../shared/preload-api'
+import type {
+  MineruFileIdRequest,
+  MineruTokenRequest,
+  UpdateMineruSettingsRequest,
 } from '../shared/preload-api'
 import type {
   CreateMaterialFolderRequest,
@@ -270,6 +280,14 @@ const api = Object.freeze({
       request,
       isManagedFileRecord,
     ),
+  }),
+  mineru: Object.freeze({
+    getSettings: () => invoke(MINERU_IPC_CHANNELS.getSettings, {}, isMineruSettings),
+    updateSettings: (request: UpdateMineruSettingsRequest) => invoke(MINERU_IPC_CHANNELS.updateSettings, request, isMineruSettings),
+    clearToken: () => invoke(MINERU_IPC_CHANNELS.clearToken, {}, isMineruSettings),
+    testConnection: (request: MineruTokenRequest) => invoke(MINERU_IPC_CHANNELS.testConnection, request, isMineruConnectionTestResult),
+    enhanceFile: (request: MineruFileIdRequest) => invoke(MINERU_IPC_CHANNELS.enhanceFile, request, isMineruEnhanceResult),
+    getStatus: (request: MineruFileIdRequest) => invoke(MINERU_IPC_CHANNELS.getStatus, request, isMineruStatus),
   }),
   backup: Object.freeze({
     create: () => invoke(BACKUP_IPC_CHANNELS.create, {}, (value): value is import('../shared/ipc-contracts').BackupSummary | null =>

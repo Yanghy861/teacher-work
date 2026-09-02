@@ -188,7 +188,7 @@ describe('V11-05 V1.1 acceptance', () => {
       const reopened = initializeWorkspace(workspaceRoot, installRoot)
       try {
         const reopenedCore = new CoreDataService(reopened.database.raw)
-        expect(reopened.identity.schemaVersion).toBe(15)
+        expect(reopened.identity.schemaVersion).toBe(16)
         expect(listDraftInbox(reopenedCore.getOverview()).map((entry) => entry.note.id))
           .toEqual([regenerated.noteId])
         expect(listLessonAiResults(reopenedCore.getOverview(), lesson.id)).toHaveLength(4)
