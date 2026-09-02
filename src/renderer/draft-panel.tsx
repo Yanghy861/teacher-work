@@ -107,7 +107,11 @@ export default function DraftPanel({
     readonly reasoningChars: number
     readonly textPreview: string
     readonly requestId: string
+    readonly startedAt: number
   } | null>(null)
+  // 思考阶段的"已耗时"走本地秒表：流事件只在网络 chunk 到达时触发，
+  // 推理模型可能数十秒无事件，纯事件驱动计数会长时间静止。
+  const [streamElapsedSeconds, setStreamElapsedSeconds] = useState(0)
   const streamRequestId = useRef('')
   const [referenceNotice, setReferenceNotice] = useState('')
   const confirmedBudgetSignature = useRef('')
@@ -339,13 +343,23 @@ export default function DraftPanel({
 
   function beginStreaming(requestId: string): void {
     streamRequestId.current = requestId
-    setStreamState({ phase: 'reasoning', reasoningChars: 0, textPreview: '', requestId })
+    setStreamElapsedSeconds(0)
+    setStreamState({ phase: 'reasoning', reasoningChars: 0, textPreview: '', requestId, startedAt: Date.now() })
   }
 
   function endStreaming(): void {
     streamRequestId.current = ''
     setStreamState(null)
   }
+
+  // 流式面板显示期间每秒推进本地秒表；面板隐藏或组件卸载时停止。
+  useEffect(() => {
+    if (streamState === null) return
+    const timer = setInterval(() => {
+      setStreamElapsedSeconds(Math.max(0, Math.floor((Date.now() - streamState.startedAt) / 1000)))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [streamState === null, streamState?.startedAt])
 
   async function cancelStreaming(): Promise<void> {
     if (streamState === null) return
@@ -904,7 +918,7 @@ export default function DraftPanel({
                 <strong>{streamState.phase === 'reasoning' ? 'AI 正在思考…' : 'AI 正在生成正文…'}</strong>
                 <button className="secondary-button" type="button" onClick={() => { void cancelStreaming() }}>取消生成</button>
               </div>
-              <p className="draft-stream-reasoning">AI 思考中…（已思考 {streamState.reasoningChars.toLocaleString('zh-CN')} 字）</p>
+              <p className="draft-stream-reasoning">AI 思考中…（已思考 {streamState.reasoningChars.toLocaleString('zh-CN')} 字，已耗时 {streamElapsedSeconds} 秒）</p>
               {streamState.textPreview !== '' && (
                 <div className="draft-stream-preview">
                   <MarkdownDocument body={streamState.textPreview} files={[]} />

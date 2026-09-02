@@ -1222,3 +1222,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 反馈 A（记录待裁决）：流式观感"不像逐字上屏"——机制走读确认链路真增量（逐 chunk 读取、逐 delta 推送、逐事件上屏，中继测试已覆盖）；成因最可能为 reasoner 模型思考阶段占据几乎全部时长（D22 只允许显示计数）而正文数秒内流完。候选：秒表 / 打字机节流 / 换 deepseek-chat，待产品负责人选择。
 - 反馈 C（记录待裁决）：md 课件直接编辑能力——超出 V1.6 冻结基准；提案 V1.7：阅读器对应用内生成 md 提供编辑入口，保存发布为第 N+1 版（推荐）或直接修改当前版本；外部资料维持只读。待产品负责人确认范围。
 - Git：本地提交 `v1.6(V16-E): fix display math rendering and record self-test feedback`。
+
+## 2026-09-02 · V16-E 反馈裁决落地：思考阶段秒表（A1）+ V1.7 候选确认保留
+
+- 裁决 A1：`draft-panel` 流式面板新增本地秒表——`streamState.startedAt` + 显示期间每秒 interval 更新 `streamElapsedSeconds`，思考行改为"AI 思考中…（已思考 N 字，已耗时 M 秒）"；推理模型数十秒无流事件期间秒数仍推进（纯事件驱动计数会静止，秒表补足"在动"实感）。A2 打字机节流、A3 换模型不做。门禁复跑全绿（70 files / 304 tests、typecheck、lint、build、diff check）。
+- 裁决 C：md 课件直接编辑按产品负责人确认作为 V1.7 候选保留记录（保存语义第 N+1 版 vs 直接改当前版，立项时定）；V1.6 内不实现。
+- Git：本地提交 `v1.6(V16-E): add reasoning elapsed timer to stream panel`。
