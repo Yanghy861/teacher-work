@@ -81,9 +81,30 @@ export function isSelectableLessonPrepFile(file: ManagedFileRecord): boolean {
   return !file.mimeType.startsWith('image/')
 }
 
-/** D23：应用内生成的课件版本（工作台发布的“标题 · 第 N 版.md”）。AI 修改对象仅限此类文件；外部导入文件（含 .md）不在此列。 */
+/** D27（V17-B）：任意 text/markdown managed 文件均可作 AI 修改对象（含外部导入 md）；office/pdf/图片/纯文本不在其列。 */
+export function isAiEditableFile(file: ManagedFileRecord): boolean {
+  return file.mimeType === 'text/markdown'
+}
+
+/**
+ * D23 历史判断保留（V17-B 起仅用于版本链命名与排序，不再作修改准入）：
+ * 工作台发布的“标题 · 第 N 版.md”。
+ */
 export function isAppGeneratedCoursewareFile(file: ManagedFileRecord): boolean {
   return file.mimeType === 'text/markdown' && lessonVersionPattern.test(file.originalName)
+}
+
+/** 修改候选排序（V17-B）：版本链最新版在前，其余 md 依原序跟后。 */
+export function orderAiEditableFiles(files: readonly ManagedFileRecord[]): ManagedFileRecord[] {
+  const versioned = files
+    .map((file) => {
+      const match = lessonVersionPattern.exec(file.originalName)
+      return match === null ? null : { file, version: Number(match[1]) }
+    })
+    .filter((item): item is { file: ManagedFileRecord; version: number } => item !== null)
+    .sort((left, right) => right.version - left.version)
+  const versionedIds = new Set(versioned.map((item) => item.file.id))
+  return [...versioned.map((item) => item.file), ...files.filter((file) => !versionedIds.has(file.id))]
 }
 
 export function classifyLessonCoursewareFiles(

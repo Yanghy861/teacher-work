@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { isAppGeneratedCoursewareFile } from '../src/renderer/lesson-prep-context'
+import { isAiEditableFile, isAppGeneratedCoursewareFile } from '../src/renderer/lesson-prep-context'
 import type { ManagedFileRecord } from '../src/shared/file-contracts'
 
 function source(relativePath: string): string {
@@ -25,7 +25,7 @@ function fileNamed(originalName: string, mimeType: string): ManagedFileRecord {
   }
 }
 
-describe('V16-B modification scope narrowing and reference budget UX', () => {
+describe('V16-B modification scope and reference budget UX (candidates widened by V17-B/D27)', () => {
   it('accepts only app-generated courseware versions as modification targets', () => {
     const versioned = fileNamed('二次函数 · 第 2 版.md', 'text/markdown')
     const importedMarkdown = fileNamed('老师自己的讲义.md', 'text/markdown')
@@ -40,6 +40,15 @@ describe('V16-B modification scope narrowing and reference budget UX', () => {
     expect(isAppGeneratedCoursewareFile(plainText)).toBe(false)
   })
 
+  it('D27 (V17-B) widens modification targets to every markdown file', () => {
+    expect(isAiEditableFile(fileNamed('二次函数 · 第 2 版.md', 'text/markdown'))).toBe(true)
+    expect(isAiEditableFile(fileNamed('老师自己的讲义.md', 'text/markdown'))).toBe(true)
+    expect(isAiEditableFile(fileNamed('外部课件.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'))).toBe(false)
+    expect(isAiEditableFile(fileNamed('扫描习题.pdf', 'application/pdf'))).toBe(false)
+    expect(isAiEditableFile(fileNamed('题目.png', 'image/png'))).toBe(false)
+    expect(isAiEditableFile(fileNamed('笔记.txt', 'text/plain'))).toBe(false)
+  })
+
   it('narrows workspace candidates, radio list and entry points to app-generated versions', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
     const context = source('../src/renderer/lesson-prep-context.ts')
@@ -47,11 +56,14 @@ describe('V16-B modification scope narrowing and reference budget UX', () => {
 
     expect(draft).toContain('modifiableCurrentFiles')
     expect(draft).toContain('appGeneratedCurrentFiles')
-    expect(draft).toContain('仅支持修改工作台生成的讲义/教案/作业；外部 Office 文档请用系统应用打开修改')
-    expect(draft).toContain('先用 AI 生成第一版课件')
+    // V17-B 演进：修改候选放宽为课次全部 md（isAiEditableFile），版本链判断保留用于命名/排序
+    expect(draft).toContain('modifiableCurrentFiles')
+    expect(draft).toContain('appGeneratedCurrentFiles')
+    expect(draft).toContain('aiEditableCurrentFiles')
+    expect(draft).toContain('本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。')
     expect(context).toContain('lessonVersionPattern.test(file.originalName)')
-    expect(files).toContain('isAppGeneratedCoursewareFile(selectedFile)')
-    expect(files).toContain('仅支持修改工作台生成的讲义/教案/作业；外部 Office 文档请用系统应用打开修改')
+    expect(files).toContain('isAiEditableFile(selectedFile)')
+    expect(files).toContain('仅支持修改 Markdown 文件；外部 Office 文档请用系统应用打开修改')
   })
 
   it('shows per-file char counts, budget occupancy and the 10-file selection cap in the picker', () => {

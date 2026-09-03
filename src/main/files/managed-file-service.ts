@@ -352,7 +352,7 @@ export class ManagedFileService {
   publishLessonDraftVersion(noteId: string): { file: ManagedFileRecord; version: number } {
     const note = this.database
       .prepare(
-        `SELECT id, lesson_id, body_md, note_kind, draft_status, deleted_at
+        `SELECT id, lesson_id, body_md, note_kind, draft_status, deleted_at, ai_metadata_json
            FROM notes WHERE id = ?`,
       )
       .get(noteId) as
@@ -363,6 +363,7 @@ export class ManagedFileService {
           readonly note_kind: string
           readonly draft_status: string | null
           readonly deleted_at: string | null
+          readonly ai_metadata_json: string | null
         }
       | undefined
     if (note === undefined) {
@@ -399,7 +400,10 @@ export class ManagedFileService {
       const match = / · 第 (\d+) 版\.md$/u.exec(row.original_name)
       return match === null ? max : Math.max(max, Number(match[1]))
     }, 0) + 1
-    const originalName = `${lessonTitle.title} · 第 ${version} 版.md`
+    // V17-B/D27：修改外部导入 md 时发布产物沿用目标名（`原名 · 第 N 版.md`），
+    // 版本链目标与无修改目标的节点维持课次标题命名（既有语义）。
+    const publishBase = resolvePublishBaseName(note.ai_metadata_json)
+    const originalName = `${publishBase ?? lessonTitle.title} · 第 ${version} 版.md`
     const file = this.createTextObjectAndRegister(body, originalName, { targetType: 'lesson', targetId: lessonId })
     this.transaction(() => {
       this.database
@@ -790,6 +794,22 @@ const MAX_WRITE_BODY_CHARS = 200_000
 
 function isPreviewableText(mimeType: string): boolean {
   return mimeType.startsWith('text/') || mimeType === 'application/json'
+}
+
+/** V17-B：非版本链修改目标（外部导入 md）发布时以其原名为版本链基名；解析失败或版本链目标回退 null（走课次标题）。 */
+function resolvePublishBaseName(aiMetadataJson: string | null): string | null {
+  if (aiMetadataJson === null) return null
+  try {
+    const parsed: unknown = JSON.parse(aiMetadataJson)
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+    const targetName = (parsed as { readonly modification?: { readonly targetName?: unknown } }).modification?.targetName
+    if (typeof targetName !== 'string' || targetName.trim() === '') return null
+    if (/ · 第 \d+ 版\.md$/u.test(targetName)) return null
+    const base = targetName.replace(/\.(?:md|markdown)$/iu, '').trim()
+    return base === '' ? null : base
+  } catch {
+    return null
+  }
 }
 
 function stripMarkdownExtension(name: string): string {

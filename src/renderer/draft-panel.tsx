@@ -19,7 +19,9 @@ import {
 import type { SkillRecord } from '../shared/skill-contracts'
 import {
   classifyLessonCoursewareFiles,
+  isAiEditableFile,
   isAppGeneratedCoursewareFile,
+  orderAiEditableFiles,
   isSelectableLessonPrepFile,
   filterLessonMaterialFiles,
   listLessonPrepFiles,
@@ -130,14 +132,14 @@ export default function DraftPanel({
   const selectableLessonFiles = lessonFiles.filter(isSelectableLessonPrepFile)
   const selectableCurrentFiles = classifiedFiles.currentMaterials.filter(isSelectableLessonPrepFile)
   const appGeneratedCurrentFiles = selectableCurrentFiles.filter(isAppGeneratedCoursewareFile)
-  const hasCourseware = appGeneratedCurrentFiles.length > 0
+  const aiEditableCurrentFiles = orderAiEditableFiles(selectableCurrentFiles.filter(isAiEditableFile))
   const targetFile = selectableLessonFiles.find((file) => file.id === targetFileId) ?? null
   const lessonBaselineFiles = lessonBaselineFileIds
     .map((fileId) => selectableLessonFiles.find((file) => file.id === fileId))
     .filter((file): file is ManagedFileRecord => file !== undefined)
-  // D23：单文件修改的候选目标仅列工作台生成的课件版本（“标题 · 第 N 版.md”），外部导入文件不出现在修改目标里。
+  // D27（V17-B）：单文件修改候选 = 课次全部 md（版本链最新版优先），非 md 不列。
   const modifiableCurrentFiles = prepMode === 'single'
-    ? selectableCurrentFiles.filter(isAppGeneratedCoursewareFile)
+    ? aiEditableCurrentFiles
     : selectableCurrentFiles
   const referenceCandidates = prepMode === 'single'
     ? selectableCurrentFiles.filter((file) => file.id !== targetFile?.id)
@@ -228,14 +230,11 @@ export default function DraftPanel({
     const previousKnown = knownLessonFileIds.current
     if (!scopeInitialized.current) {
       const requestedMode = launchIntent?.mode
-      const nextMode: PrepLaunchMode = appGeneratedCurrentFiles.length === 0
+      const nextMode: PrepLaunchMode = aiEditableCurrentFiles.length === 0
         ? 'new'
-        : requestedMode === 'lesson' ? 'lesson' : 'single'
-      const requestedTarget = appGeneratedCurrentFiles.find((file) => file.id === launchIntent?.targetFileId)
-      const nextTarget = requestedTarget
-        ?? (classifiedFiles.currentVersion !== null && isAppGeneratedCoursewareFile(classifiedFiles.currentVersion)
-          ? classifiedFiles.currentVersion
-          : appGeneratedCurrentFiles[0])
+        : requestedMode === 'lesson' && appGeneratedCurrentFiles.length > 0 ? 'lesson' : 'single'
+      const requestedTarget = aiEditableCurrentFiles.find((file) => file.id === launchIntent?.targetFileId)
+      const nextTarget = requestedTarget ?? aiEditableCurrentFiles[0]
       setPrepMode(nextMode)
       setTargetFileId(nextTarget?.id ?? '')
       setLessonBaselineFileIds(nextMode === 'lesson'
@@ -411,7 +410,11 @@ export default function DraftPanel({
   }
 
   function changePrepMode(nextMode: Exclude<PrepLaunchMode, 'new'>): void {
-    if (!hasCourseware || prepMode === nextMode) return
+    // D27：单文件模式只需课次内存在 md；整课重做沿用应用内课件版本基线（V17-B 不动）。
+    const modeAvailable = nextMode === 'single'
+      ? aiEditableCurrentFiles.length > 0
+      : appGeneratedCurrentFiles.length > 0
+    if (!modeAvailable || prepMode === nextMode) return
     setPrepMode(nextMode)
     if (nextMode === 'single' && !modifiableCurrentFiles.some((file) => file.id === targetFileId)) {
       setTargetFileId(classifiedFiles.currentVersion?.id ?? modifiableCurrentFiles[0]?.id ?? '')
@@ -838,7 +841,7 @@ export default function DraftPanel({
           ) : prepMode === 'single' ? (
             <>
               <div className="card-heading"><div><p className="section-kicker">修改对象</p><h2>选择一份课件版本</h2></div><span className="count-label">单选</span></div>
-              <ScopeFileList files={modifiableCurrentFiles} selection="radio" selectedIds={targetFile === null ? [] : [targetFile.id]} onSelect={selectTargetFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课还没有工作台生成的课件版本。仅支持修改工作台生成的讲义/教案/作业；外部 Office 文档请用系统应用打开修改。" />
+              <ScopeFileList files={modifiableCurrentFiles} selection="radio" selectedIds={targetFile === null ? [] : [targetFile.id]} onSelect={selectTargetFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。" />
             </>
           ) : (
             <>
@@ -906,9 +909,14 @@ export default function DraftPanel({
               ))}
             </div>
             {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
-            {prepMode !== 'new' && appGeneratedCurrentFiles.length === 0 && (
+            {prepMode === 'single' && aiEditableCurrentFiles.length === 0 && (
               <div className="inline-notice" role="status">
-                本课还没有应用内生成的课件版本，先用 AI 生成第一版课件，之后才能“修改这份 / 整课重做”。
+                本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。
+              </div>
+            )}
+            {prepMode === 'lesson' && appGeneratedCurrentFiles.length === 0 && (
+              <div className="inline-notice" role="status">
+                本课还没有应用内生成的课件版本，整课重做需要先用 AI 生成第一版课件；单文件修改已支持外部导入的 md。
               </div>
             )}
           </div>

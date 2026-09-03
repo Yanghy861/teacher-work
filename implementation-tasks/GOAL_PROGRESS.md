@@ -1260,3 +1260,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 既有测试终点钉测按迁移序列演进更新（workspace-foundation/v1.1/v1.2/v1.3/mineru-migration 的 schemaVersion 16→17；rollback 用例 failing migration 移至 v18）；mineru-migration 两个 v15 伪造库用例补最小 v16 形态 notes/students 表（v17 重建需要）。
 - 门禁：全量 74 files / 332 tests passed（1 skipped 既有真实题库冒烟）、typecheck、lint 通过；未运行 portable/installer（按约束）。
 - Git：本地提交 `v1.7(V17-A): contracts, migration v17 and main support for md write path and bank payloads`。
+
+## 2026-09-03 · V17-B 完成：AI 修改对象放宽到全部 md（D27）
+
+- 修改对象从“应用内课件版本”（V1.6 D23 收口）放宽为课次全部 `text/markdown` managed 文件（含外部导入 md 讲义）；office/pdf/图片/纯文本仍不可作修改对象。版本链判断（` · 第 N 版.md`）保留用于候选排序（最新版优先）与发布命名，不再作准入。
+- 入口/文案：draft-panel 单文件候选列全部 md；“修改这份”对 md 启用，非 md 置灰提示“仅支持修改 Markdown 文件；外部 Office 文档请用系统应用打开修改”；无 md 课次引导“可先导入 md 讲义或用 AI 生成第一版课件”。整课重做基线仍限应用内课件版本（V17-B 明确不动）。
+- 发布命名分支：`publishLessonDraftVersion` 读取 note `ai_metadata_json.modification.targetName`——非版本链目标（外部 md）发布产物为 `原名 · 第 N 版.md`（版本号课次锚定 MAX+1，逐次递增），版本链目标与无 modification 节点维持 `课次标题 · 第 N 版.md`；目标原件字节不动（测试钉死）。
+- 测试：新增 `v17-b-widen-scope.test.ts`（4 例：排序/外部 md 发布命名与原件不动/命名回退/静态钉测），`v1.6-scope-budget.test.ts` 钉测按 D27 演进；全量 75 files / 337 tests、typecheck、lint 通过。
+- Git：本地提交 `v1.7(V17-B): widen ai modification targets to all markdown files`。
