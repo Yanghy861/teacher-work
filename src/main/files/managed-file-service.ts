@@ -211,6 +211,7 @@ export class ManagedFileService {
     if (match === null) {
       const editedName = `${stripMarkdownExtension(source.originalName)}（编辑版）.md`
       const file = this.createTextObjectAndRegister(bodyMd, editedName, { targetType: 'lesson', targetId: lessonId })
+      this.recordManualEditNote(lessonId, source, file)
       return { file, version: 1 }
     }
     const version = this.nextLessonVersionNumber(lessonId)
@@ -219,7 +220,38 @@ export class ManagedFileService {
       `${source.originalName.slice(0, match.index)} · 第 ${version} 版.md`,
       { targetType: 'lesson', targetId: lessonId },
     )
+    this.recordManualEditNote(lessonId, source, file)
     return { file, version }
+  }
+
+  /**
+   * V17-C/D28：人工编辑保存后在课次留一条 note_kind='manual_edit' 的来源标注
+   * （不参与 AI 修改流 note 语义，仅作“人工编辑”标识；正文存文件，note 只做标记）。
+   */
+  private recordManualEditNote(
+    lessonId: string,
+    source: ManagedFileRecord,
+    written: ManagedFileRecord,
+  ): void {
+    try {
+      const now = this.now()
+      this.database
+        .prepare(
+          `INSERT INTO notes
+             (id, student_id, lesson_id, body_md, created_at, updated_at, deleted_at,
+              occurred_on, note_kind, ai_metadata_json, draft_status)
+           VALUES (?, NULL, ?, ?, ?, ?, NULL, NULL, 'manual_edit', NULL, NULL)`,
+        )
+        .run(
+          this.idFactory(),
+          lessonId,
+          `人工编辑：${source.originalName} → ${written.originalName}`,
+          now,
+          now,
+        )
+    } catch {
+      // 标注失败不阻塞保存：新文件与登记已成功，来源标注仅为展示信息。
+    }
   }
 
   private nextLessonVersionNumber(lessonId: string): number {

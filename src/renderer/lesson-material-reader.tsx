@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
+import MdEditor from './md-editor'
 import type { ManagedFileContent, ManagedFileRecord } from '../shared/file-contracts'
 import {
   buildLessonMaterialTree,
@@ -20,6 +21,8 @@ export default function LessonMaterialReader({
   onShowInFolder,
   onRemoveFile,
   onEnhanceFile,
+  editable = false,
+  onFileSaved,
   mineruTokenConfigured = false,
   mineruBusy = false,
   mineruStatus,
@@ -33,6 +36,9 @@ export default function LessonMaterialReader({
   readonly onShowInFolder?: (fileId: string) => void
   readonly onRemoveFile?: (fileId: string) => void
   readonly onEnhanceFile?: (fileId: string) => void
+  /** D28（V17-C）：md 编辑入口（只读课次不传 = 不显示）。 */
+  readonly editable?: boolean
+  readonly onFileSaved?: (fileId: string) => void
   readonly mineruTokenConfigured?: boolean
   readonly mineruBusy?: boolean
   readonly mineruStatus?: { readonly state: 'queued' | 'running' | 'done' | 'failed'; readonly message?: string } | null
@@ -44,6 +50,8 @@ export default function LessonMaterialReader({
   const [content, setContent] = useState<ManagedFileContent | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [editSavedNotice, setEditSavedNotice] = useState('')
 
   useEffect(() => {
     if (selectedFile !== null) return
@@ -76,6 +84,14 @@ export default function LessonMaterialReader({
     return () => { cancelled = true }
   }, [selectedFile?.id])
 
+  // 切换文件或树中不再可见时退出编辑态
+  useEffect(() => {
+    setEditing(false)
+    setEditSavedNotice('')
+  }, [selectedFileId])
+
+  const canEditSelectedFile = editable && selectedFile !== null && selectedFile.mimeType === 'text/markdown'
+
   return (
     <div className={`material-reader${hideTree ? ' is-single' : ''}`}>
       {!hideTree && (
@@ -97,6 +113,16 @@ export default function LessonMaterialReader({
           </div>
           {selectedFile !== null && (onOpenFile !== undefined || onShowInFolder !== undefined) && (
             <div className="material-reader-actions">
+              {canEditSelectedFile && (
+                <button
+                  className={editing ? 'link-button is-active' : 'link-button'}
+                  type="button"
+                  aria-pressed={editing}
+                  onClick={() => { setEditing((current) => !current); setEditSavedNotice('') }}
+                >
+                  {editing ? '✓ 预览' : '✎ 编辑'}
+                </button>
+              )}
               {onOpenFile !== undefined && <button className="link-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>系统打开</button>}
               {onShowInFolder !== undefined && <button className="link-button" type="button" onClick={() => onShowInFolder(selectedFile.id)}>所在文件夹</button>}
               {onEnhanceFile !== undefined && isMineruEnhanceableFile(selectedFile) && mineruStatus?.state !== 'done' && (
@@ -124,9 +150,26 @@ export default function LessonMaterialReader({
         </header>
         <div className="material-reader-scroll">
           {loading && <div className="material-reader-state">正在打开资料…</div>}
+          {editSavedNotice !== '' && <div className="inline-notice" role="status">{editSavedNotice}</div>}
+          {!loading && editing && canEditSelectedFile && (
+            <MdEditor
+              file={selectedFile}
+              files={files}
+              onSaved={(result) => {
+                const chain = / · 第 (\d+) 版\.md$/u.test(result.file.originalName)
+                setEditSavedNotice(chain
+                  ? `已保存为第 ${result.version} 版《${result.file.originalName}》，旧版保留在历史版本。`
+                  : `已保存为编辑版副本《${result.file.originalName}》，原件未改动。`)
+                setEditing(false)
+                onFileSaved?.(result.file.id)
+                onSelectFile(result.file.id)
+              }}
+              onCancel={() => { setEditing(false) }}
+            />
+          )}
           {!loading && error !== '' && <div className="inline-error" role="alert">{error}</div>}
           {!loading && error === '' && selectedFile === null && <div className="material-reader-state">从左侧选择一份 Markdown、图片或其他资料。</div>}
-          {!loading && error === '' && content?.kind === 'text' && <MarkdownDocument body={content.content} files={files} />}
+          {!loading && error === '' && !editing && content?.kind === 'text' && <MarkdownDocument body={content.content} files={files} />}
           {!loading && error === '' && content?.kind === 'image' && (
             <div className="material-image-preview"><img src={content.dataUrl} alt={selectedFile?.originalName ?? '资料图片'} /></div>
           )}

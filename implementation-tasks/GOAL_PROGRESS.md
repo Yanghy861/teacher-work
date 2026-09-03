@@ -1268,3 +1268,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 发布命名分支：`publishLessonDraftVersion` 读取 note `ai_metadata_json.modification.targetName`——非版本链目标（外部 md）发布产物为 `原名 · 第 N 版.md`（版本号课次锚定 MAX+1，逐次递增），版本链目标与无 modification 节点维持 `课次标题 · 第 N 版.md`；目标原件字节不动（测试钉死）。
 - 测试：新增 `v17-b-widen-scope.test.ts`（4 例：排序/外部 md 发布命名与原件不动/命名回退/静态钉测），`v1.6-scope-budget.test.ts` 钉测按 D27 演进；全量 75 files / 337 tests、typecheck、lint 通过。
 - Git：本地提交 `v1.7(V17-B): widen ai modification targets to all markdown files`。
+
+## 2026-09-03 · V17-C 完成：md 人工编辑器（D28/D29）
+
+- 阅读器入口：`lesson-material-reader` 增 `editable`/`onFileSaved` props——仅 md 且非只读课次显示“✎ 编辑 / ✓ 预览”切换（aria-pressed）；编辑态渲染 MdEditor，非编辑态才渲染 MarkdownDocument；保存成功按分支提示（版本链“已保存为第 N 版（旧版保留在历史版本）”/外部 md“已保存为编辑版副本（原件未改动）”）并自动选中新文件。`lesson-files-section` 以 `editable={!readOnly}` 接线并在 `onFileSaved` 后重拉课件清单 + 共享 overview + 选中新文件。
+- 编辑器（`md-editor.tsx`，零新依赖）：受控 textarea + 工具栏（加粗/斜体/H1–H3 标题字号模板/`<sub>`/`<sup>` 上下标/有序无序列表/引用/表格模板/分隔线/行内 `$…$` 与块级 `$$…$$` 公式/18 项 LaTeX 速查面板（分式/根号/上下标/∠/△/≌/∽/⊥/∥/°/π/∑/方程组等）/插图面板列本课图片插入 `![名](文件名)`/撤销重做快照栈）；插入带光标定位与选区包裹；分屏实时 KaTeX 预览复用 MarkdownDocument；热保存 localStorage（键 `md-editor-draft:<fileId>`，250ms 防抖，失败静默），再进入时原文与热草稿分离暂存（sessionStorage）并提示“恢复草稿/丢弃”。
+- 保存（D29）：调 `files:write-version` 永写新文件（版本链第 N+1 版 / 外部 md “（编辑版）”副本），成功后清理热草稿；每次保存由 Main 写一条 `note_kind='manual_edit'` 标注 note（“人工编辑：原名 → 新名”，draft_status NULL）。标注经 core-data-service createNote 通道入库、overview notes 可见，历史版本区并列展示最近 5 条；manual_edit 不进 AI 修改结果（draft-view-model 要求 draftStatus !== undefined）、不进学生手记（noteKind 过滤）、不进快建向导。标注写入失败静默不阻塞保存（DROP TABLE notes 测试钉死）。
+- 合同：`NoteRecord.noteKind` 扩 `'manual' | 'manual_edit' | DraftKind`（isNoteRecord 同步）；mapNoteRecord 显式暴露 manual_edit 的 noteKind（manual 仍省略保持 V1 语义）。
+- 测试：新增 `v17-c-md-editor.test.ts`（12 例：manual_edit 落库/分支命名/失败静默 + 编辑器依赖零/工具栏/速查/热保存恢复/分屏钉测 + 阅读器接线/manual_edit 展示与隔离）；全量 75 files / 349 tests、typecheck、lint 通过。
+- Git：本地提交 `v1.7(V17-C): manual md editor with write-version persistence and manual_edit notes`。

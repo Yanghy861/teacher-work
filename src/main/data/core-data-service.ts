@@ -78,7 +78,7 @@ interface NoteRow {
   readonly updated_at: string
   readonly deleted_at: string | null
   readonly occurred_on: string | null
-  readonly note_kind: 'manual' | DraftKind
+  readonly note_kind: 'manual' | 'manual_edit' | DraftKind
   readonly ai_metadata_json: string | null
   readonly draft_status: DraftStatus | null
 }
@@ -298,7 +298,7 @@ export class CoreDataService {
     bodyMd: string,
     lessonId?: string,
     metadata?: {
-      readonly noteKind?: 'manual' | DraftKind
+      readonly noteKind?: 'manual' | 'manual_edit' | DraftKind
       readonly aiMetadata?: DraftNoteMetadata
       readonly occurredOn?: string
     },
@@ -334,7 +334,9 @@ export class CoreDataService {
           metadata?.occurredOn ?? null,
           metadata?.noteKind ?? 'manual',
           metadata?.aiMetadata === undefined ? null : JSON.stringify(metadata.aiMetadata),
-          metadata?.noteKind === undefined || metadata.noteKind === 'manual' ? null : 'draft',
+          metadata?.noteKind === undefined || metadata.noteKind === 'manual' || metadata.noteKind === 'manual_edit'
+            ? null
+            : 'draft',
         )
       return this.requireNote(id)
     })
@@ -834,9 +836,11 @@ function mapNote(row: NoteRow): NoteRecord {
       // Optional metadata must not make the editable note unavailable.
     }
   }
-  if (row.note_kind !== 'manual' && !isDraftStatus(row.draft_status)) {
+  const manualLikeKind = row.note_kind === 'manual' || row.note_kind === 'manual_edit'
+  if (!manualLikeKind && !isDraftStatus(row.draft_status)) {
     throw new CoreDataError('INVALID_DRAFT', '草稿生命周期状态无效。')
   }
+  // manual_edit 是唯一需要显式暴露 noteKind 的手记类：renderer 靠它在历史版本区标注“人工编辑”。
   return {
     id: row.id,
     studentId: row.student_id,
@@ -847,7 +851,7 @@ function mapNote(row: NoteRow): NoteRecord {
     deletedAt: row.deleted_at,
     ...(row.occurred_on === null ? {} : { occurredOn: row.occurred_on }),
     ...(row.note_kind === 'manual' ? {} : { noteKind: row.note_kind }),
-    ...(row.note_kind === 'manual' ? {} : { draftStatus: row.draft_status as DraftStatus }),
+    ...(manualLikeKind ? {} : { draftStatus: row.draft_status as DraftStatus }),
     ...(aiMetadata === undefined ? {} : { aiMetadata }),
   }
 }

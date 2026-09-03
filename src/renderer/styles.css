@@ -3257,3 +3257,102 @@ button.quick-status { cursor: pointer; }
   background: #fff;
   font-size: 12px;
 }
+
+/* V17-C：md 人工编辑器（零新依赖：受控 textarea + 工具栏 + 分屏 KaTeX 预览） */
+.md-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.md-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+}
+
+.md-editor-toolbar select {
+  font-size: 12px;
+  padding: 3px 4px;
+}
+
+.md-editor-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: #cbd5e1;
+}
+
+.md-editor-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  min-height: 320px;
+}
+
+.md-editor-textarea {
+  width: 100%;
+  min-height: 320px;
+  padding: 10px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.md-editor-preview {
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  background: #ffffff;
+  overflow: auto;
+  max-height: 60vh;
+}
+
+.md-editor-palette {
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.md-editor-palette-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.md-editor-palette-empty {
+  color: #94a3b8;
+}
+
+.md-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.md-editor-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.md-editor-recover {
+  margin: 0;
+}
+
+.lesson-manual-edit-notes {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #7c5cbf;
+}

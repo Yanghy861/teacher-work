@@ -102,7 +102,7 @@ export interface NoteRecord {
   readonly updatedAt: string
   readonly deletedAt: string | null
   readonly occurredOn?: string
-  readonly noteKind?: 'manual' | DraftKind
+  readonly noteKind?: 'manual' | 'manual_edit' | DraftKind
   readonly draftStatus?: DraftStatus
   readonly aiMetadata?: DraftNoteMetadata
 }
@@ -371,7 +371,10 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
     isNonEmptyString(value.updatedAt) &&
     (value.deletedAt === null || isNonEmptyString(value.deletedAt)) &&
     (value.occurredOn === undefined || isLocalDateString(value.occurredOn)) &&
-    (value.noteKind === undefined || value.noteKind === 'manual' || isDraftKind(value.noteKind)) &&
+    (value.noteKind === undefined ||
+      value.noteKind === 'manual' ||
+      value.noteKind === 'manual_edit' ||
+      isDraftKind(value.noteKind)) &&
     (value.aiMetadata === undefined || isDraftNoteMetadata(value.aiMetadata))
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { NodeRecord, NoteRecord } from '../shared/core-contracts'
 import type { ManagedFileOverview } from '../shared/file-contracts'
+import { useCoreOverview } from './core-overview-provider'
 import {
   classifyLessonCoursewareFiles,
   filterLessonMaterialFiles,
@@ -39,6 +40,7 @@ export default function LessonFilesSection({
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
 }): React.JSX.Element {
   const { confirm } = useAppDialog()
+  const { overview: core, reload: reloadCore } = useCoreOverview()
   const [overview, setOverview] = useState<ManagedFileOverview | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -172,6 +174,28 @@ export default function LessonFilesSection({
     onStartPrep(prepContext, { mode: 'lesson' })
   }
 
+  /** V17-C/D28：本课“人工编辑”来源标注（note_kind='manual_edit'，最多显示最近 5 条）。 */
+  const lessonId = lesson?.id ?? null
+  const manualEditNotes = useMemo(() => {
+    if (lessonId === null || core === null) return []
+    return core.notes
+      .filter((note) =>
+        note.deletedAt === null &&
+        note.lessonId === lessonId &&
+        note.noteKind === 'manual_edit',
+      )
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+      .slice(0, 5)
+  }, [core, lessonId])
+
+  /** V17-C：人工编辑保存新版本后刷新课件清单与共享 overview（manual_edit 标注由 overview 数据驱动）。 */
+  async function handleManualEditSaved(fileId: string): Promise<void> {
+    setNotice('已保存为新版本，旧版保留在历史版本。')
+    await reload()
+    await reloadCore()
+    setSelectedFileId(fileId)
+  }
+
   if (lesson === null) {
     return (
       <div className="lesson-files-section lesson-files-empty">
@@ -226,6 +250,8 @@ export default function LessonFilesSection({
           onShowInFolder={(fileId) => { void openFile(fileId, true) }}
           onRemoveFile={readOnly ? undefined : (fileId) => { void removeFile(fileId) }}
           onEnhanceFile={readOnly ? undefined : (fileId) => { void enhanceWithMineru(fileId) }}
+          editable={!readOnly}
+          onFileSaved={(fileId) => { void handleManualEditSaved(fileId) }}
           mineruTokenConfigured={mineruTokenConfigured}
           mineruBusy={mineruBusy}
           mineruStatus={mineruStatus}
@@ -244,6 +270,11 @@ export default function LessonFilesSection({
               </li>
             ))}
           </ul>
+          {manualEditNotes.length > 0 && (
+            <p className="lesson-manual-edit-notes">
+              ✎ 人工编辑：{manualEditNotes.map((note) => note.bodyMd).join('；')}
+            </p>
+          )}
         </details>
       )}
     </div>
