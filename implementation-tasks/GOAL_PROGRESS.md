@@ -1277,3 +1277,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 合同：`NoteRecord.noteKind` 扩 `'manual' | 'manual_edit' | DraftKind`（isNoteRecord 同步）；mapNoteRecord 显式暴露 manual_edit 的 noteKind（manual 仍省略保持 V1 语义）。
 - 测试：新增 `v17-c-md-editor.test.ts`（12 例：manual_edit 落库/分支命名/失败静默 + 编辑器依赖零/工具栏/速查/热保存恢复/分屏钉测 + 阅读器接线/manual_edit 展示与隔离）；全量 75 files / 349 tests、typecheck、lint 通过。
 - Git：本地提交 `v1.7(V17-C): manual md editor with write-version persistence and manual_edit notes`。
+
+## 2026-09-03 · V17-D 完成：题库自动选题与双版输出（D30/D31）
+
+- 合同：`GenerateDraftRequest.bankQuestionIds?`（过目步剔除后的候选集，isBankQuestionIds 守卫 1..60 道）；`DraftNoteMetadata.variant?`（'teacher'/'student'，缺省 = 单版无徽标）。
+- shared 纯函数集中：新建 `src/shared/draft-bank-preview.ts`——`bankPlanToSearchRequest`（DraftBankPlan→QuestionBankSearchRequest，tagMode=include）、`renderQuestionForContext`、`buildBankCandidateBlock`、`fitBankCandidateCount`（先全量、超预算退 targetCount、再逐道递减的截减算法）与 `DRAFT_BANK_CANDIDATE_MULTIPLIER=3`；Main 注入与 Renderer 过目共用同一渲染/检索/截减（所见即所发），draft-service 本地副本删除（re-export 兼容既有测试）。
+- Main：`buildBankCandidates` 接受 `confirmedQuestionIds`——剔除集直接取代检索（零 search 调用），空集/全剔拒绝；`dualVersion: true` 时教师版/学生版 metadata 分别落 variant，studentNoteId 关联两 note。
+- 发布命名：`publishLessonDraftVersion` 按 note variant 分流——学生版 `讲义 · 第 N 版 · 学生版.md`，版本号只数同模式文件（教师版/学生版各自独立版本链互不干扰计数）；教师版命名语义不变（V17-B 回归全绿）。
+- Renderer（draft-panel）：参考区“参考题库（AI 自动选题）”开关（未安装置灰 + 提示；目标题数 select 1–20 默认 5；“同时生成学生版”开关）；方案阶段 startImprovePlan 串行 runBankSelection（ai.requestText 出计划 → searchQuestions 检索 → 逐题 getQuestion 算候选块字数），方案确认卡新增过目分区（AI 计划原样展示 tag/年级/难度/题数/关键词、候选列表题干预览+难度+含图+tag、逐题剔除 checkbox、“调整后重新选题”自然语言输入追加进 requirement）；确认生成固化 bankPlan + bankQuestionIds + dualVersion，成功清选题状态；D25 预算弹窗加“题库候选 N 道（按预算部分纳入 M 道）”行，选择区实时“题库候选 N 题 · M 字（超预算自动截减）”；修改记录/内容标题/收件箱教师版/学生版徽标（draft-variant-badge）；切换修改对象/模式清空选题。预览步零新 IPC——复用 ai:request-text + question-bank:search-questions/get-question。
+- 测试：新增 `tests/v17-d-bank-selection.test.ts` 11 例（剔除集直达 prompt 且零检索调用/空集拒绝/双版两次请求与 studentNoteId/variant 落库/单版零变化/学生版独立版本链/开关/过目卡/确认请求字段/预算列名与徽标/零新 IPC 钉测）；全量 76 files / 360 tests、typecheck、lint 通过。
+- Git：本地提交 `v1.7(V17-D): bank-driven selection with review step and dual-version output`。

@@ -3356,3 +3356,149 @@ button.quick-status { cursor: pointer; }
   font-size: 12px;
   color: #7c5cbf;
 }
+
+/* V17-D：题库自动选题与双版输出 */
+.prep-bank-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid #c7d2fe;
+  border-radius: var(--radius-md);
+  background: #f8faff;
+  font-size: 13px;
+}
+
+.prep-bank-toggle label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.prep-bank-toggle label.is-disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.prep-bank-toggle small {
+  color: #94a3b8;
+}
+
+.prep-bank-options {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.prep-bank-options label {
+  font-weight: 400;
+}
+
+.prep-bank-options select {
+  font-size: 12px;
+  padding: 2px 4px;
+  margin-left: 4px;
+}
+
+.improve-bank-section {
+  margin-top: 10px;
+  border: 1px solid #c7d2fe;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background: #f8faff;
+}
+
+.improve-bank-plan {
+  font-size: 12px;
+  color: #4338ca;
+  margin: 8px 0;
+}
+
+.improve-bank-candidates {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.improve-bank-candidates li label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+}
+
+.improve-bank-candidates li.is-excluded label {
+  opacity: 0.5;
+  text-decoration: line-through;
+  background: #f1f5f9;
+}
+
+.improve-bank-candidates small {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.improve-bank-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.improve-bank-actions input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.improve-bank-budget {
+  font-size: 12px;
+  color: #64748b;
+  margin: 8px 0 0;
+}
+
+.improve-bank-budget:has(+ .is-over),
+.improve-bank-section .is-over {
+  color: #dc2626;
+}
+
+.draft-row-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.draft-variant-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.draft-variant-badge.is-teacher {
+  color: #4338ca;
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.draft-variant-badge.is-student {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}

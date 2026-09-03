@@ -1,6 +1,6 @@
 # V17-D · 题库自动选题与双版输出（D30/D31）
 
-**状态：** `TODO`
+**状态：** `DONE`（2026-09-03）
 
 ## 范围
 
@@ -21,3 +21,12 @@
 - 静态渲染钉测：开关（未安装置灰）、过目卡（计划/候选/剔除/调整按钮）、双版徽标；
 - 既有生成流回归全绿（不带 bankPlan 的请求行为与 V1.6 完全一致）；
 - typecheck、lint；完成后更新 STATUS/GOAL_PROGRESS 并提交 `v1.7(V17-D): <摘要>`。
+
+## 完成记录（2026-09-03）
+
+- **合同**：`GenerateDraftRequest.bankQuestionIds?`（剔除后的候选题 ID 集，1..60 守卫）；`DraftNoteMetadata.variant?: 'teacher' | 'student'`（双版留痕，缺省单版）。
+- **shared**：`src/shared/draft-bank-preview.ts` 集中 `bankPlanToSearchRequest` / `renderQuestionForContext` / `buildBankCandidateBlock` / `fitBankCandidateCount` / `DRAFT_BANK_CANDIDATE_MULTIPLIER`；Main 候选注入与 Renderer 过目步共用（所见即所发），draft-service 删除本地副本并 re-export 兼容。
+- **Main**：`buildBankCandidates(plan, budgetChars, confirmedQuestionIds?)`——剔除集直接取代检索；空集抛“候选题已被全部剔除”；dualVersion 两 note 分别 variant='teacher'/'student'；`publishLessonDraftVersion` 学生版 `讲义 · 第 N 版 · 学生版.md` 独立版本链（版本号只数同模式文件）。
+- **Renderer**：参考区题库开关（未安装置灰“先在题库页导入 .tqbank”）、目标题数 1–20 默认 5、学生版开关；startImprovePlan 串行 runBankSelection（ai:request-text 计划 → question-bank:search-questions 检索 → 逐题 getQuestion）；方案确认卡过目分区（计划原样展示/候选列表/逐题剔除/自然语言调整重检索追加 requirement）；confirmPlanAndGenerate 固化 bankPlan+bankQuestionIds+dualVersion 并清选题状态；D25 预算弹窗加题库候选行；修改记录/标题/收件箱教师版学生版徽标。零新 IPC。
+- **不做确认**：未做含图题进上下文（候选仅标“含图”）、未做本地学生版剥离、未做 function-calling 工具循环——与设计基准一致。
+- **测试**：`tests/v17-d-bank-selection.test.ts` 11 例新增；既有生成流/发布回归全绿；全量 76 files / 360 tests、typecheck、lint 通过。

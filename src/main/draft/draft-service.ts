@@ -23,6 +23,13 @@ import {
   type GenerateDraftResult,
 } from '../../shared/draft-contracts'
 import {
+  DRAFT_BANK_CANDIDATE_MULTIPLIER,
+  bankPlanToSearchRequest,
+  buildBankCandidateBlock,
+  fitBankCandidateCount,
+  renderQuestionForContext,
+} from '../../shared/draft-bank-preview'
+import {
   buildBankPlanPrompt,
   buildFallbackBankPlan,
   DRAFT_BANK_PLAN_MAX_TOKENS,
@@ -39,13 +46,16 @@ import { SkillService, SkillServiceError } from '../skills/skill-service'
 import { CoreDataError } from '../data/core-data-service'
 
 /** D30：生成侧对题库的窄只读端口（search/getQuestion/getSummary，独立库、可缺省）。 */
+// D30 常量已迁至 shared/draft-bank-preview（Renderer 过目步与 Main 共用），此处 re-export 供既有测试引用。
+export { DRAFT_BANK_CANDIDATE_MULTIPLIER } from '../../shared/draft-bank-preview'
+
 export interface QuestionBankDraftPort {
   getSummary(): QuestionBankSummary
   search(request: QuestionBankSearchRequest): QuestionBankSearchResult
   getQuestion(questionId: string): QuestionBankDetail
 }
 
-export const DRAFT_BANK_CANDIDATE_MULTIPLIER = 3
+
 
 export type DraftServiceErrorCode =
   | 'DRAFT_INVALID_REQUEST'
@@ -84,6 +94,7 @@ interface ResolvedGenerationInput {
   readonly modification?: DraftModificationScope
   readonly bankPlan?: DraftBankPlan
   readonly dualVersion?: boolean
+  readonly bankQuestionIds?: readonly string[]
 }
 
 export interface ResolveBankPlanRequest {
@@ -124,6 +135,7 @@ export class DraftService {
       ...(request.modification === undefined ? {} : { modification: request.modification }),
       ...(request.bankPlan === undefined ? {} : { bankPlan: request.bankPlan }),
       ...(request.dualVersion === undefined ? {} : { dualVersion: request.dualVersion }),
+      ...(request.bankQuestionIds === undefined ? {} : { bankQuestionIds: request.bankQuestionIds }),
     }, onStream)
   }
 
@@ -245,6 +257,7 @@ export class DraftService {
       ...(input.requirement === undefined ? {} : { requirement: input.requirement }),
       ...(input.modification === undefined ? {} : { modification: input.modification }),
       ...(context.bankSelection === undefined ? {} : { bankSelection: context.bankSelection }),
+      ...(input.dualVersion === true ? { variant: 'teacher' } : {}),
     }
 
     let noteId: string
@@ -276,6 +289,7 @@ export class DraftService {
       model: studentResult.model,
       inputChars: Math.max(1, Math.min(result.text.length, DRAFT_MAX_CHARS)),
       maxTokens: studentTokenBudget(input.maxTokens),
+      variant: 'student',
     }
     try {
       const studentNote = this.coreData.createLessonDraft(
@@ -381,7 +395,11 @@ export class DraftService {
       return { text: parts.join('\n\n'), sources: refs, inputChars }
     }
 
-    const { block, selection: bankSelection } = this.buildBankCandidates(input.bankPlan, remaining)
+    const { block, selection: bankSelection } = this.buildBankCandidates(
+      input.bankPlan,
+      remaining,
+      input.bankQuestionIds,
+    )
     const bankChars = block === undefined ? 0 : block.length
     return {
       text: parts.join('\n\n'),
@@ -392,47 +410,40 @@ export class DraftService {
     }
   }
 
-  /** D30 阶段二候选：检索 targetCount×3 道 → 渲染为整块候选文本，超预算按顺序截减。 */
+  /** D30 阶段二候选：检索 targetCount×3 道 → 渲染为整块候选文本，超预算按顺序截减；
+   * 过目步剔除后的候选集（confirmedQuestionIds）直接取代检索，保证所见即所发。 */
   private buildBankCandidates(
     plan: DraftBankPlan,
     budgetChars: number,
+    confirmedQuestionIds?: readonly string[],
   ): { readonly block: string | undefined; readonly selection: DraftBankSelection } {
     const bank = this.requireQuestionBank()
-    const retrieved = bank.search({
-      ...planToSearchRequest(plan),
-      limit: Math.min(plan.targetCount * DRAFT_BANK_CANDIDATE_MULTIPLIER, 100),
-      offset: 0,
+    if (confirmedQuestionIds !== undefined) {
+      if (confirmedQuestionIds.length === 0) {
+        throw new DraftServiceError(
+          'DRAFT_INVALID_REQUEST',
+          '候选题已被全部剔除，请保留至少一道候选题或关闭参考题库。',
+        )
+      }
+    }
+    const retrievedIds = confirmedQuestionIds ?? this.searchCandidateIds(bank, plan)
+    const candidates = retrievedIds.map((id) => {
+      const question = bank.getQuestion(id)
+      return { id, rendered: renderQuestionForContext(question) }
     })
-    if (retrieved.items.length === 0) {
-      throw new DraftServiceError(
-        'DRAFT_INVALID_REQUEST',
-        '题库中没有符合检索计划的题目，请调整检索条件或关闭参考题库。',
-      )
-    }
-    const candidates = retrieved.items.map((item) => {
-      const question = bank.getQuestion(item.id)
-      return { id: item.id, rendered: renderQuestionForContext(question) }
-    })
-    const blockFor = (count: number): string => [
-      `【题库候选题（共 ${count} 道，含答案解析；只能从中选择使用，不得杜撰或改编题目）】`,
-      ...candidates.slice(0, count).map((candidate, index) => `（候选 ${index + 1}）\n${candidate.rendered}`),
-    ].join('\n\n')
-
-    let count = candidates.length
-    if (blockFor(count).length > budgetChars) {
-      count = Math.min(count, plan.targetCount)
-    }
-    while (count > 1 && blockFor(count).length > budgetChars) {
-      count -= 1
-    }
-    const block = blockFor(count)
-    if (block.length > budgetChars) {
+    const count = fitBankCandidateCount(
+      candidates.map((candidate) => candidate.rendered),
+      plan.targetCount,
+      budgetChars,
+    )
+    if (count === 0) {
       // 文件参考已吃满预算，连一道候选都放不下：只留痕检索结果，提示老师删减参考
       throw new DraftServiceError(
         'DRAFT_INVALID_REQUEST',
         `字符预算不足，题库候选题未能纳入（检索到 ${candidates.length} 道）。请减少参考资料或降低目标题数。`,
       )
     }
+    const block = buildBankCandidateBlock(candidates.map((candidate) => candidate.rendered), count)
     return {
       block,
       selection: {
@@ -442,6 +453,21 @@ export class DraftService {
         candidateIds: candidates.slice(0, count).map((candidate) => candidate.id),
       },
     }
+  }
+
+  private searchCandidateIds(bank: QuestionBankDraftPort, plan: DraftBankPlan): readonly string[] {
+    const retrieved = bank.search({
+      ...bankPlanToSearchRequest(plan),
+      limit: Math.min(plan.targetCount * DRAFT_BANK_CANDIDATE_MULTIPLIER, 100),
+      offset: 0,
+    })
+    if (retrieved.items.length === 0) {
+      throw new DraftServiceError(
+        'DRAFT_INVALID_REQUEST',
+        '题库中没有符合检索计划的题目，请调整检索条件或关闭参考题库。',
+      )
+    }
+    return retrieved.items.map((item) => item.id)
   }
 
   private requireQuestionBank(): QuestionBankDraftPort {
@@ -534,44 +560,6 @@ function buildStudentVersionPrompt(teacherBodyMd: string): string {
     '# 输出约束',
     '输出普通 Markdown，不要输出元数据或系统说明。',
   ].join('\n\n')
-}
-
-/** D30：题库候选渲染为上下文文本块（题干 + 选项 + 答案 + 解析 + 元数据行 + 含图标记）。 */
-function renderQuestionForContext(question: QuestionBankDetail): string {
-  const hasAssets = question.assets.length > 0
-  const lines: string[] = []
-  lines.push(question.questionNo === null ? question.content : `第 ${question.questionNo} 题 ${question.content}`)
-  if (question.options.length > 0) {
-    lines.push(question.options.map((option) => `${option.key}. ${option.text}`).join('\n'))
-  }
-  lines.push(`答案：${question.answer === '' ? '（未提供）' : question.answer}`)
-  lines.push(`解析：${question.analysis === '' ? '（未提供）' : question.analysis}`)
-  lines.push(
-    [
-      `tag：${question.tags.length > 0 ? question.tags.join('、') : '无'}`,
-      `难度：${question.difficulty === null ? '未标注' : String(question.difficulty)}`,
-      `年级：${question.grade ?? '未注明'}`,
-      `题型：${question.typeLabel}`,
-      hasAssets ? '含图' : '',
-    ]
-      .filter((part) => part !== '')
-      .join(' / '),
-  )
-  if (hasAssets) {
-    lines.push('（本题含图片，图片不随文本提供，仅标注“含图”）')
-  }
-  return lines.join('\n')
-}
-
-function planToSearchRequest(plan: DraftBankPlan): QuestionBankSearchRequest {
-  return {
-    ...(plan.text === undefined ? {} : { text: plan.text }),
-    ...(plan.tags === undefined ? {} : { tags: plan.tags, tagMode: 'include' as const }),
-    ...(plan.grade === undefined ? {} : { grade: plan.grade }),
-    ...(plan.type === undefined ? {} : { type: plan.type }),
-    ...(plan.difficultyMin === undefined ? {} : { difficultyMin: plan.difficultyMin }),
-    ...(plan.difficultyMax === undefined ? {} : { difficultyMax: plan.difficultyMax }),
-  }
 }
 
 /** D31：学生版 maxTokens 减半（下限 1，防 0）。 */

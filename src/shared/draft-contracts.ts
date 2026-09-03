@@ -50,6 +50,8 @@ export interface DraftNoteMetadata {
   readonly requirement?: string
   readonly modification?: DraftModificationScope
   readonly bankSelection?: DraftBankSelection
+  /** D31：双版输出时标识教师版/学生版（缺省 = 单版输出，无徽标）。 */
+  readonly variant?: 'teacher' | 'student'
 }
 
 export interface DraftLessonSnapshot {
@@ -113,6 +115,8 @@ export interface GenerateDraftRequest {
   readonly modification?: DraftModificationScope
   readonly bankPlan?: DraftBankPlan
   readonly dualVersion?: true
+  /** D30：过目步确认后的候选题 ID 集合（已剔除不要的题）；缺省 = Main 按计划自行检索。 */
+  readonly bankQuestionIds?: readonly string[]
   readonly sources: readonly DraftSourceSelection[]
   readonly maxChars: number
   readonly maxTokens: number
@@ -158,7 +162,7 @@ export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRe
     hasOnlyKeys(
       value,
       ['requestId', 'kind', 'lessonId', 'sources', 'maxChars', 'maxTokens'],
-      ['studentId', 'skillId', 'requirement', 'modification', 'bankPlan', 'dualVersion'],
+      ['studentId', 'skillId', 'requirement', 'modification', 'bankPlan', 'dualVersion', 'bankQuestionIds'],
     ) &&
     isNonEmptyString(value.requestId, 128) &&
     isDraftKind(value.kind) &&
@@ -169,6 +173,7 @@ export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRe
     (value.modification === undefined || isDraftModificationScope(value.modification)) &&
     (value.bankPlan === undefined || isDraftBankPlan(value.bankPlan)) &&
     (value.dualVersion === undefined || value.dualVersion === true) &&
+    (value.bankQuestionIds === undefined || isBankQuestionIds(value.bankQuestionIds)) &&
     Array.isArray(value.sources) &&
     value.sources.length > 0 &&
     value.sources.length <= DRAFT_MAX_SOURCE_FILES &&
@@ -333,7 +338,18 @@ export function isDraftNoteMetadata(value: unknown): value is DraftNoteMetadata 
     (value.skill === undefined || isDraftSkillSnapshot(value.skill)) &&
     (value.requirement === undefined || isNonEmptyString(value.requirement, DRAFT_REQUIREMENT_MAX_CHARS)) &&
     (value.modification === undefined || isDraftModificationScope(value.modification)) &&
-    (value.bankSelection === undefined || isDraftBankSelection(value.bankSelection))
+    (value.bankSelection === undefined || isDraftBankSelection(value.bankSelection)) &&
+    (value.variant === undefined || value.variant === 'teacher' || value.variant === 'student')
+  )
+}
+
+/** D30：过目步剔除后的候选题 ID 集合（1..60 道非空短字符串）。 */
+export function isBankQuestionIds(value: unknown): value is readonly string[] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 1 &&
+    value.length <= 60 &&
+    value.every((id) => isNonEmptyString(id, 512))
   )
 }
 

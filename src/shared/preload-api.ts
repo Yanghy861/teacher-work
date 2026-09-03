@@ -400,6 +400,8 @@ export interface TeacherWorkbenchApi {
     getSummary: () => Promise<QuestionBankSummary>
     chooseAndImport: () => Promise<QuestionBankSummary | null>
     search: (request: QuestionBankSearchRequest) => Promise<QuestionBankSearchResult>
+    /** V17-A：过目步专用搜索（与 search 同载荷同守卫）。 */
+    searchQuestions: (request: QuestionBankSearchRequest) => Promise<QuestionBankSearchResult>
     getQuestion: (request: QuestionBankQuestionRequest) => Promise<QuestionBankDetail>
     copyToLibrary: (request: QuestionBankQuestionRequest) => Promise<ManagedFileRecord>
     copyToLesson: (request: QuestionBankLessonCopyRequest) => Promise<ManagedFileRecord>

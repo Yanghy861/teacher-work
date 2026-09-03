@@ -419,23 +419,27 @@ export class ManagedFileService {
     const lessonTitle = this.database
       .prepare('SELECT title FROM nodes WHERE id = ?')
       .get(lessonId) as { readonly title: string }
+    // D31：教师版与学生版各自独立版本链——版本号只数同模式文件（学生版后缀不进教师版 MAX，反之亦然）。
+    const studentVersion = isStudentVersionNote(note.ai_metadata_json)
     const versionRows = this.database
       .prepare(
         `SELECT f.original_name AS original_name
           FROM lesson_files lf
           JOIN files f ON f.id = lf.file_id
          WHERE lf.lesson_id = ?
-            AND f.original_name LIKE '% · 第 % 版.md'`,
+            AND f.original_name LIKE ${studentVersion ? "'% · 第 % 版 · 学生版.md'" : "'% · 第 % 版.md'"}`,
       )
       .all(lessonId) as Array<{ readonly original_name: string }>
     const version = versionRows.reduce((max, row) => {
-      const match = / · 第 (\d+) 版\.md$/u.exec(row.original_name)
+      const match = studentVersion
+        ? / · 第 (\d+) 版 · 学生版\.md$/u.exec(row.original_name)
+        : / · 第 (\d+) 版\.md$/u.exec(row.original_name)
       return match === null ? max : Math.max(max, Number(match[1]))
     }, 0) + 1
     // V17-B/D27：修改外部导入 md 时发布产物沿用目标名（`原名 · 第 N 版.md`），
     // 版本链目标与无修改目标的节点维持课次标题命名（既有语义）。
     const publishBase = resolvePublishBaseName(note.ai_metadata_json)
-    const originalName = `${publishBase ?? lessonTitle.title} · 第 ${version} 版.md`
+    const originalName = `${publishBase ?? lessonTitle.title} · 第 ${version} 版${studentVersion ? ' · 学生版' : ''}.md`
     const file = this.createTextObjectAndRegister(body, originalName, { targetType: 'lesson', targetId: lessonId })
     this.transaction(() => {
       this.database
@@ -829,6 +833,18 @@ function isPreviewableText(mimeType: string): boolean {
 }
 
 /** V17-B：非版本链修改目标（外部导入 md）发布时以其原名为版本链基名；解析失败或版本链目标回退 null（走课次标题）。 */
+/** D31：学生版 note（ai_metadata.variant === 'student'）识别，用于发布命名与收件箱徽标。 */
+function isStudentVersionNote(aiMetadataJson: string | null): boolean {
+  if (aiMetadataJson === null) return false
+  try {
+    const parsed: unknown = JSON.parse(aiMetadataJson)
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return false
+    return (parsed as { readonly variant?: unknown }).variant === 'student'
+  } catch {
+    return false
+  }
+}
+
 function resolvePublishBaseName(aiMetadataJson: string | null): string | null {
   if (aiMetadataJson === null) return null
   try {

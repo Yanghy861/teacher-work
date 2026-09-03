@@ -9,8 +9,27 @@ import {
   DRAFT_KINDS,
   DRAFT_MAX_REFERENCE_FILES,
   DRAFT_REQUIREMENT_MAX_CHARS,
+  DRAFT_BANK_PLAN_DEFAULT_TARGET_COUNT,
+  type DraftBankPlan,
   type DraftKind,
 } from '../shared/draft-contracts'
+import {
+  DRAFT_BANK_CANDIDATE_MULTIPLIER,
+  bankPlanToSearchRequest,
+  buildBankCandidateBlock,
+  fitBankCandidateCount,
+  renderQuestionForContext,
+} from '../shared/draft-bank-preview'
+import {
+  buildBankPlanPrompt,
+  buildFallbackBankPlan,
+  parseBankPlanText,
+  DRAFT_BANK_PLAN_MAX_TOKENS,
+} from '../shared/draft-bank-plan'
+import type {
+  QuestionBankSearchItem,
+  QuestionBankSummary,
+} from '../shared/question-bank-contracts'
 import {
   formatExcludedReferenceNames,
   planDraftBudget,
@@ -103,6 +122,18 @@ export default function DraftPanel({
   const [improveBase, setImproveBase] = useState<{ title: string; body: string } | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
   const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
+  // D30/V17-D：题库自动选题（开关 + 过目步状态）
+  const [bankSummary, setBankSummary] = useState<QuestionBankSummary | null>(null)
+  const [bankEnabled, setBankEnabled] = useState(false)
+  const [bankTargetCount, setBankTargetCount] = useState(DRAFT_BANK_PLAN_DEFAULT_TARGET_COUNT)
+  const [dualVersionEnabled, setDualVersionEnabled] = useState(false)
+  const [bankPlan, setBankPlan] = useState<DraftBankPlan | null>(null)
+  const [bankCandidates, setBankCandidates] = useState<readonly QuestionBankSearchItem[]>([])
+  const [bankExcludedIds, setBankExcludedIds] = useState<string[]>([])
+  const [bankRenderedMap, setBankRenderedMap] = useState<ReadonlyMap<string, string>>(new Map())
+  const [bankAdjustment, setBankAdjustment] = useState('')
+  const [bankNotice, setBankNotice] = useState('')
+  const [bankPlanBusy, setBankPlanBusy] = useState(false)
   const [referenceCharCounts, setReferenceCharCounts] = useState<ReadonlyMap<string, number>>(new Map())
   const [streamState, setStreamState] = useState<{
     readonly phase: 'reasoning' | 'text'
@@ -158,6 +189,14 @@ export default function DraftPanel({
     : lessonBaselineFiles.reduce((sum, file) => sum + (referenceCharCounts.get(file.id) ?? 0), 0)
   const scopedCharTotal = baselineCharTotal + referenceCharTotal
   const referenceBudgetExceeded = scopedCharTotal > DRAFT_DEFAULT_MAX_CHARS
+  // D30：过目步剔除后的候选集（确认生成按此集合发送，Main 不再自行检索）
+  const keptBankCandidates = bankCandidates.filter((item) => !bankExcludedIds.includes(item.id))
+  const keptBankRendereds = keptBankCandidates.map(
+    (item) => bankRenderedMap.get(item.id) ?? item.contentPreview,
+  )
+  const bankCandidateChars = keptBankRendereds.length === 0
+    ? 0
+    : buildBankCandidateBlock(keptBankRendereds, keptBankRendereds.length).length
   const selectedFiles = uniqueFiles(prepMode === 'single'
     ? [...(targetFile === null ? [] : [targetFile]), ...selectedReferenceFiles]
     : prepMode === 'lesson'
@@ -182,6 +221,15 @@ export default function DraftPanel({
   }, [dirty, onDirtyChange])
 
   useEffect(() => { clearCoreError() }, [clearCoreError])
+
+  // D30/V17-D：题库安装状态只读探测（未安装时开关置灰并提示导入）。
+  useEffect(() => {
+    let cancelled = false
+    void window.teacherWorkbench.questionBank.getSummary()
+      .then((summary) => { if (!cancelled) setBankSummary(summary) })
+      .catch(() => { if (!cancelled) setBankSummary(null) })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -406,6 +454,7 @@ export default function DraftPanel({
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
+    clearBankSelection()
     setMessage('')
   }
 
@@ -429,6 +478,7 @@ export default function DraftPanel({
     setImproveError('')
     setImproveBase(null)
     setCompareOpen(false)
+    clearBankSelection()
     setMessage('')
   }
 
@@ -486,8 +536,15 @@ export default function DraftPanel({
       (file) => !referenceCharCounts.has(file.id),
     ).length
     const overflowCount = plan.excludedReferences.length
-    if (overflowCount === 0 && unmeasuredCount === 0) return true
-    const signature = `${baselineFiles.map((file) => file.id).join(',')}#${selectedReferenceFiles.map((file) => file.id).join(',')}:${overflowCount}`
+    // D30：题库候选块整块计入预算——文件参考优先，候选块按同一截减算法取“部分纳入 M 道”
+    const bankActive = bankEnabled && bankPlan !== null && keptBankCandidates.length > 0
+    const bankRemaining = Math.max(0, DRAFT_DEFAULT_MAX_CHARS - scopedCharTotal)
+    const bankFitCount = bankActive
+      ? fitBankCandidateCount(keptBankRendereds, bankPlan.targetCount, bankRemaining)
+      : 0
+    const bankOverflow = bankActive && bankCandidateChars > bankRemaining && bankFitCount > 0
+    if (overflowCount === 0 && unmeasuredCount === 0 && !bankOverflow) return true
+    const signature = `${baselineFiles.map((file) => file.id).join(',')}#${selectedReferenceFiles.map((file) => file.id).join(',')}:${overflowCount}:${bankCandidateChars}`
     if (signature === confirmedBudgetSignature.current) return true
     const overflowNames = overflowCount > 0
       ? `按 ${DRAFT_DEFAULT_MAX_CHARS} 字预算，以下参考未纳入或未完整纳入：${formatExcludedReferenceNames(plan.excludedReferences)}。`
@@ -495,14 +552,130 @@ export default function DraftPanel({
     const unmeasuredHint = unmeasuredCount > 0
       ? `${unmeasuredCount} 份参考（如 Office/PDF）无法预读字符数，实际发送时按解析文本优先计入。`
       : ''
+    const bankHint = bankOverflow
+      ? `题库候选 ${keptBankCandidates.length} 道（按预算部分纳入 ${bankFitCount} 道）。`
+      : ''
+    const hints = [overflowNames, unmeasuredHint, bankHint].filter((hint) => hint !== '')
     const confirmed = await confirm({
       title: '部分参考未完整纳入本次 AI 请求',
-      description: <>{overflowNames}{overflowNames !== '' && unmeasuredHint !== '' ? ' ' : ''}{unmeasuredHint}<br />可以继续生成，也可以返回取消勾选。</>,
+      description: <>{hints.join(' ')}<br />可以继续生成，也可以返回取消勾选或删减候选。</>,
       confirmLabel: '继续生成',
     })
     if (!confirmed) return false
     confirmedBudgetSignature.current = signature
     return true
+  }
+
+  function toggleBankEnabled(): void {
+    if (bankSummary !== null && !bankSummary.installed) return
+    setBankEnabled((current) => {
+      if (current) {
+        // 关闭开关即作废过目步状态；确认生成回到无题库请求
+        setBankPlan(null)
+        setBankCandidates([])
+        setBankExcludedIds([])
+        setBankRenderedMap(new Map())
+        setBankNotice('')
+      }
+      return !current
+    })
+  }
+
+  function clearBankSelection(): void {
+    setBankPlan(null)
+    setBankCandidates([])
+    setBankExcludedIds([])
+    setBankRenderedMap(new Map())
+    setBankNotice('')
+  }
+
+  function toggleBankCandidate(questionId: string): void {
+    setBankExcludedIds((current) =>
+      current.includes(questionId)
+        ? current.filter((id) => id !== questionId)
+        : [...current, questionId],
+    )
+  }
+
+  /**
+   * D30 过目步阶段一+二：AI 出检索计划（容错回退）→ question-bank:search-questions
+   * 本地检索 → 逐题取详情算候选块字数（与 Main 注入共用同一渲染函数）。返回是否拿到候选。
+   */
+  async function runBankSelection(requestIdSeed: string, extraRequirement?: string): Promise<boolean> {
+    if (context === null) return false
+    setBankPlanBusy(true)
+    setBankNotice('')
+    try {
+      const summary = await window.teacherWorkbench.questionBank.getSummary()
+      setBankSummary(summary)
+      if (!summary.installed) {
+        setBankNotice('题库未安装，请先在题库页导入 .tqbank。')
+        return false
+      }
+      const combinedRequirement = [requirement.trim(), (extraRequirement ?? '').trim()]
+        .filter((part) => part !== '')
+        .join('\n')
+      const fallback = buildFallbackBankPlan({
+        lessonTitle: context.lessonTitle,
+        ...(combinedRequirement === '' ? {} : { requirement: combinedRequirement }),
+        summary,
+        targetCount: bankTargetCount,
+      })
+      const result = await window.teacherWorkbench.ai.requestText({
+        requestId: `${requestIdSeed}-bank-plan`,
+        prompt: buildBankPlanPrompt({
+          lessonTitle: context.lessonTitle,
+          ...(context.periodTitle === undefined ? {} : { periodTitle: context.periodTitle }),
+          ...(combinedRequirement === '' ? {} : { requirement: combinedRequirement }),
+          summary,
+          targetCount: bankTargetCount,
+        }),
+        maxTokens: DRAFT_BANK_PLAN_MAX_TOKENS,
+      })
+      const plan = parseBankPlanText(result.text, fallback)
+      const retrieved = await window.teacherWorkbench.questionBank.searchQuestions({
+        ...bankPlanToSearchRequest(plan),
+        limit: Math.min(plan.targetCount * DRAFT_BANK_CANDIDATE_MULTIPLIER, 100),
+        offset: 0,
+      })
+      if (retrieved.items.length === 0) {
+        setBankNotice('题库中没有符合检索计划的题目，请调整要求重新选题或关闭参考题库。')
+        return false
+      }
+      const rendereds = new Map<string, string>()
+      for (const item of retrieved.items) {
+        try {
+          const detail = await window.teacherWorkbench.questionBank.getQuestion({ questionId: item.id })
+          rendereds.set(item.id, renderQuestionForContext(detail))
+        } catch {
+          if (!rendereds.has(item.id)) rendereds.set(item.id, item.contentPreview)
+        }
+      }
+      setBankPlan(plan)
+      setBankCandidates(retrieved.items)
+      setBankExcludedIds([])
+      setBankRenderedMap(rendereds)
+      return true
+    } catch (bankError) {
+      setBankNotice(toErrorMessage(bankError, '题库选题失败，请稍后重试；或关闭参考题库直接生成。'))
+      return false
+    } finally {
+      setBankPlanBusy(false)
+    }
+  }
+
+  /** D30：目标题数 1..20（合同钉测同范围）。 */
+  const BANK_TARGET_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20]
+
+  /** D30 过目步反馈：自然语言调整追加进 requirement，重新出检索计划并重检索。 */
+  async function reselectBank(): Promise<void> {
+    const adjustment = bankAdjustment.trim()
+    if (adjustment !== '') {
+      setRequirement((current) =>
+        [current.trim(), adjustment].filter((part) => part !== '').join('\n'))
+    }
+    setBankAdjustment('')
+    await runBankSelection(globalThis.crypto.randomUUID(), adjustment)
   }
 
   async function startImprovePlan(): Promise<void> {
@@ -549,6 +722,11 @@ export default function DraftPanel({
       })
       setImprovePlan(result.text)
       setImproveBase(buildComparisonBase(prepMode, scopedText.baselineParts))
+      // D30 过目步：方案阶段同时执行阶段一（AI 检索计划）+ 阶段二（本地候选检索），串行秒级
+      if (bankEnabled) {
+        setMessage('正在按课次要求检索题库候选题…')
+        await runBankSelection(planRequestId)
+      }
       setImprovePhase('review')
       setMessage(prepMode === 'single'
         ? '单文件修改方案已生成，请审阅确认后再生成新副本。'
@@ -573,6 +751,12 @@ export default function DraftPanel({
     }
     if (!await confirmReferenceBudget(baselineFiles)) {
       setImproveError('已取消。请删减补充参考后重试，或再次确认并选择“继续生成”。')
+      return
+    }
+    // D30 过目步：开启题库但候选被全部剔除时阻止生成（保留全部或关闭开关）
+    const bankActive = bankEnabled && bankPlan !== null
+    if (bankActive && keptBankCandidates.length === 0) {
+      setImproveError('候选题已被全部剔除，请保留至少一道候选题或关闭参考题库。')
       return
     }
     const orderedSources = uniqueFiles([...baselineFiles, ...selectedReferenceFiles])
@@ -609,6 +793,12 @@ export default function DraftPanel({
         ...(selectedSkillId === '' ? {} : { skillId: selectedSkillId }),
         requirement: embeddedRequirement,
         modification,
+        // D30/D31：确认请求固化过目步剔除后的候选集 + 学生版开关；题库未出计划时按无题库生成
+        ...(bankActive ? {
+          bankPlan: bankPlan,
+          bankQuestionIds: keptBankCandidates.map((item) => item.id),
+        } : {}),
+        ...(bankActive && dualVersionEnabled ? { dualVersion: true } : {}),
         sources: orderedSources.map((file) => ({ fileId: file.id })),
         maxChars: DRAFT_DEFAULT_MAX_CHARS,
         maxTokens: DRAFT_DEFAULT_MAX_TOKENS,
@@ -622,9 +812,10 @@ export default function DraftPanel({
       setCompareOpen(true)
       setImprovePhase('')
       setImprovePlan('')
+      clearBankSelection()
       setMessage(prepMode === 'single'
-        ? `《${baselineFiles[0].originalName}》已按方案生成完整修订稿，可用“新旧对比”查看差异。`
-        : '整课完整新版本已生成，包含讲义、例题、课堂练习与课后作业，可用“新旧对比”审阅。')
+        ? `《${baselineFiles[0].originalName}》已按方案生成完整修订稿，可用“新旧对比”查看差异。${result.studentNoteId !== undefined ? '学生版已一并生成，见修改记录。' : ''}`
+        : `整课完整新版本已生成，包含讲义、例题、课堂练习与课后作业，可用“新旧对比”审阅。${result.studentNoteId !== undefined ? '学生版已一并生成，见修改记录。' : ''}`)
     } catch (generationError) {
       setMessage('')
       setImproveError(toErrorMessage(generationError, '操作失败，请稍后重试。'))
@@ -861,7 +1052,49 @@ export default function DraftPanel({
               <p className={`prep-budget-hint${referenceBudgetExceeded ? ' is-over' : ''}`} role="status">
                 {referenceNotice !== '' ? `${referenceNotice} ` : ''}
                 参考已占用 {referenceCharTotal.toLocaleString('zh-CN')} / {DRAFT_DEFAULT_MAX_CHARS.toLocaleString('zh-CN')} 字（含修改对象共 {scopedCharTotal.toLocaleString('zh-CN')} 字）{referenceFilesFull ? `；已选满 ${DRAFT_MAX_REFERENCE_FILES} 份` : ''}
+                {bankEnabled && keptBankCandidates.length > 0 ? `；题库候选 ${keptBankCandidates.length} 题 · ${bankCandidateChars.toLocaleString('zh-CN')} 字（超预算自动截减）` : ''}
               </p>
+              <div className="prep-bank-toggle">
+                <label className={(bankSummary?.installed ?? false) ? '' : 'is-disabled'}>
+                  <input
+                    type="checkbox"
+                    checked={bankEnabled}
+                    disabled={!(bankSummary?.installed ?? false) || busyAction !== '' || improveBusy}
+                    onChange={toggleBankEnabled}
+                  />
+                  参考题库（AI 自动选题）
+                </label>
+                {bankSummary !== null && !bankSummary.installed && (
+                  <small>先在题库页导入 .tqbank</small>
+                )}
+                {bankEnabled && (
+                  <span className="prep-bank-options">
+                    <label>目标题数：
+                      <select
+                        value={bankTargetCount}
+                        disabled={busyAction !== '' || improveBusy}
+                        onChange={(event) => {
+                          setBankTargetCount(Number(event.currentTarget.value))
+                          clearBankSelection()
+                        }}
+                      >
+                        {BANK_TARGET_COUNTS.map((count) => (
+                          <option key={count} value={count}>{count} 题</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={dualVersionEnabled}
+                        disabled={busyAction !== '' || improveBusy}
+                        onChange={(event) => setDualVersionEnabled(event.currentTarget.checked)}
+                      />
+                      同时生成学生版
+                    </label>
+                  </span>
+                )}
+              </div>
             </div>
           )}
           <div className="prep-source-actions">
@@ -877,7 +1110,11 @@ export default function DraftPanel({
                   <button type="button" className="draft-result-select" onClick={() => { void selectResult(note) }} disabled={busyAction !== ''}>
                     <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
                     <span><strong>{modificationNodeLabel(note)}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
-                    <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
+                    <span className="draft-row-badges">
+                      {note.aiMetadata?.variant === 'teacher' && <span className="draft-variant-badge is-teacher">教师版</span>}
+                      {note.aiMetadata?.variant === 'student' && <span className="draft-variant-badge is-student">学生版</span>}
+                      <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
+                    </span>
                   </button>
                   {note.draftStatus === 'draft' && <button className="danger-button" type="button" onClick={() => void deleteDraft(note)} disabled={busyAction !== ''}>删除</button>}
                 </li>
@@ -938,6 +1175,61 @@ export default function DraftPanel({
             <div className="improve-review-card">
               <div className="card-heading"><div><p className="section-kicker">改进流程</p><h2>修改方案（先审阅，再生成）</h2></div></div>
               <div className="improve-plan-body"><MarkdownDocument body={improvePlan} files={[]} /></div>
+              {bankEnabled && (
+                <div className="improve-bank-section" aria-label="题库候选题过目">
+                  <div className="card-heading"><div><p className="section-kicker">AI 自动选题</p><h2>题库候选（先过目，再生成）</h2></div>{bankPlanBusy ? <span className="count-label">正在选题…</span> : null}</div>
+                  {bankPlan === null ? (
+                    <p className="inline-notice" role="status">
+                      {bankNotice !== '' ? bankNotice : '尚未完成题库选题；确认生成将不使用题库候选。'}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="improve-bank-plan">
+                        AI 检索计划：{bankPlan.tags !== undefined && bankPlan.tags.length > 0 ? `tag「${bankPlan.tags.join('、')}」` : '全部 tag'}
+                        {' · '}{bankPlan.grade !== undefined ? `年级「${bankPlan.grade}」` : '年级不限'}
+                        {' · '}难度 {bankPlan.difficultyMin ?? 0}–{bankPlan.difficultyMax ?? 100}
+                        {' · '}目标 {bankPlan.targetCount} 题
+                        {bankPlan.text !== undefined ? ` · 关键词「${bankPlan.text}」` : ''}
+                      </p>
+                      <ul className="improve-bank-candidates">
+                        {bankCandidates.map((item) => (
+                          <li key={item.id} className={bankExcludedIds.includes(item.id) ? 'is-excluded' : ''}>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={!bankExcludedIds.includes(item.id)}
+                                disabled={bankPlanBusy}
+                                onChange={() => toggleBankCandidate(item.id)}
+                              />
+                              <span>{item.questionNo === null ? '' : `第 ${item.questionNo} 题 `}{item.contentPreview}</span>
+                              <small>
+                                难度 {item.difficulty === null ? '未标注' : item.difficulty}
+                                {item.hasAssets ? ' · 含图' : ''}
+                                {item.tags.length > 0 ? ` · ${item.tags.join('、')}` : ''}
+                              </small>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="improve-bank-actions">
+                        <input
+                          value={bankAdjustment}
+                          onChange={(event) => setBankAdjustment(event.target.value)}
+                          maxLength={DRAFT_REQUIREMENT_MAX_CHARS}
+                          placeholder="例如：再难一点；去掉尺规作图题"
+                          disabled={bankPlanBusy}
+                        />
+                        <button className="secondary-button" type="button" disabled={bankPlanBusy} onClick={() => { void reselectBank() }}>调整后重新选题</button>
+                      </div>
+                      <p className="improve-bank-budget" role="status">
+                        已保留 {keptBankCandidates.length} / {bankCandidates.length} 道候选 · {bankCandidateChars.toLocaleString('zh-CN')} 字
+                        {bankNotice !== '' ? ` · ${bankNotice}` : ''}
+                        {keptBankCandidates.length === 0 ? ' · 候选已全部剔除，请保留至少一道或关闭参考题库' : ''}
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
               <div className="improve-review-actions">
                 {prepMode === 'new' && <label className="improve-kind-label">生成类型
                   <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={improveBusy}>
@@ -963,7 +1255,7 @@ export default function DraftPanel({
                 </div>
               )}
               <div className="draft-content-header">
-                <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{modificationNodeLabel(selectedNote)}</h2></div>
+                <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{modificationNodeLabel(selectedNote)}{selectedNote.aiMetadata?.variant === 'teacher' ? '（教师版）' : selectedNote.aiMetadata?.variant === 'student' ? '（学生版）' : ''}</h2></div>
                 <div className="draft-content-actions">
                   {editing ? <><button className="secondary-button" type="button" onClick={cancelEditing} disabled={busyAction !== ''}>取消编辑</button><button className="secondary-button" type="button" onClick={() => void saveModification()} disabled={busyAction !== ''}>保存修改</button></> : <button className="secondary-button" type="button" onClick={startEditing} disabled={busyAction !== ''}>编辑</button>}
                   <button className="secondary-button" type="button" onClick={() => void regenerate()} disabled={busyAction !== ''}>重新生成</button>
@@ -1070,6 +1362,9 @@ function DraftInboxRow({ entry, busy, onOpenDraft, onDeleteDraft }: {
       <button className="draft-inbox-open" type="button" disabled={busy || entry.context === null} onClick={() => entry.context !== null && onOpenDraft(entry.context, entry.note.id)}>
         <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
         <span><strong>{modificationNodeLabel(entry.note)}</strong><small>{entry.courseTitle} / {entry.lessonTitle}</small></span>
+        {entry.note.aiMetadata?.variant !== undefined && (
+          <span className={`draft-variant-badge is-${entry.note.aiMetadata.variant}`}>{entry.note.aiMetadata.variant === 'teacher' ? '教师版' : '学生版'}</span>
+        )}
         <time dateTime={entry.note.updatedAt}>{formatDateTime(entry.note.updatedAt)}</time>
       </button>
       <button className="danger-button" type="button" disabled={busy} onClick={() => onDeleteDraft(entry.note)}>删除</button>
