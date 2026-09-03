@@ -163,3 +163,15 @@
 **V1.6 已冻结在 `checkpoint-V1.6-pass`（基线 `checkpoint-V1.5.6-pass`）。** V1.7 需求已由产品负责人提出（见 V16-E 任务文件"V1.7 需求记录"）：① 所有 md 文件可 AI 二次编辑（D23 收口放宽，明确要做）；② md 人工直接编辑（候选）；③ 扫描件就地提示增强（候选）——待产品负责人确认开工后另立 V1.7 设计基准与任务链。
 
 基线 `checkpoint-V1.5.6-pass`（已创建）；设计基准 `docs/v1.6-ai-modification-rewrite-plan.md`，决策 D21–D26（`implementation-tasks/V1_6_DECISIONS.md`）；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer。
+
+## V1.7 已立项（MD 课件编辑与题库 AI 选题生成）
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V17-A 合同与 Main 支撑 | TODO | migration v17（notes.note_kind 追加 manual_edit）、`files:read-text`/`files:write-version`（永写新文件）/`question-bank:search-questions` IPC、DraftBankPlan/dualVersion 合同、题库上下文注入与预算占用、AI 检索计划（JSON 容错）、学生版生成编排 |
+| V17-B AI 修改对象放宽 | TODO | 修改对象从应用内课件版本放宽到全部 text/markdown managed 文件（D27）；外部 md 发布产物为 `原名 · 第 N 版.md`，原件不动；修改流复用零改动 |
+| V17-C md 人工编辑器 | TODO | 阅读器编辑/预览切换；零新依赖编辑器（工具栏/行级 LaTeX 公式输入与速查模板/插图本课文件引用/标题字号模板/表格/撤销重做/热保存）；保存存为新版本（D29：版本链第 N+1 版或外部 md 编辑版副本） |
+| V17-D 题库自动选题与双版输出 | TODO | 参考题库开关（未安装置灰）、过目步（AI 检索计划展示/自然语言调整重检索/逐题剔除）、流式选题生成（不得杜撰、教师版含标注与答案区块）、学生版第二次生成与发布命名（D30/D31） |
+| V17-E 最终回归与版本验收 | TODO | 全量测试、typecheck、lint、production build、diff check；中继式验收（计划解析/候选注入/双版编排/编辑保存命名）；隔离 Windows 冒烟；DeepSeek 真实自测（预估 ≤ ¥3）；`docs/v1.7-acceptance.md` |
+
+基线 `checkpoint-V1.6-pass`（已创建）；设计基准 `docs/v1.7-md-editing-and-bank-integration-plan.md`，决策 D27–D32（`implementation-tasks/V1_7_DECISIONS.md`）；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer；里程碑提交后 push（产品负责人已授权 GitHub 同步）。

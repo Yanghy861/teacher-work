@@ -86,3 +86,19 @@ V15 任务必须按编号顺序执行；同一时刻最多一个里程碑为 `IN
 | [V16-C](v1.6-tasks/V16-C-streaming.md) | V16-B | `ai:stream-event` 推送、SSE 解析、思考进度与正文上屏、静默超时 | fake 流式 provider 测试 + build + 中继式一轮 |
 | [V16-D](v1.6-tasks/V16-D-mineru-integration.md) | V16-C | migration v16、safeStorage 多槽、MinerU 设置卡与判活、解析服务与入库、右键入口 | 迁移专项 + fake HTTP + 真实文件开发验证 |
 | [V16-E](v1.6-tasks/V16-E-final-gate.md) | V16-A–D | 全量回归 + 隔离 Windows 冒烟 + DeepSeek/MinerU 真实自测 + 验收文档 | 最终验收；确认后创建 `checkpoint-V1.6-pass` |
+
+V1.6 已冻结在 `checkpoint-V1.6-pass`（2026-09-02 产品负责人最终验收）。
+
+## V1.7 当前唯一活动链（MD 课件编辑与题库 AI 选题生成）
+
+基线 `checkpoint-V1.6-pass`；方案 `docs/v1.7-md-editing-and-bank-integration-plan.md`，决策 D27–D32。
+
+| 里程碑 | 前置 | 核心产物 | 验收 |
+|---|---|---|---|
+| [V17-A](v1.7-tasks/V17-A-contracts-and-main-support.md) | `checkpoint-V1.6-pass`、V1.7 修订冻结方案 | migration v17、files:read-text / write-version（永写新文件）、题库搜索 IPC、DraftBankPlan/dualVersion 合同、题库上下文注入与检索计划、学生版编排 | 迁移专项 + Service/合同测试 + typecheck + lint |
+| [V17-B](v1.7-tasks/V17-B-widen-ai-modification-scope.md) | V17-A | AI 修改对象放宽到全部 md（外部导入 md 可改，发布产物新版本文件） | 静态渲染钉测 + 修改流回归 |
+| [V17-C](v1.7-tasks/V17-C-manual-md-editor.md) | V17-A | 阅读器 md 编辑器：工具栏、行级 LaTeX 公式输入与速查、插图引用、标题字号模板、热保存、存为新版本 | 组件静态渲染 + 手工冒烟（公式/插图/版本链） |
+| [V17-D](v1.7-tasks/V17-D-bank-selection-and-dual-output.md) | V17-A–C | 参考题库开关、过目步（计划/剔除/调整）、流式选题生成、学生版/教师版双输出与发布命名 | 编排中继测试（fake bank + provider）+ 静态渲染 |
+| [V17-E](v1.7-tasks/V17-E-final-gate.md) | V17-A–D | 全量回归 + 隔离 Windows 冒烟 + DeepSeek 真实自测 + 验收文档 | 最终验收；确认后创建 `checkpoint-V1.7-pass` |
+
+V17 任务必须按编号顺序执行；同一时刻最多一个里程碑为 `IN_PROGRESS`。V17-E 通过且产品负责人最终体验确认后才创建 `checkpoint-V1.7-pass`。V1.7 不运行 portable/installer；里程碑提交后 push（产品负责人已授权 GitHub 同步）。

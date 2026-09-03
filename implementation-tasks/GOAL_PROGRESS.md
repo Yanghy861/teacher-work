@@ -1243,3 +1243,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - V16-E 置 DONE；STATUS / 验收文档 / 任务文件同步最终验收记录；最终确认提交创建 `checkpoint-V1.6-pass`（基线 `checkpoint-V1.5.6-pass`），V1.6 冻结。
 - V1.7 需求由产品负责人验收时提出并记录（V16-E 任务文件 + 验收文档）：① 所有 md 文件可 AI 二次编辑（D23 收口放宽，明确要做）；② md 人工直接编辑（候选）；③ 扫描件就地提示一键 MinerU 增强（候选）——待开工确认后另立 V1.7 设计基准与任务链。
 - Git：本地提交 `v1.6(V16-E): record final acceptance` + 标签 `checkpoint-V1.6-pass`。
+
+## 2026-09-03 · V1.7 立项：设计基准与任务链冻结（plan 提交）
+
+- 产品负责人三项需求定稿：① 所有 md 文件可 AI 二次编辑（D27，放宽 V1.6 D23 收口）；② md 人工编辑器（D28/D29，立项要求"必要能实现输入行级公式的、插入图片、修改字体大小等基础 md 编辑功能"，保存语义 = 存为新版本，绝不覆盖原件）；③ 题库 AI 自动选题（D30，两阶段：AI 出结构化检索计划 → Main 本地确定性检索 → AI 从候选选题写作，不得杜撰；过目步支持自然语言调整与逐题剔除；否决 function-calling 与手动挑题）+ 学生版/教师版双输出（D31，学生版为第二次快速生成）。
+- 题库定位裁决（产品负责人确认）："产品上一体（AI 生成的知识源），架构上解耦（独立只读快照、窄接口、可缺省）"；不演变为组卷/错题本。ID 稳定性经代码核实（导出器强制稳定 source_uid + 主键/唯一双保险），无新增工作。
+- 产物：`docs/v1.7-md-editing-and-bank-integration-plan.md`（设计基准，V17-A–E 五任务含验收摘要）、`implementation-tasks/V1_7_DECISIONS.md`（D27–D32）、`implementation-tasks/v1.7-tasks/V17-{A..E}-*.md` 任务链；AGENTS.md 与 STATUS.md 切换活动增量至 V1.7（migration 仅允许 v17，新 IPC 仅 files:read-text / files:write-version / question-bank:search-questions 三条；V1.6 冻结语义不得触碰）。
+- Git：本地提交 `plan(V1.7): define md editing and bank selection integration`；随后 push。
