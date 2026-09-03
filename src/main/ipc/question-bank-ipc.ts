@@ -97,6 +97,9 @@ export async function dispatchQuestionBankIpc(
         )
       }
       case QUESTION_BANK_IPC_CHANNELS.search:
+      // V17-D Renderer 过目步用同载荷检索通道（载荷即 QuestionBankSearchRequest）
+      // eslint-disable-next-line no-fallthrough -- 同一 dispatch 故意落穿到共用的搜索分支
+      case QUESTION_BANK_IPC_CHANNELS.searchQuestions:
         assertRequest(payload, isQuestionBankSearchRequest)
         return ensureResponse<QuestionBankSearchResult>(
           service.search(payload as QuestionBankSearchRequest),

@@ -97,6 +97,38 @@ describe('question bank IPC boundary', () => {
     )).toEqual({ ok: true, data: null })
   })
 
+  it('dispatches the V17-A search-questions channel with the same payload guard as search', async () => {
+    const searched: unknown[] = []
+    const service = {
+      getSummary: vi.fn(),
+      search: (request: unknown) => {
+        searched.push(request)
+        return { total: 0, limit: 50, offset: 0, items: [] }
+      },
+      importSnapshot: vi.fn(),
+      getQuestion: vi.fn(),
+      copyToLibrary: vi.fn(),
+      copyToLesson: vi.fn(),
+    } as unknown as QuestionBankService
+    const deps: QuestionBankIpcDependencies = {
+      getService: () => service,
+      chooseSnapshotPath: async () => null,
+    }
+    expect(await dispatchQuestionBankIpc(
+      QUESTION_BANK_IPC_CHANNELS.searchQuestions,
+      { text: '一次函数', limit: 10 },
+      deps,
+      new TestLogger(),
+    )).toMatchObject({ ok: true, data: { total: 0, items: [] } })
+    expect(await dispatchQuestionBankIpc(
+      QUESTION_BANK_IPC_CHANNELS.searchQuestions,
+      { limit: 101 },
+      deps,
+      new TestLogger(),
+    )).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+    expect(searched).toEqual([{ text: '一次函数', limit: 10 }])
+  })
+
   it('rejects extra fields, invalid ranges, and unknown channels before service calls', async () => {
     const deps = dependencies()
     for (const payload of [

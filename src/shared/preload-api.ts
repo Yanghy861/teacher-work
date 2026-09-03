@@ -105,11 +105,14 @@ import {
   isCopyFileToStudentRequest,
   isFileActionResult,
   isFileIdRequest,
-  isManagedFileOverview,
   isManagedFileContentChanged,
+  isManagedFileOverview,
   isManagedFileRefreshResult,
   isManagedFileRecord,
   isNullableManagedFileRecord,
+  isReadFileTextResult,
+  isWriteFileVersionRequest,
+  isWriteFileVersionResult,
   type CopyFileToLessonRequest,
   type CopyFileToStudentRequest,
   type FileActionResult,
@@ -118,6 +121,9 @@ import {
   type ManagedFileContent,
   type ManagedFileContentChanged,
   type ManagedFileRecord,
+  type ReadFileTextResult,
+  type WriteFileVersionRequest,
+  type WriteFileVersionResult,
 } from './file-contracts'
 import type { BackupSummary, RestoreSummary } from './ipc-contracts'
 import {
@@ -224,6 +230,9 @@ export type {
   ManagedFileOverview,
   ManagedFileRecord,
   ManagedFileRefreshResult,
+  ReadFileTextResult,
+  WriteFileVersionRequest,
+  WriteFileVersionResult,
 } from './file-contracts'
 export { isManagedFileContent } from './file-contracts'
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
@@ -322,6 +331,8 @@ export interface TeacherWorkbenchApi {
   files: {
     getOverview: () => Promise<ManagedFileOverview>
     readContent: (request: FileIdRequest) => Promise<ManagedFileContent>
+    readText: (request: FileIdRequest) => Promise<ReadFileTextResult>
+    writeVersion: (request: WriteFileVersionRequest) => Promise<WriteFileVersionResult>
     importFromPicker: () => Promise<ManagedFileRecord | null>
     openFile: (request: FileIdRequest) => Promise<FileActionResult>
     showFileInFolder: (request: FileIdRequest) => Promise<FileActionResult>
@@ -428,6 +439,9 @@ export {
   isManagedFileRefreshResult,
   isManagedFileRecord,
   isNullableManagedFileRecord,
+  isReadFileTextResult,
+  isWriteFileVersionRequest,
+  isWriteFileVersionResult,
   parseIpcResponse,
   TeacherWorkbenchError,
   isSearchHit,

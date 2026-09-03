@@ -58,6 +58,23 @@ export interface FileIdRequest {
   readonly fileId: string
 }
 
+/** V17-C：md 编辑器保存（D29 永远写新文件，绝不 UPDATE 目标行）。 */
+export interface WriteFileVersionRequest {
+  readonly fileId: string
+  readonly bodyMd: string
+  readonly summary?: string
+}
+
+export interface WriteFileVersionResult {
+  readonly file: ManagedFileRecord
+  readonly version: number
+}
+
+export interface ReadFileTextResult {
+  readonly file: ManagedFileRecord
+  readonly content: string
+}
+
 export interface CopyFileToLessonRequest {
   readonly fileId: string
   readonly lessonId: string
@@ -117,6 +134,31 @@ export function isManagedFileOverview(value: unknown): value is ManagedFileOverv
 
 export function isFileIdRequest(value: unknown): value is FileIdRequest {
   return hasOnlyKeys(value, ['fileId']) && isNonEmptyString(value.fileId)
+}
+
+export function isWriteFileVersionRequest(value: unknown): value is WriteFileVersionRequest {
+  return (
+    hasOnlyKeys(value, ['fileId', 'bodyMd'], ['summary']) &&
+    isNonEmptyString(value.fileId) &&
+    typeof value.bodyMd === 'string' &&
+    value.bodyMd.trim() !== '' &&
+    value.bodyMd.length <= 200_000 &&
+    (value.summary === undefined || (isNonEmptyString(value.summary) && value.summary.length <= 500))
+  )
+}
+
+export function isWriteFileVersionResult(value: unknown): value is WriteFileVersionResult {
+  return (
+    isRecord(value) &&
+    isManagedFileRecord(value.file) &&
+    typeof value.version === 'number' &&
+    Number.isInteger(value.version) &&
+    value.version >= 1
+  )
+}
+
+export function isReadFileTextResult(value: unknown): value is ReadFileTextResult {
+  return isRecord(value) && isManagedFileRecord(value.file) && typeof value.content === 'string'
 }
 
 export function isCopyFileToLessonRequest(value: unknown): value is CopyFileToLessonRequest {
@@ -180,10 +222,12 @@ function isFiniteNumber(value: unknown): value is number {
 function hasOnlyKeys(
   value: unknown,
   requiredKeys: readonly string[],
+  optionalKeys: readonly string[] = [],
 ): value is Record<string, unknown> {
   if (!isRecord(value)) {
     return false
   }
   const keys = Object.keys(value)
-  return requiredKeys.every((key) => keys.includes(key)) && keys.every((key) => requiredKeys.includes(key))
+  const allowed = new Set([...requiredKeys, ...optionalKeys])
+  return requiredKeys.every((key) => keys.includes(key)) && keys.every((key) => allowed.has(key))
 }

@@ -167,6 +167,76 @@ export class ManagedFileService {
     }
   }
 
+  /** V17-C：编辑器读取原始 md 文本（仅 text/*，不截断不转换，渲染层自行 KaTeX）。 */
+  readText(fileId: string): { file: ManagedFileRecord; content: string } {
+    const file = this.requireActiveFile(fileId)
+    if (!isPreviewableText(file.mimeType)) {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '只能读取文本类托管文件。')
+    }
+    const contentPath = this.requireReadableObject(file.id)
+    const stats = statSync(contentPath)
+    if (stats.size > MAX_PREVIEW_BYTES) {
+      throw new ManagedFileError('FILE_CONTENT_TOO_LARGE', '文件过大，编辑器暂不支持读取。')
+    }
+    return { file, content: readFileSync(contentPath).toString('utf8') }
+  }
+
+  /**
+   * V17-C/D29：人工编辑保存为**新文件**（绝不 UPDATE 目标行）：
+   * 版本链目标沿用 publishLessonDraftVersion 的课次锚定 MAX+1 版号出 ` · 第 N+1 版.md`；
+   * 非版本链目标出 `原名（编辑版）.md` 副本；两者都经临时文件 + 原子重命名 + importToLesson 语义入课次。
+   */
+  writeVersion(fileId: string, bodyMd: string): { file: ManagedFileRecord; version: number } {
+    const source = this.requireActiveFile(fileId)
+    if (source.mimeType !== 'text/markdown') {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '只能编辑 Markdown 文件。')
+    }
+    this.requireReadableObject(source.id)
+    if (typeof bodyMd !== 'string' || bodyMd.trim() === '') {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '保存内容不能为空。')
+    }
+    if (bodyMd.length > MAX_WRITE_BODY_CHARS) {
+      throw new ManagedFileError('FILE_CONTENT_TOO_LARGE', '保存内容过大，请精简后重试。')
+    }
+    const linkedLessonIds = this.database
+      .prepare('SELECT lesson_id FROM lesson_files WHERE file_id = ? ORDER BY created_at, lesson_id')
+      .all(source.id) as Array<{ readonly lesson_id: string }>
+    const lessonId = linkedLessonIds[0]?.lesson_id
+    if (lessonId === undefined) {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '该文件未挂接课次，请先复制到课次再编辑。')
+    }
+    this.requireActiveLesson(lessonId)
+
+    const match = / · 第 (\d+) 版\.md$/u.exec(source.originalName)
+    if (match === null) {
+      const editedName = `${stripMarkdownExtension(source.originalName)}（编辑版）.md`
+      const file = this.createTextObjectAndRegister(bodyMd, editedName, { targetType: 'lesson', targetId: lessonId })
+      return { file, version: 1 }
+    }
+    const version = this.nextLessonVersionNumber(lessonId)
+    const file = this.createTextObjectAndRegister(
+      bodyMd,
+      `${source.originalName.slice(0, match.index)} · 第 ${version} 版.md`,
+      { targetType: 'lesson', targetId: lessonId },
+    )
+    return { file, version }
+  }
+
+  private nextLessonVersionNumber(lessonId: string): number {
+    const rows = this.database
+      .prepare(
+        `SELECT original_name
+           FROM lesson_files lf
+           JOIN files f ON f.id = lf.file_id
+          WHERE lf.lesson_id = ? AND f.original_name LIKE '% · 第 % 版.md'`,
+      )
+      .all(lessonId) as Array<{ readonly original_name: string }>
+    return rows.reduce((max, row) => {
+      const versionMatch = / · 第 (\d+) 版\.md$/u.exec(row.original_name)
+      return versionMatch === null ? max : Math.max(max, Number(versionMatch[1]))
+    }, 0) + 1
+  }
+
   softDeleteFile(fileId: string): ManagedFileRecord {
     return this.transaction(() => {
       this.requireActiveFile(fileId)
@@ -716,9 +786,14 @@ function mimeTypeForName(name: string): string {
 }
 
 const MAX_PREVIEW_BYTES = 12 * 1024 * 1024
+const MAX_WRITE_BODY_CHARS = 200_000
 
 function isPreviewableText(mimeType: string): boolean {
   return mimeType.startsWith('text/') || mimeType === 'application/json'
+}
+
+function stripMarkdownExtension(name: string): string {
+  return name.toLowerCase().endsWith('.md') ? name.slice(0, -3) : name
 }
 
 function formatFileSize(size: number): string {

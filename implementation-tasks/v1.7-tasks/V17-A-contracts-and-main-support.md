@@ -1,6 +1,6 @@
 # V17-A · 合同与 Main 支撑（md 写路径 + 题库载荷）
 
-**状态：** `TODO`
+**状态：** `DONE`
 
 ## 范围
 
@@ -24,3 +24,9 @@
 - 计划解析容错测试（合法 JSON / 包裹 markdown fence / 非法回退）；
 - 双版编排 fake provider 测试（两次请求序、studentNoteId 关联、学生版 prompt 含教师版全文）；
 - typecheck、lint；完成后更新 STATUS/GOAL_PROGRESS 并提交 `v1.7(V17-A): <摘要>`。
+
+## 完成记录（2026-09-03）
+
+- migration v17 专项测试 3 例（全新库幂等 / v16→v17 无损含 occurred_on 与外键 / manual_edit 可写且旧语义不变）；write-version Service+IPC 测试 7 例（版本链命名递增、（编辑版）副本命名、原子写无 tmp 残留、mineru_ready 原件不动新文件入索引、原件字节不变、非 md/无课次/空内容拒绝、dispatch 守卫与 onContentChanged/enqueueIndex）；合同与计划解析测试 9 例；draft-service 编排测试 8 例（候选注入/预算截减/零候选与未安装报错/无 bankPlan 零变化/阶段一解析与回退/双版两次请求序与 studentNoteId）。
+- 实现注记：write-version 版本号沿用 V155-D 发布锚定语义（课次内含软删除 MAX+1，编辑旧版本不重号）；payload `summary?` 已校验但 V17-A 不落库——manual_edit 来源标注 note 的写入属 V17-C 语义；既有测试 schemaVersion 终点钉测按迁移序列演进为 17（rollback 用例 failing migration 移至 v18）。
+- 门禁：全量 74 files / 332 tests（1 skipped）、typecheck、lint 通过。

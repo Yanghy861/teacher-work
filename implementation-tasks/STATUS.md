@@ -168,7 +168,7 @@
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
-| V17-A 合同与 Main 支撑 | TODO | migration v17（notes.note_kind 追加 manual_edit）、`files:read-text`/`files:write-version`（永写新文件）/`question-bank:search-questions` IPC、DraftBankPlan/dualVersion 合同、题库上下文注入与预算占用、AI 检索计划（JSON 容错）、学生版生成编排 |
+| V17-A 合同与 Main 支撑 | DONE | migration v17（notes.note_kind 追加 manual_edit，12 步法重建、FK 守卫沿用 V16-D 框架）、files:read-text / files:write-version（永写新文件、原件只读）/question-bank:search-questions 三条新 IPC、DraftBankPlan/dualVersion/studentNoteId/bankSelection 合同守卫、题库上下文注入与预算截减、AI 检索计划 JSON 容错、学生版第二次生成编排完成；专项测试 20 例 + 既有终点钉测按序演进（16→17），全量 74 files / 332 tests、typecheck、lint 通过 | migration v17（notes.note_kind 追加 manual_edit）、`files:read-text`/`files:write-version`（永写新文件）/`question-bank:search-questions` IPC、DraftBankPlan/dualVersion 合同、题库上下文注入与预算占用、AI 检索计划（JSON 容错）、学生版生成编排 |
 | V17-B AI 修改对象放宽 | TODO | 修改对象从应用内课件版本放宽到全部 text/markdown managed 文件（D27）；外部 md 发布产物为 `原名 · 第 N 版.md`，原件不动；修改流复用零改动 |
 | V17-C md 人工编辑器 | TODO | 阅读器编辑/预览切换；零新依赖编辑器（工具栏/行级 LaTeX 公式输入与速查模板/插图本课文件引用/标题字号模板/表格/撤销重做/热保存）；保存存为新版本（D29：版本链第 N+1 版或外部 md 编辑版副本） |
 | V17-D 题库自动选题与双版输出 | TODO | 参考题库开关（未安装置灰）、过目步（AI 检索计划展示/自然语言调整重检索/逐题剔除）、流式选题生成（不得杜撰、教师版含标注与答案区块）、学生版第二次生成与发布命名（D30/D31） |

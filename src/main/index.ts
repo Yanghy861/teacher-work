@@ -181,6 +181,7 @@ function getDraftService(): DraftService {
     getAiGateway(),
     getAiSettings(),
     getSkillService(),
+    getQuestionBankService(),
   )
   return draftService
 }

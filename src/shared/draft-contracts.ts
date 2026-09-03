@@ -20,6 +20,10 @@ export const DRAFT_REQUIREMENT_MAX_CHARS = 4_000
 export const DRAFT_MAX_REFERENCE_FILES = 10
 export const DRAFT_MAX_SOURCE_FILES = 32
 
+export const DRAFT_BANK_PLAN_MIN_TARGET_COUNT = 1
+export const DRAFT_BANK_PLAN_MAX_TARGET_COUNT = 20
+export const DRAFT_BANK_PLAN_DEFAULT_TARGET_COUNT = 5
+
 export interface DraftSourceSelection {
   readonly fileId: string
   readonly text?: string
@@ -45,6 +49,7 @@ export interface DraftNoteMetadata {
   readonly skill?: DraftSkillSnapshot
   readonly requirement?: string
   readonly modification?: DraftModificationScope
+  readonly bankSelection?: DraftBankSelection
 }
 
 export interface DraftLessonSnapshot {
@@ -79,6 +84,25 @@ export interface DraftModificationScope {
   readonly confirmedPlan?: string
 }
 
+/** D30：AI 检索计划（QuestionBankSearchRequest 的子集 + 目标题数），阶段一由 AI 输出、Main 校验。 */
+export interface DraftBankPlan {
+  readonly text?: string
+  readonly tags?: readonly string[]
+  readonly grade?: string
+  readonly type?: string
+  readonly difficultyMin?: number
+  readonly difficultyMax?: number
+  readonly targetCount: number
+}
+
+/** D30：题库候选审计留痕（只存计划/数量/ID，不存题目全文——全文固化在 note body）。 */
+export interface DraftBankSelection {
+  readonly plan: DraftBankPlan
+  readonly retrievedCount: number
+  readonly sentCount: number
+  readonly candidateIds: readonly string[]
+}
+
 export interface GenerateDraftRequest {
   readonly requestId: string
   readonly kind: DraftKind
@@ -87,6 +111,8 @@ export interface GenerateDraftRequest {
   readonly skillId?: string
   readonly requirement?: string
   readonly modification?: DraftModificationScope
+  readonly bankPlan?: DraftBankPlan
+  readonly dualVersion?: true
   readonly sources: readonly DraftSourceSelection[]
   readonly maxChars: number
   readonly maxTokens: number
@@ -97,6 +123,7 @@ export interface GenerateDraftResult {
   readonly kind: DraftKind
   readonly bodyMd: string
   readonly metadata: DraftNoteMetadata
+  readonly studentNoteId?: string
 }
 
 export interface DraftIdRequest {
@@ -131,7 +158,7 @@ export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRe
     hasOnlyKeys(
       value,
       ['requestId', 'kind', 'lessonId', 'sources', 'maxChars', 'maxTokens'],
-      ['studentId', 'skillId', 'requirement', 'modification'],
+      ['studentId', 'skillId', 'requirement', 'modification', 'bankPlan', 'dualVersion'],
     ) &&
     isNonEmptyString(value.requestId, 128) &&
     isDraftKind(value.kind) &&
@@ -140,6 +167,8 @@ export function isGenerateDraftRequest(value: unknown): value is GenerateDraftRe
     (value.skillId === undefined || isNonEmptyString(value.skillId, 128)) &&
     (value.requirement === undefined || isNonEmptyString(value.requirement, DRAFT_REQUIREMENT_MAX_CHARS)) &&
     (value.modification === undefined || isDraftModificationScope(value.modification)) &&
+    (value.bankPlan === undefined || isDraftBankPlan(value.bankPlan)) &&
+    (value.dualVersion === undefined || value.dualVersion === true) &&
     Array.isArray(value.sources) &&
     value.sources.length > 0 &&
     value.sources.length <= DRAFT_MAX_SOURCE_FILES &&
@@ -226,6 +255,68 @@ export function isDraftModificationScope(value: unknown): value is DraftModifica
   )
 }
 
+export function isDraftBankPlan(value: unknown): value is DraftBankPlan {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(
+      value,
+      ['targetCount'],
+      ['text', 'tags', 'grade', 'type', 'difficultyMin', 'difficultyMax'],
+    ) ||
+    !isBankTargetCount(value.targetCount) ||
+    (value.text !== undefined && !isNonEmptyString(value.text, 256)) ||
+    (value.grade !== undefined && !isNonEmptyString(value.grade, 64)) ||
+    (value.type !== undefined && !isNonEmptyString(value.type, 64)) ||
+    !isBankDifficulty(value.difficultyMin) ||
+    !isBankDifficulty(value.difficultyMax) ||
+    (value.difficultyMin !== undefined &&
+      value.difficultyMax !== undefined &&
+      value.difficultyMin > value.difficultyMax)
+  ) {
+    return false
+  }
+  if (value.tags === undefined) return true
+  if (!Array.isArray(value.tags) || value.tags.length > 20) return false
+  const normalized = value.tags.map((tag) => (typeof tag === 'string' ? tag.trim() : tag))
+  if (!normalized.every((tag): tag is string => isNonEmptyString(tag, 128))) return false
+  return new Set(normalized).size === normalized.length
+}
+
+function isBankTargetCount(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= DRAFT_BANK_PLAN_MIN_TARGET_COUNT &&
+    value <= DRAFT_BANK_PLAN_MAX_TARGET_COUNT
+  )
+}
+
+export function isDraftBankSelection(value: unknown): value is DraftBankSelection {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ['plan', 'retrievedCount', 'sentCount', 'candidateIds']) &&
+    isDraftBankPlan(value.plan) &&
+    isSafeCount(value.retrievedCount) &&
+    isSafeCount(value.sentCount) &&
+    value.sentCount <= value.retrievedCount &&
+    Array.isArray(value.candidateIds) &&
+    value.candidateIds.length <= 100 &&
+    value.candidateIds.every((id) => isNonEmptyString(id, 512)) &&
+    value.sentCount <= value.candidateIds.length
+  )
+}
+
+function isBankDifficulty(value: unknown): value is number | undefined {
+  return (
+    value === undefined ||
+    (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100)
+  )
+}
+
+function isSafeCount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100
+}
+
 export function isDraftNoteMetadata(value: unknown): value is DraftNoteMetadata {
   return (
     isRecord(value) &&
@@ -241,17 +332,24 @@ export function isDraftNoteMetadata(value: unknown): value is DraftNoteMetadata 
     (value.lesson === undefined || isDraftLessonSnapshot(value.lesson)) &&
     (value.skill === undefined || isDraftSkillSnapshot(value.skill)) &&
     (value.requirement === undefined || isNonEmptyString(value.requirement, DRAFT_REQUIREMENT_MAX_CHARS)) &&
-    (value.modification === undefined || isDraftModificationScope(value.modification))
+    (value.modification === undefined || isDraftModificationScope(value.modification)) &&
+    (value.bankSelection === undefined || isDraftBankSelection(value.bankSelection))
   )
 }
 
 export function isGenerateDraftResult(value: unknown): value is GenerateDraftResult {
   return (
     isRecord(value) &&
+    hasOnlyKeys(
+      value,
+      ['noteId', 'kind', 'bodyMd', 'metadata'],
+      ['studentNoteId'],
+    ) &&
     isNonEmptyString(value.noteId, 128) &&
     isDraftKind(value.kind) &&
     isNonEmptyString(value.bodyMd, DRAFT_MAX_CHARS) &&
-    isDraftNoteMetadata(value.metadata)
+    isDraftNoteMetadata(value.metadata) &&
+    (value.studentNoteId === undefined || isNonEmptyString(value.studentNoteId, 128))
   )
 }
 

@@ -22,6 +22,8 @@ import {
   isManagedFileOverview,
   isManagedFileRecord,
   isNullableManagedFileRecord,
+  isReadFileTextResult,
+  isWriteFileVersionResult,
   isAppVersion,
   isCoreOverview,
   isCreateCourseSetupResult,
@@ -82,6 +84,7 @@ import {
   type CopyFileToStudentRequest,
   type FileIdRequest,
   type ManagedFileContentChanged,
+  type WriteFileVersionRequest,
   type MoveNodeRequest,
   type NodeIdRequest,
   type ReorderNodeRequest,
@@ -177,6 +180,8 @@ const api = Object.freeze({
   files: Object.freeze({
     getOverview: () => invoke(FILE_IPC_CHANNELS.getManagedFileOverview, {}, isManagedFileOverview),
     readContent: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.readContent, request, isManagedFileContent),
+    readText: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.readText, request, isReadFileTextResult),
+    writeVersion: (request: WriteFileVersionRequest) => invoke(FILE_IPC_CHANNELS.writeVersion, request, isWriteFileVersionResult),
     importFromPicker: () => invoke(FILE_IPC_CHANNELS.importFromPicker, {}, isNullableManagedFileRecord),
     openFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.openFile, request, isFileActionResult),
     showFileInFolder: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.showFileInFolder, request, isFileActionResult),
@@ -262,6 +267,11 @@ const api = Object.freeze({
     ),
     search: (request: QuestionBankSearchRequest) => invoke(
       QUESTION_BANK_IPC_CHANNELS.search,
+      request,
+      isQuestionBankSearchResult,
+    ),
+    searchQuestions: (request: QuestionBankSearchRequest) => invoke(
+      QUESTION_BANK_IPC_CHANNELS.searchQuestions,
       request,
       isQuestionBankSearchResult,
     ),

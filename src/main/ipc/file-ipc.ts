@@ -16,11 +16,15 @@ import {
   isManagedFileOverview,
   isManagedFileRecord,
   isNullableManagedFileRecord,
+  isReadFileTextResult,
+  isWriteFileVersionRequest,
+  isWriteFileVersionResult,
   type CopyFileToLessonRequest,
   type CopyFileToStudentRequest,
   type FileIdRequest,
   type ManagedFileContentChanged,
   type ManagedFileRefreshResult,
+  type WriteFileVersionRequest,
 } from '../../shared/file-contracts'
 import { ManagedFileError, ManagedFileService } from '../files/managed-file-service'
 import type { IpcLogger, IpcMainPort } from './app-ipc'
@@ -94,6 +98,25 @@ export async function dispatchFileIpc(
           fileService.readContent((payload as FileIdRequest).fileId),
           isManagedFileContent,
         )
+      case FILE_IPC_CHANNELS.readText:
+        assertRequest(payload, isFileIdRequest)
+        return ensureResponse(
+          fileService.readText((payload as FileIdRequest).fileId),
+          isReadFileTextResult,
+        )
+      case FILE_IPC_CHANNELS.writeVersion: {
+        assertRequest(payload, isWriteFileVersionRequest)
+        const request = payload as WriteFileVersionRequest
+        const written = fileService.writeVersion(request.fileId, request.bodyMd)
+        dependencies.enqueueIndex?.(written.file.id)
+        // 新版本文件随 contentChanged 事件触发 Renderer 侧 overview 刷新，立即出现在课件区。
+        dependencies.notifyContentChanged({
+          fileId: written.file.id,
+          contentChanged: true,
+          file: written.file,
+        })
+        return ensureResponse(written, isWriteFileVersionResult)
+      }
       case FILE_IPC_CHANNELS.importFromPicker: {
         assertRequest(payload, isEmptyIpcRequest)
         const sourcePath = await dependencies.chooseSourcePath()

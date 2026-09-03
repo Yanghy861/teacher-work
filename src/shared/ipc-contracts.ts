@@ -38,6 +38,8 @@ export const ATTENDANCE_IPC_CHANNELS = {
 export const FILE_IPC_CHANNELS = {
   getManagedFileOverview: 'files:get-overview',
   readContent: 'files:read-content',
+  readText: 'files:read-text',
+  writeVersion: 'files:write-version',
   importFromPicker: 'files:import-from-picker',
   openFile: 'files:open',
   showFileInFolder: 'files:show-in-folder',
@@ -110,6 +112,7 @@ export const QUESTION_BANK_IPC_CHANNELS = {
   getSummary: 'question-bank:get-summary',
   chooseAndImport: 'question-bank:choose-and-import',
   search: 'question-bank:search',
+  searchQuestions: 'question-bank:search-questions',
   getQuestion: 'question-bank:get-question',
   copyToLibrary: 'question-bank:copy-to-library',
   copyToLesson: 'question-bank:copy-to-lesson',

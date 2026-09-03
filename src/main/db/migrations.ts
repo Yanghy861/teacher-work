@@ -461,6 +461,56 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 17,
+    name: 'extend_notes_note_kind_for_manual_edit',
+    up: (database) => {
+      // V17-A/D29：人工编辑课件保存为新版本时，落一条 note_kind='manual_edit'
+      // 的来源标注记录。SQLite 不能 ALTER CHECK，按 12 步法重建 notes 表；
+      // FK 顺序守卫沿用 runMigrations 修复后的框架（PRAGMA 在迁移事务外关闭）。
+      database.exec(`
+        CREATE TABLE notes_v17 (
+          id TEXT PRIMARY KEY NOT NULL,
+          student_id TEXT REFERENCES students(id) ON DELETE SET NULL,
+          lesson_id TEXT REFERENCES nodes(id) ON DELETE SET NULL,
+          body_md TEXT NOT NULL CHECK (length(trim(body_md)) > 0),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT,
+          occurred_on TEXT,
+          note_kind TEXT NOT NULL DEFAULT 'manual'
+            CHECK (note_kind IN ('manual', 'manual_edit', 'lecture', 'example', 'homework')),
+          ai_metadata_json TEXT,
+          draft_status TEXT,
+          CHECK (
+            (note_kind IN ('manual', 'manual_edit') AND draft_status IS NULL)
+            OR
+            (note_kind NOT IN ('manual', 'manual_edit') AND draft_status IS NOT NULL
+              AND draft_status IN ('draft', 'saved'))
+          )
+        );
+
+        INSERT INTO notes_v17
+          (id, student_id, lesson_id, body_md, created_at, updated_at,
+           deleted_at, occurred_on, note_kind, ai_metadata_json, draft_status)
+      SELECT id, student_id, lesson_id, body_md, created_at, updated_at,
+               deleted_at, occurred_on, note_kind, ai_metadata_json, draft_status
+          FROM notes;
+
+        DROP TABLE notes;
+        ALTER TABLE notes_v17 RENAME TO notes;
+
+        CREATE INDEX idx_notes_student_created
+          ON notes (student_id, created_at, id);
+        CREATE INDEX idx_notes_lesson_created
+          ON notes (lesson_id, created_at, id);
+        CREATE INDEX idx_notes_draft_inbox
+          ON notes (draft_status, deleted_at, updated_at DESC, id);
+        CREATE INDEX IF NOT EXISTS idx_notes_student_occurred
+          ON notes (student_id, occurred_on, id);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

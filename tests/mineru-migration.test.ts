@@ -49,15 +49,16 @@ function seedV15Files(database: SqliteDatabase): void {
   `)
 }
 
-describe('V16-D migration v16 (files index_status CHECK rebuild)', () => {
+describe('V16-D migration v16 (files index_status CHECK rebuild, endpoint updated by V17-A)', () => {
   it('applies v16 on top of a fresh workspace and keeps idempotent', () => {
     const database = createDatabase()
     const version = runMigrations(database, workspaceMigrations)
-    expect(version).toBe(16)
+    expect(version).toBe(17)
     expect(getAppliedMigrationVersions(database)).toContain(16)
+    expect(getAppliedMigrationVersions(database)).toContain(17)
 
     // 再次运行不重复应用、不报错（幂等）
-    expect(runMigrations(database, workspaceMigrations)).toBe(16)
+    expect(runMigrations(database, workspaceMigrations)).toBe(17)
   })
 
   it('upgrades a v15-shaped workspace losslessly: rows, old status values, and foreign keys survive', () => {
@@ -87,9 +88,44 @@ describe('V16-D migration v16 (files index_status CHECK rebuild)', () => {
         SELECT 14, 'add_historical_course_date_metadata', '2026-01-01' UNION ALL
         SELECT 15, 'create_material_library_tree', '2026-01-01'
       );
+
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('course', 'period', 'lesson')),
+        title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+        parent_id TEXT REFERENCES nodes(id) ON DELETE CASCADE,
+        sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT
+      );
+      INSERT INTO nodes (id, kind, title, created_at, updated_at) VALUES
+        ('lesson-fk', 'lesson', '第 1 讲', 't', 't');
+
+      CREATE TABLE students (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT
+      );
+      CREATE TABLE notes (
+        id TEXT PRIMARY KEY NOT NULL,
+        student_id TEXT REFERENCES students(id) ON DELETE SET NULL,
+        lesson_id TEXT REFERENCES nodes(id) ON DELETE SET NULL,
+        body_md TEXT NOT NULL CHECK (length(trim(body_md)) > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        occurred_on TEXT,
+        note_kind TEXT NOT NULL DEFAULT 'manual'
+          CHECK (note_kind IN ('manual', 'lecture', 'example', 'homework')),
+        ai_metadata_json TEXT,
+        draft_status TEXT
+      );
     `)
 
-    expect(runMigrations(database, workspaceMigrations)).toBe(16)
+    expect(runMigrations(database, workspaceMigrations)).toBe(17)
 
     const rows = database
       .prepare('SELECT id, index_status FROM files ORDER BY id')
@@ -185,9 +221,31 @@ describe('V16-D migration v16 (files index_status CHECK rebuild)', () => {
       );
       INSERT INTO lesson_files (file_id, lesson_id, created_at) VALUES
         ('f-doc', 'lesson-fk', 't'), ('f-img', 'lesson-fk', 't');
+
+      CREATE TABLE students (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT
+      );
+      CREATE TABLE notes (
+        id TEXT PRIMARY KEY NOT NULL,
+        student_id TEXT REFERENCES students(id) ON DELETE SET NULL,
+        lesson_id TEXT REFERENCES nodes(id) ON DELETE SET NULL,
+        body_md TEXT NOT NULL CHECK (length(trim(body_md)) > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        occurred_on TEXT,
+        note_kind TEXT NOT NULL DEFAULT 'manual'
+          CHECK (note_kind IN ('manual', 'lecture', 'example', 'homework')),
+        ai_metadata_json TEXT,
+        draft_status TEXT
+      );
     `)
 
-    expect(runMigrations(database, workspaceMigrations)).toBe(16)
+    expect(runMigrations(database, workspaceMigrations)).toBe(17)
 
     // 关联行逐条幸存（旧实现此数为 0）
     const links = database
